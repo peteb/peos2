@@ -1,0 +1,23 @@
+Why build yet another operating system?
+---------------------------------------
+
+* Because it's fun (most important point!)
+* To learn and improve
+* To study algorithms and system design
+* It's meditative
+
+General
+-------
+DON'T IMPLEMENT GRAPHICS. It's a crazy rabbit hole of VESA, VBE3, VGA,
+SVGA, etc. especially when the BIOS isn't used. Plus, I've already
+played around a lot with graphics -- better to focus on networking
+which has far more well-documented hardware.
+
+Try to make things as simple as possible when taking into account
+current requirements -- not what might be needed in the future. Ie,
+don't abstract out x86 until multi-platform is needed.
+
+Build and run
+-------------
+* Build the cross-compiler docker image in build/compiler
+* Use build/docker-bash to get a bash shell with the cross-compiler in /opt/cross/bin/

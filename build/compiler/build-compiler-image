@@ -1,0 +1,2 @@
+#!/bin/bash
+docker build `dirname "$0"` -t i686-elf-compiler:latest

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -e
+
+export PREFIX="/opt/cross"
+export TARGET=i686-elf
+export PATH="$PREFIX/bin:$PATH"
+
+BINUTILS_VERSION=2.33.1
+GCC_VERSION=9.2.0
+
+mkdir src && pushd src
+
+# TODO: remove --no-check-certificate, for some reason this system
+# doesn't include Let's encrypt in its chain
+wget --no-check-certificate https://ftp.gnu.org/gnu/binutils/binutils-$BINUTILS_VERSION.tar.xz
+wget --no-check-certificate https://ftp.gnu.org/gnu/gcc/gcc-$GCC_VERSION/gcc-$GCC_VERSION.tar.xz
+tar xvf binutils-$BINUTILS_VERSION.tar.xz
+tar xvf gcc-$GCC_VERSION.tar.xz
+
+# Build binutils
+mkdir build-binutils && pushd build-binutils
+../binutils-$BINUTILS_VERSION/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot --disable-nls --disable-werror
+make && make install
+popd
+
+# Build gcc
+mkdir build-gcc && pushd build-gcc
+../gcc-$GCC_VERSION/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
+make all-gcc
+make all-target-libgcc
+make install-gcc
+make install-target-libgcc
+popd
+
+popd
+rm -r src
