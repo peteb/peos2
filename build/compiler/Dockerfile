@@ -9,5 +9,6 @@ WORKDIR /opt/cross/
 COPY make-cross-compiler .
 
 RUN ./make-cross-compiler
+RUN echo "export PATH=\$PATH:/opt/cross/bin/" >> ~/.bashrc
 
 WORKDIR /opt/src/
