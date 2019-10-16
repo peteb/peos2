@@ -2,5 +2,5 @@
 
 extern "C" void main() {
   clear_screen();
-  puts("Welcome!");
+  puts("Welcome!\n");
 }
