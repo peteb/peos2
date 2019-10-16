@@ -7,6 +7,7 @@
 #include <stddef.h>
 
 #include "assert.h"
+#include "utils.h"
 
 namespace p2 {
   // Representing a memory area. Doesn't own the memory, so a const
@@ -51,12 +52,10 @@ namespace p2 {
     }
 
     void assign_overlap(const mem_range<T> &rhs) const {
-      size_t min_length = size();
-      if (rhs.size() < min_length) {
-        min_length = rhs.size();
-      }
+      const size_t min_length = p2::min(size(), rhs.size());
 
-      // TODO: make this work when rhs is before this
+      // TODO: make this work when rhs storage comes before us
+      // TODO: optimize
       for (size_t i = 0; i < min_length; ++i) {
         (*this)[i] = rhs[i];
       }
