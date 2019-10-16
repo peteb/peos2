@@ -12,12 +12,12 @@ namespace p2 {
   class fixed_string {
   public:
     fixed_string() {
-      ASSERT(N > 0);
+      assert(N > 0);
       storage[0] = '\0';
     }
 
     void append(char c) {
-      ASSERT(position < N - 1 && "reached end of fixed memory area");
+      assert(position < N - 1 && "reached end of fixed memory area");
 
       storage[position++] = c;
       storage[position + 1] = '\0';

@@ -34,12 +34,12 @@ namespace p2 {
     }
 
     T &operator [](int idx) {
-      ASSERT(start + idx >= start && start + idx < end && "idx is within bounds");
+      assert(start + idx >= start && start + idx < end && "idx is within bounds");
       return start[idx];
     }
 
     T &operator [](int idx) const {
-      ASSERT(start + idx >= start && start + idx < end && "idx is within bounds");
+      assert(start + idx >= start && start + idx < end && "idx is within bounds");
       return start[idx];
     }
 

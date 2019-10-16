@@ -3,10 +3,13 @@
 
 #include "panic.h"
 
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
 #ifdef NDEBUG
-#define ASSERT(exp) {if (!(exp)) {panic("Assertion failed: " #exp); } }
+#define assert(exp) {if (!(exp)) {panic("ASSERT " __FILE__ ":" TOSTRING(__LINE__) ": " #exp); } }
 #else
-#define ASSERT(exp)
+#define assert(exp)
 #endif
 
 #endif // !PEOS2_ASSERT_H
