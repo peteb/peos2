@@ -9,6 +9,8 @@
 #include "assert.h"
 
 namespace p2 {
+  // Representing a memory area. Doesn't own the memory, so a const
+  // instance can still manipulate the underlying bytes.
   template<typename T>
   class mem_range {
   public:
@@ -17,7 +19,7 @@ namespace p2 {
     mem_range(T *start, T *end)
       : start(start), end(end) {}
 
-    void fill(T value) {
+    void fill(T value) const {
       // TODO: optimize using block operations
       T *pos = start;
 
@@ -35,12 +37,12 @@ namespace p2 {
       return start[idx];
     }
 
-    const T &operator [](int idx) const {
+    T &operator [](int idx) const {
       ASSERT(start + idx >= start && start + idx < end && "idx is within bounds");
       return start[idx];
     }
 
-    mem_range subrange(int substart, int length = -1) {
+    mem_range subrange(int substart, int length = -1) const {
       if (length == -1) {
         length = end - start;
       }
@@ -48,7 +50,7 @@ namespace p2 {
       return mem_range<T>(start + substart, start + substart + length);
     }
 
-    void assign_overlap(const mem_range<T> &rhs) {
+    void assign_overlap(const mem_range<T> &rhs) const {
       size_t min_length = size();
       if (rhs.size() < min_length) {
         min_length = rhs.size();

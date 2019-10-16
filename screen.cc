@@ -3,11 +3,17 @@
 #include "support/mem_range.h"
 #include "x86.h"
 
-static const int kNumColumns = 80;
-static const int kNumRows = 25;
+using namespace p2;
 
+// Constants
+static const int NUM_COLUMNS = 80;
+static const int NUM_ROWS    = 25;
+static const mem_range<uint16_t> FRAMEBUFFER = {0xB8000, 0xB8000 + 2 * NUM_COLUMNS * NUM_ROWS};
+
+// Global state
 static int screen_position = 0;
 
+// Declarations
 static void show_cursor();
 static void hide_cursor();
 
@@ -16,37 +22,34 @@ static inline uint16_t entry(uint8_t bg_color, uint8_t fg_color, char letter) {
 }
 
 void clear_screen() {
-  // TODO: call constructors before running main
-  p2::mem_range<uint16_t> video(0xB8000, 0xB8000 + 2 * kNumColumns * kNumRows);
-  video.fill(entry(0x0, 0xF, ' '));
+  FRAMEBUFFER.fill(entry(0x0, 0xF, ' '));
 
   set_cursor(0);
   show_cursor();
+  screen_position = 0;
 }
 
 void puts(const char *message) {
-  p2::mem_range<uint16_t> video(0xB8000, 0xB8000 + 2 * kNumColumns * kNumRows);
   bool clear_until_end = false;
 
   while (*message) {
     const bool newline = *message == '\n';
 
     if (newline) {
-      screen_position += kNumColumns - screen_position % kNumColumns;
+      screen_position += NUM_COLUMNS - screen_position % NUM_COLUMNS;  // Move cursor to start of next line
     }
 
-    if (screen_position >= kNumColumns * kNumRows) {
-      screen_position -= kNumColumns;  // Beware, this doesn't protect against large overruns
+    if (screen_position >= NUM_COLUMNS * NUM_ROWS) {
+      screen_position -= NUM_COLUMNS;  // Move to start of line. Beware, this doesn't protect against large overruns
 
-      video
-        .subrange(0, kNumColumns * (kNumRows - 1))
-        .assign_overlap(video.subrange(kNumColumns));  // Scroll
+      // Scroll
+      FRAMEBUFFER
+        .subrange(0, NUM_COLUMNS * (NUM_ROWS - 1))
+        .assign_overlap(FRAMEBUFFER.subrange(NUM_COLUMNS));
 
       if (newline) {
         // Clear the row immediately as we're not filling up the rows
-        video
-          .subrange(screen_position)
-          .fill(entry(0x0, 0xF, ' '));
+        FRAMEBUFFER.subrange(screen_position).fill(entry(0x0, 0xF, ' '));
       }
       else {
         // Delay clearing the rest of the buffer to minimize overwrite
@@ -55,14 +58,14 @@ void puts(const char *message) {
     }
 
     if (!newline) {
-      video[screen_position++] = entry(0x0, 0xF, *message);
+      FRAMEBUFFER[screen_position++] = entry(0x0, 0xF, *message);
     }
 
     ++message;
   }
 
   if (clear_until_end) {
-    video.subrange(screen_position).fill(entry(0x0, 0xF, ' '));
+    FRAMEBUFFER.subrange(screen_position).fill(entry(0x0, 0xF, ' '));
   }
 
   set_cursor(screen_position);

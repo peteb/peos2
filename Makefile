@@ -6,7 +6,9 @@ CXXFLAGS=-std=c++17 -masm=intel -O2 -Wall -Wextra -fno-exceptions -fno-rtti -I. 
 
 all : vmpeoz
 
-OBJECTS=boot.o main.o screen.o panic.o
+CRTBEGIN_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
+CRTEND_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
+OBJECTS=crti.o $(CRTBEGIN_OBJECT) boot.o main.o screen.o panic.o $(CRTEND_OBJECT) crtn.o
 
 .PHONY : clean
 clean :

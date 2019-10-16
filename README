@@ -22,3 +22,7 @@ Build and run
 * Build the cross-compiler docker image in build/compiler
 * Use build/build-shell to get a bash shell with the cross-compiler and run `make`
 * Run with `run-qemu`
+
+Notes
+-----
+* Kernel isn't started when constructors are run
