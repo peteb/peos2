@@ -1,12 +1,12 @@
 CC=i686-elf-gcc
 CXX=i686-elf-g++
 AS=i686-elf-as
-CFLAGS=-std=gnu99 -O2 -Wall -Wextra
-CXXFLAGS=-std=c++17 -O2 -Wall -Wextra -fno-exceptions -fno-rtti
+CFLAGS=-std=gnu99 -masm=intel -O2 -Wall -Wextra -DNDEBUG
+CXXFLAGS=-std=c++17 -masm=intel -O2 -Wall -Wextra -fno-exceptions -fno-rtti -I. -DNDEBUG
 
 all : vmpeoz
 
-OBJECTS=boot.o main.o
+OBJECTS=boot.o main.o screen.o panic.o
 
 .PHONY : clean
 clean :
