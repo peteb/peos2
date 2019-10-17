@@ -16,20 +16,24 @@ namespace p2 {
       storage[0] = '\0';
     }
 
-    void append(char c) {
+    fixed_string<N> &append(char c) {
       assert(position < N - 1 && "reached end of fixed memory area");
 
       storage[position++] = c;
       storage[position + 1] = '\0';
+
+      return *this;
     }
 
-    void append(const char *str) {
+    fixed_string<N> &append(const char *str) {
       while (*str) {
         append(*str++);
       }
+
+      return *this;
     }
 
-    void append(unsigned value, int width = -1, int radix = 10) {
+    fixed_string<N> &append(unsigned value, int width = -1, int radix = 10, char padding = ' ') {
       char *start_pos = &storage[position];
 
       if (width == -1) {
@@ -44,7 +48,7 @@ namespace p2 {
       }
 
       for (int i = 0; i < width; ++i) {
-        append(' ');
+        append(padding);
       }
 
       char *pos = &storage[position - 1];
@@ -57,6 +61,8 @@ namespace p2 {
           break;
         }
       }
+
+      return *this;
     }
 
     const char *str() const {
