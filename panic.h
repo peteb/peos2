@@ -1,3 +1,5 @@
+// -*- c++ -*-
+
 #ifndef PEOS2_PANIC_H
 #define PEOS2_PANIC_H
 

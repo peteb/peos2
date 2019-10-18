@@ -3,6 +3,7 @@
 #include "support/string.h"
 #include "protected_mode.h"
 #include "multiboot.h"
+#include "panic.h"
 
 extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   clear_screen();
@@ -20,7 +21,7 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   const char *mmap_ptr = reinterpret_cast<char *>(multiboot_hdr->mmap_addr);
   const char *const mmap_ptr_end = reinterpret_cast<char *>(multiboot_hdr->mmap_addr + multiboot_hdr->mmap_length);
 
-  puts("Memory map:\n");
+  puts("Memory map:");
   uint64_t memory_available = 0;
 
   while (mmap_ptr < mmap_ptr_end) {
@@ -32,8 +33,7 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
          .append(mmap_entry->addr + mmap_entry->len, 16, 16, '0')
          .append(" ")
          .append(multiboot_memory_type(mmap_entry->type))
-         .append(" (").append(mmap_entry->len, -1, 10).append(" bytes)")
-         .append("\n").str());
+         .append(" (").append(mmap_entry->len, -1, 10).append(" bytes)"));
 
     if (mmap_entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
       memory_available += mmap_entry->len;
@@ -45,18 +45,17 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   puts(p2::fixed_string<32>()
        .append("Total avail mem: ")
        .append(memory_available / 1024 / 1024)
-       .append(" MB\n").str());
+       .append(" MB"));
 
-  puts("Entering protected mode...\n");
+  puts("Entering protected mode...");
   enter_protected_mode();
 
   // TODO: setup a new stack?
-  puts("Updated GDT\n");
+  puts("Updated GDT");
 
   uint32_t esp = 0;
   asm volatile("mov %0, esp" : "=m" (esp) :);
 
   puts(p2::fixed_string<32>()
-       .append("ESP=").append(esp, 8, 16, '0').append("\n")
-       .str());
+       .append("ESP=").append(esp, 8, 16, '0'));
 }

@@ -1,3 +1,5 @@
+// -*- c++ -*-
+
 #ifndef PEOS2_MULTIBOOT_H
 #define PEOS2_MULTIBOOT_H
 

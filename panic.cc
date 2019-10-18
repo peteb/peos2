@@ -2,6 +2,6 @@
 #include "screen.h"
 
 void panic(const char *explanation) {
-  puts("PANIC! ");
-  puts(explanation);
+  print("PANIC! ");
+  print(explanation);
 }

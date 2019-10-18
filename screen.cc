@@ -29,7 +29,7 @@ void clear_screen() {
   screen_position = 0;
 }
 
-void puts(const char *message) {
+void print(const char *message) {
   bool clear_until_end = false;
 
   while (*message) {
