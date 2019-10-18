@@ -5,6 +5,8 @@
 #include "multiboot.h"
 #include "panic.h"
 
+extern int kernel_end;
+
 extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   clear_screen();
 
@@ -56,6 +58,20 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   uint32_t esp = 0;
   asm volatile("mov %0, esp" : "=m" (esp) :);
 
-  puts(p2::fixed_string<32>()
-       .append("ESP=").append(esp, 8, 16, '0'));
+  puts(p2::fixed_string<64>()
+       .append("ESP =").append(esp, 8, 16, '0').append("\n")
+       .append("main=").append((uint64_t)&main, 8, 16, '0').append("\n")
+       .append("end =").append((uint64_t)&kernel_end, 8, 16, '0'));
+
+
+  volatile char *ptr_end = (char *)0x7FE0000;
+  volatile char *ptr = (char *)&kernel_end;
+
+  uint64_t bytes = 0;
+
+  for (; ptr != ptr_end; ++ptr) {
+    print(p2::fixed_string<32>().append(*ptr));
+  }
+
+  puts(p2::fixed_string<32>().append(bytes));
 }

@@ -18,7 +18,7 @@ void enter_protected_mode() {
 }
 
 void setup_gdt() {
-  static const gdt_descriptor descriptors[] __attribute__((aligned(16))) = {
+  static const gdt_descriptor descriptors[] alignas(16) = {
     {0x0, 0x0, 0x0, 0x0},
     {0x0, 0x000FFFFF, GDT_FLAGS_G|GDT_FLAGS_DB, GDT_TYPE_CODE|GDT_TYPE_P|GDT_TYPE_R},
     {0x0, 0x000FFFFF, GDT_FLAGS_G|GDT_FLAGS_DB, GDT_TYPE_DATA|GDT_TYPE_P|GDT_TYPE_W}

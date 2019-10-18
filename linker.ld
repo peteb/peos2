@@ -8,6 +8,11 @@ SECTIONS {
     *(.text)
   }
 
+  .bss BLOCK(4K) : ALIGN(4K) {
+    *(COMMON)
+    *(.bss)
+  }
+
   .rodata BLOCK(4K) : ALIGN(4K) {
     *(.rodata)
   }
@@ -16,8 +21,5 @@ SECTIONS {
     *(.data)
   }
 
-  .bss BLOCK(4K) : ALIGN(4K) {
-    *(COMMON)
-    *(.bss)
-  }
+  kernel_end = .;
 }

@@ -73,7 +73,6 @@ namespace p2 {
     char storage[N];
     int position = 0;
   };
-
 }
 
 #endif // !PEOS2_STRING_H
