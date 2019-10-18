@@ -56,8 +56,7 @@ bool a20_enabled() {
     return *ptr1 != *ptr2;
   }
   else {
-    assert(!"implement real mode support");
-    return false;
+    panic("implement real mode support");
   }
 }
 

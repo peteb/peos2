@@ -4,4 +4,8 @@
 void panic(const char *explanation) {
   print("PANIC! ");
   print(explanation);
+
+  while (true) {
+    asm volatile("cli\nhlt");
+  }
 }
