@@ -13,14 +13,14 @@ namespace p2 {
   public:
     string() {
       assert(N > 0);
-      storage[0] = '\0';
+      _storage[0] = '\0';
     }
 
     string<N> &append(char c) {
-      assert(position < N - 1 && "reached end of fixed memory area");
+      assert(_position < N - 1 && "reached end of fixed memory area");
 
-      storage[position++] = c;
-      storage[position + 1] = '\0';
+      _storage[_position++] = c;
+      _storage[_position + 1] = '\0';
 
       return *this;
     }
@@ -34,7 +34,7 @@ namespace p2 {
     }
 
     string<N> &append(uint64_t value, int width = -1, int radix = 10, char padding = ' ') {
-      char *start_pos = &storage[position];
+      char *start_pos = &_storage[_position];
 
       if (width == -1) {
         // Calculate number of digits
@@ -51,7 +51,7 @@ namespace p2 {
         append(padding);
       }
 
-      char *pos = &storage[position - 1];
+      char *pos = &_storage[_position - 1];
       while (pos >= start_pos) {
         int digit = value % radix;
         value /= radix;
@@ -66,12 +66,12 @@ namespace p2 {
     }
 
     const char *str() const {
-      return storage;
+      return _storage;
     }
 
   private:
-    char storage[N];
-    int position = 0;
+    char _storage[N];
+    int _position = 0;
   };
 }
 

@@ -1,6 +1,7 @@
 #include "screen.h"
 #include "x86.h"
 #include "support/string.h"
+#include "support/format.h"
 #include "protected_mode.h"
 #include "multiboot.h"
 #include "panic.h"
@@ -11,8 +12,7 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   clear_screen();
 
   if (multiboot_magic != MULTIBOOT_MAGIC) {
-    panic(p2::string<32>()
-          .append("Incorrect mb magic: ").append(multiboot_magic, 8, 16).append("\n").str());
+    panic((p2::format<32>("Incorrect mb magic: %x") % multiboot_magic).str());
   }
 
   if (!(multiboot_hdr->flags & MULTIBOOT_INFO_MEM_MAP)) {
@@ -29,13 +29,11 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   while (mmap_ptr < mmap_ptr_end) {
     const multiboot_mmap_entry *const mmap_entry = reinterpret_cast<const multiboot_mmap_entry *>(mmap_ptr);
 
-    puts(p2::string<128>()
-         .append(mmap_entry->addr                  , 16, 16, '0')
-         .append("-")
-         .append(mmap_entry->addr + mmap_entry->len, 16, 16, '0')
-         .append(" ")
-         .append(multiboot_memory_type(mmap_entry->type))
-         .append(" (").append(mmap_entry->len, -1, 10).append(" bytes)"));
+    puts(p2::format<128>("%lx-%lx %s (%d bytes)")
+         % mmap_entry->addr
+         % (mmap_entry->addr + mmap_entry->len)
+         % multiboot_memory_type(mmap_entry->type)
+         % mmap_entry->len);
 
     if (mmap_entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
       memory_available += mmap_entry->len;
@@ -44,10 +42,7 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
     mmap_ptr += mmap_entry->size + sizeof(mmap_entry->size);
   }
 
-  puts(p2::string<32>()
-       .append("Total avail mem: ")
-       .append(memory_available / 1024 / 1024)
-       .append(" MB"));
+  puts(p2::format<32>("Total avail mem: %d MB") % (memory_available / 1024 / 1024));
 
   puts("Entering protected mode...");
   enter_protected_mode();
