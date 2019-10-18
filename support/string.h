@@ -9,14 +9,14 @@ namespace p2 {
   char digit_as_char(int digit, int radix);
 
   template<int N>
-  class fixed_string {
+  class string {
   public:
-    fixed_string() {
+    string() {
       assert(N > 0);
       storage[0] = '\0';
     }
 
-    fixed_string<N> &append(char c) {
+    string<N> &append(char c) {
       assert(position < N - 1 && "reached end of fixed memory area");
 
       storage[position++] = c;
@@ -25,7 +25,7 @@ namespace p2 {
       return *this;
     }
 
-    fixed_string<N> &append(const char *str) {
+    string<N> &append(const char *str) {
       while (*str) {
         append(*str++);
       }
@@ -33,7 +33,7 @@ namespace p2 {
       return *this;
     }
 
-    fixed_string<N> &append(uint64_t value, int width = -1, int radix = 10, char padding = ' ') {
+    string<N> &append(uint64_t value, int width = -1, int radix = 10, char padding = ' ') {
       char *start_pos = &storage[position];
 
       if (width == -1) {

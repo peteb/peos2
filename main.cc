@@ -11,7 +11,7 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   clear_screen();
 
   if (multiboot_magic != MULTIBOOT_MAGIC) {
-    panic(p2::fixed_string<32>()
+    panic(p2::string<32>()
           .append("Incorrect mb magic: ").append(multiboot_magic, 8, 16).append("\n").str());
   }
 
@@ -29,7 +29,7 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   while (mmap_ptr < mmap_ptr_end) {
     const multiboot_mmap_entry *const mmap_entry = reinterpret_cast<const multiboot_mmap_entry *>(mmap_ptr);
 
-    puts(p2::fixed_string<128>()
+    puts(p2::string<128>()
          .append(mmap_entry->addr                  , 16, 16, '0')
          .append("-")
          .append(mmap_entry->addr + mmap_entry->len, 16, 16, '0')
@@ -44,7 +44,7 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
     mmap_ptr += mmap_entry->size + sizeof(mmap_entry->size);
   }
 
-  puts(p2::fixed_string<32>()
+  puts(p2::string<32>()
        .append("Total avail mem: ")
        .append(memory_available / 1024 / 1024)
        .append(" MB"));
@@ -58,20 +58,8 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   uint32_t esp = 0;
   asm volatile("mov %0, esp" : "=m" (esp) :);
 
-  puts(p2::fixed_string<64>()
+  puts(p2::string<64>()
        .append("ESP =").append(esp, 8, 16, '0').append("\n")
        .append("main=").append((uint64_t)&main, 8, 16, '0').append("\n")
        .append("end =").append((uint64_t)&kernel_end, 8, 16, '0'));
-
-
-  volatile char *ptr_end = (char *)0x7FE0000;
-  volatile char *ptr = (char *)&kernel_end;
-
-  uint64_t bytes = 0;
-
-  for (; ptr != ptr_end; ++ptr) {
-    print(p2::fixed_string<32>().append(*ptr));
-  }
-
-  puts(p2::fixed_string<32>().append(bytes));
 }
