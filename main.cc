@@ -2,11 +2,52 @@
 #include "x86.h"
 #include "support/string.h"
 #include "protected_mode.h"
+#include "multiboot.h"
 
-extern "C" void main() {
+extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   clear_screen();
-  puts("Entering protected mode...\n");
 
+  if (multiboot_magic != MULTIBOOT_MAGIC) {
+    panic(p2::fixed_string<32>()
+          .append("Incorrect mb magic: ").append(multiboot_magic, 8, 16).append("\n").str());
+  }
+
+  if (!(multiboot_hdr->flags & MULTIBOOT_INFO_MEM_MAP)) {
+    panic("Expecting a memory map in the multiboot header");
+  }
+
+  // The bootloader supplies us with a memory map according to the Multiboot standard
+  const char *mmap_ptr = reinterpret_cast<char *>(multiboot_hdr->mmap_addr);
+  const char *const mmap_ptr_end = reinterpret_cast<char *>(multiboot_hdr->mmap_addr + multiboot_hdr->mmap_length);
+
+  puts("Memory map:\n");
+  uint64_t memory_available = 0;
+
+  while (mmap_ptr < mmap_ptr_end) {
+    const multiboot_mmap_entry *const mmap_entry = reinterpret_cast<const multiboot_mmap_entry *>(mmap_ptr);
+
+    puts(p2::fixed_string<128>()
+         .append(mmap_entry->addr                  , 16, 16, '0')
+         .append("-")
+         .append(mmap_entry->addr + mmap_entry->len, 16, 16, '0')
+         .append(" ")
+         .append(multiboot_memory_type(mmap_entry->type))
+         .append(" (").append(mmap_entry->len, -1, 10).append(" bytes)")
+         .append("\n").str());
+
+    if (mmap_entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
+      memory_available += mmap_entry->len;
+    }
+
+    mmap_ptr += mmap_entry->size + sizeof(mmap_entry->size);
+  }
+
+  puts(p2::fixed_string<32>()
+       .append("Total avail mem: ")
+       .append(memory_available / 1024 / 1024)
+       .append(" MB\n").str());
+
+  puts("Entering protected mode...\n");
   enter_protected_mode();
 
   // TODO: setup a new stack?

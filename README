@@ -13,6 +13,9 @@ SVGA, etc. especially when the BIOS isn't used. Plus, I've already
 played around a lot with graphics -- better to focus on networking
 which has far better documentation.
 
+Note: if I want to do graphics, I should probably use the multiboot
+video feature. It's incredibly handy, if it works.
+
 Try to make things as simple as possible when taking into account
 current requirements -- not what might be needed in the future. Ie,
 don't abstract out x86 until multi-platform is needed.

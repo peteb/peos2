@@ -33,12 +33,12 @@ namespace p2 {
       return *this;
     }
 
-    fixed_string<N> &append(unsigned value, int width = -1, int radix = 10, char padding = ' ') {
+    fixed_string<N> &append(uint64_t value, int width = -1, int radix = 10, char padding = ' ') {
       char *start_pos = &storage[position];
 
       if (width == -1) {
         // Calculate number of digits
-        unsigned value_left = value / radix;
+        uint64_t value_left = value / radix;
         width = 1;
 
         while (value_left) {

@@ -25,9 +25,12 @@ stack_top:
 .type _start, @function
 _start:
         mov $stack_top, %esp
-        call _init  // Ctors etc
+        push %ebx   // save multiboot header, argument to main
+        push %eax   // multiboot magic
+
+        call _init  // ctors
         call main
-        call _fini  // Dtors etc
+        call _fini  // dtors
 
         cli
 1:	hlt
