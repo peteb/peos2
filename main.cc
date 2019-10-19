@@ -51,10 +51,16 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   puts("Updated GDT");
 
   uint32_t esp = 0;
-  asm volatile("mov %0, esp" : "=m" (esp) :);
+  uint16_t ss = 0;
+  asm("mov %0, esp" : "=m" (esp) :);
+  asm("mov %0, ss" : "=m"(ss) :);
 
   puts(p2::string<64>()
        .append("ESP =").append(esp, 8, 16, '0').append("\n")
+       .append("SS  =").append(ss, 8, 16, '0').append("\n")
        .append("main=").append((uint64_t)&main, 8, 16, '0').append("\n")
        .append("end =").append((uint64_t)&kernel_end, 8, 16, '0'));
+
+  setup_interrupts();
+  asm volatile("int 3");  // Test INT3
 }

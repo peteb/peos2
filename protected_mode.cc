@@ -24,16 +24,16 @@ void setup_gdt() {
     {0x0, 0x000FFFFF, GDT_FLAGS_G|GDT_FLAGS_DB, GDT_TYPE_DATA|GDT_TYPE_P|GDT_TYPE_W}
   };
 
-  static const gdtr gdt = {sizeof(descriptors), reinterpret_cast<uint32_t>(descriptors)};
+  static const gdtr gdt = {sizeof(descriptors) - 1, reinterpret_cast<uint32_t>(descriptors)};
   assert(sizeof(&descriptors[0]) == sizeof(gdt.base));
 
   // TODO: make the switch work when coming from real mode -- the code
   // now expects flat addressing already setup by QEMU multiboot
 
-  asm volatile("lgdt [%0]\n"                   // Change GDTR
-               "jmp 0x08:update_data_segs\n"   // Far jump, this will read the GDTR and drain pipeline
+  asm volatile("lgdt [%0]\n"                 // Change GDTR
+               "jmp %1:update_data_segs\n"   // Far jump, this will read the GDTR and drain pipeline
                "update_data_segs:\n"
-               "mov ax, 0x10\n"                // Update all data segments to point to GDT[2]
+               "mov ax, %2\n"                // Update all data segments to point to GDT[2]
                "mov ds, ax\n"
                "mov es, ax\n"
                "mov fs, ax\n"
@@ -42,12 +42,21 @@ void setup_gdt() {
                "mov eax, cr0\n"
                "or eax, 1\n"
                "mov cr0, eax\n"                // Set protected mode bit
-               : : "m" (gdt));
+               :
+               :
+               "m" (gdt),
+               "i" (KERNEL_CODE_SEL),
+               "i" (KERNEL_DATA_SEL)
+               :
+               "eax");
 }
 
 
 bool a20_enabled() {
-  if (cr0() & CR0_PE) {
+  uint32_t cr0 = 0;
+  asm("mov %0, cr0" : "=r"(cr0));
+
+  if (cr0 & CR0_PE) {
     // Protected mode is enabled, so check whether the addresses below are aliases
     unsigned volatile *ptr1 = reinterpret_cast<unsigned *>(0x112345);
     unsigned volatile *ptr2 = reinterpret_cast<unsigned *>(0x012345);

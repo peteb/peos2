@@ -32,6 +32,11 @@
 #define GDT_FLAGS_DB         0x04  // 0 = 16-bit segment, 1 = 32-bit
 #define GDT_FLAGS_G          0x08  // Granularity. 1 = limit is increments of 4k
 
+#define IDT_TYPE_D           0x08  // Size of gate; 1 = 32 bits, 0 = 16 bits
+#define IDT_TYPE_INTERRUPT   0x06  // Interrupt gate
+#define IDT_TYPE_DPL3        0x60  // Descriptor privilege level
+#define IDT_TYPE_P           0x80  // Segment Present
+
 struct gdt_descriptor {
   gdt_descriptor(uint32_t base, uint32_t limit, uint8_t flags, uint8_t type);
 
@@ -42,32 +47,39 @@ struct gdt_descriptor {
   uint8_t  limit_16_19:4;
   uint8_t  flags:4;          // G, D/B, L, AVL
   uint8_t  base_24_31;
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 struct gdtr {
   uint16_t limit;
   uint32_t base;
-} __attribute__ ((packed));
+} __attribute__((packed));
+
+struct idt_descriptor {
+  idt_descriptor(uint32_t offset, uint16_t segment, uint8_t type);
+  idt_descriptor() = default;
+
+  uint16_t offset_0_15;
+  uint16_t segment_selector;
+  uint8_t  zero;
+  uint8_t  type;             // P, DPL, D, Type
+  uint16_t offset_16_31;
+} __attribute__((packed));
 
 inline void outb(uint16_t port, uint8_t value) {
   // dN = 8 bits are passed as immediate, while larger values are set in dx
-  asm volatile ("out %0, %1" : : "dN" (port), "a" (value));
+  asm volatile("out %0, %1" : : "dN" (port), "a" (value));
 }
 
 inline void outw(uint16_t port, uint16_t value) {
-  asm volatile ("out %0, %1" : : "dN" (port), "ax" (value));
+  asm volatile("out %0, %1" : : "dN" (port), "ax" (value));
 }
 
 inline uint8_t inb(uint16_t port) {
   uint8_t ret;
-  asm volatile ("in %0, %1" : "=a" (ret) : "dN" (port));
+  asm volatile("in %0, %1" : "=a" (ret) : "dN" (port));
   return ret;
 }
 
-inline uint32_t cr0() {
-  uint32_t ret;
-  asm volatile ("mov %0, cr0" : "=r" (ret) :);
-  return ret;
-}
+void setup_interrupts();
 
 #endif // !PEOS2_X86_H

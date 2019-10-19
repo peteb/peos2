@@ -2,7 +2,7 @@ CC=i686-elf-gcc
 CXX=i686-elf-g++
 AS=i686-elf-as
 CFLAGS=-std=gnu99 -masm=intel -O2 -Wall -Wextra -fno-threadsafe-statics -DNDEBUG
-CXXFLAGS=-std=c++17 -masm=intel -O2 -Wall -Wextra -fno-exceptions -fno-rtti -fno-threadsafe-statics -I. -DNDEBUG
+CXXFLAGS=-std=c++17 -masm=intel -O2 -Wall -Wextra -fno-exceptions -fno-rtti -fno-threadsafe-statics -mno-red-zone -mgeneral-regs-only -I. -DNDEBUG
 
 all : vmpeoz
 
