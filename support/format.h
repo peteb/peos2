@@ -6,10 +6,12 @@
 #include "panic.h"
 
 namespace p2 {
-  template<int N>
+  template<int _MaxLen>
   class format {
   public:
     format(const char *fmt) : _fmt_pos(fmt) {}
+    format(char (&data)[_MaxLen], const char *fmt) : _storage(data), _fmt_pos(fmt) {}
+    format(char *(&data), const char *fmt) : _storage(data), _fmt_pos(fmt) {}
 
     format &operator %(const char *str) {
       expect_string();
@@ -82,10 +84,27 @@ namespace p2 {
       __builtin_unreachable();
     }
 
-    p2::string<N> _storage;
+    p2::string<_MaxLen> _storage;
     const char *_fmt_pos;
   };
 
+  inline void _test_format() {
+    // TODO: get rid of this function when we have usage of all cases
+    {
+      format<123> f("Hello %s");
+    }
+
+    {
+      char buf[100];
+      format hej(buf, "hello %s");
+    }
+
+    {
+      char buf[100];
+      char *ptr = buf;
+      format<100> hej(ptr, "hello %s");
+    }
+  }
 }
 
 #endif // !PEOS2_FORMAT_H
