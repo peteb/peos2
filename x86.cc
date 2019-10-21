@@ -4,18 +4,9 @@
 #include "support/format.h"
 #include "protected_mode.h"
 
-struct int_frame_same_dpl {
-  uint32_t eip;
-  uint32_t cs;
-  uint32_t eflags;
-};
-
 static idt_descriptor idt_descriptors[256] alignas(8);
 
-template<typename T>
-static void register_interrupt(int num, T func, uint16_t segment_selector, uint8_t type) {
-  idt_descriptors[num] = {reinterpret_cast<uint32_t>(func), segment_selector, type};
-}
+static void pic_remap(uint8_t master_offset, uint8_t slave_offset);
 
 gdt_descriptor::gdt_descriptor(uint32_t base,
                                uint32_t limit,
@@ -41,7 +32,7 @@ idt_descriptor::idt_descriptor(uint32_t offset, uint16_t segment, uint8_t type) 
   this->type = type;
 }
 
-__attribute__((interrupt)) void interrupt_debug(struct int_frame_same_dpl *frame) {
+__attribute__((interrupt)) void interrupt_debug(int_frame_same_cpl *frame) {
   // Note: we're not using pushad/popad to avoid leaking registers; we
   // leave everything up to gcc to sort out. Ie, definitely use
   // clobbers in inline asm!! This is probably an untenable situation,
@@ -57,4 +48,68 @@ void setup_interrupts() {
   static const gdtr idt_ptr = {sizeof(idt_descriptors) - 1, reinterpret_cast<uint32_t>(idt_descriptors)};
   asm volatile("lidt [%0]" : : "m"(idt_ptr));
   register_interrupt(3, interrupt_debug, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+}
+
+void register_interrupt(int num, void (*handler)(int_frame_same_cpl *), uint16_t segment_selector, uint8_t type) {
+  idt_descriptors[num] = {reinterpret_cast<uint32_t>(handler), segment_selector, type};
+}
+
+void init_pic() {
+  pic_remap(IRQ_BASE_INTERRUPT, IRQ_BASE_INTERRUPT + 8);
+
+  // Mask all IRQs
+  outb_wait(PIC_MASTER_DATA, 0xFF);
+  outb_wait(PIC_SLAVE_DATA, 0xFF);
+
+  irq_enable(IRQ_CASCADE);
+}
+
+void pic_remap(uint8_t master_offset, uint8_t slave_offset) {
+  // First initialize PIC #1
+  outb_wait(PIC_MASTER_CMD, PIC_CMD_INIT);
+  outb_wait(PIC_MASTER_DATA, master_offset);  // ICW 2
+  outb_wait(PIC_MASTER_DATA, 0x4);            // ICW 3: there's a slave PIC at IRQ2
+  outb_wait(PIC_MASTER_DATA, 0x01);           // ICW 4: 80x86 mode
+
+  // Then initialize PIC #2
+  outb_wait(PIC_SLAVE_CMD, PIC_CMD_INIT);
+  outb_wait(PIC_SLAVE_DATA, slave_offset);    // ICW 2
+  outb_wait(PIC_SLAVE_DATA, 0x2);             // ICW 3
+  outb_wait(PIC_SLAVE_DATA, 0x01);            // ICW 4: 80x86 mode
+}
+
+void irq_disable(uint8_t irq_line) {
+  uint16_t port;
+
+  if (irq_line < 8) {
+    port = PIC_MASTER_DATA;
+  }
+  else {
+    port = PIC_SLAVE_DATA;
+    irq_line -= 8;
+  }
+
+  outb_wait(port, inb(port) | (1 << irq_line));
+}
+
+void irq_enable(uint8_t irq_line) {
+  uint16_t port;
+
+  if (irq_line < 8) {
+    port = PIC_MASTER_DATA;
+  }
+  else {
+    port = PIC_SLAVE_DATA;
+    irq_line -= 8;
+  }
+
+  outb_wait(port, inb(port) & ~(1 << irq_line));
+}
+
+void irq_eoi(uint8_t irq_line) {
+  if (irq_line >= 8) {
+    outb(PIC_SLAVE_CMD, 0x20);
+  }
+
+  outb(PIC_MASTER_CMD, 0x20);
 }

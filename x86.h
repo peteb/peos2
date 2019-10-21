@@ -37,6 +37,19 @@
 #define IDT_TYPE_DPL3        0x60  // Descriptor privilege level
 #define IDT_TYPE_P           0x80  // Segment Present
 
+#define PIC_MASTER_CMD     0x20
+#define PIC_MASTER_DATA    0x21
+#define PIC_SLAVE_CMD      0xA0
+#define PIC_SLAVE_DATA     0xA1
+
+#define PIC_CMD_INIT       0x11  // init + IC4
+
+#define IRQ_SYSTEM_TIMER   0
+#define IRQ_KEYBOARD       1
+#define IRQ_CASCADE        2
+
+#define IRQ_BASE_INTERRUPT 0x20
+
 struct gdt_descriptor {
   gdt_descriptor(uint32_t base, uint32_t limit, uint8_t flags, uint8_t type);
 
@@ -65,9 +78,26 @@ struct idt_descriptor {
   uint16_t offset_16_31;
 } __attribute__((packed));
 
+// Interrupt invoked without CPL decrease
+struct int_frame_same_cpl {
+  uint32_t eip;
+  uint32_t cs;
+  uint32_t eflags;
+};
+
 inline void outb(uint16_t port, uint8_t value) {
+  // dN = 8 bits are pased as immediate, while larger values are set in dx
+  asm volatile("out %0, %1" : : "dN" (port), "a" (value));
+}
+
+inline void io_wait() {
+  asm volatile("outb 0x80, al" : : "a"(0));
+}
+
+inline void outb_wait(uint16_t port, uint8_t value) {
   // dN = 8 bits are passed as immediate, while larger values are set in dx
   asm volatile("out %0, %1" : : "dN" (port), "a" (value));
+  io_wait();
 }
 
 inline void outw(uint16_t port, uint16_t value) {
@@ -81,5 +111,10 @@ inline uint8_t inb(uint16_t port) {
 }
 
 void setup_interrupts();
+void register_interrupt(int num, void (*handler)(int_frame_same_cpl *), uint16_t segment_selector, uint8_t type);
+void init_pic();
+void irq_enable(uint8_t irq_line);
+void irq_disable(uint8_t irq_line);
+void irq_eoi(uint8_t irq_line);
 
 #endif // !PEOS2_X86_H

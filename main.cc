@@ -5,6 +5,7 @@
 #include "protected_mode.h"
 #include "multiboot.h"
 #include "panic.h"
+#include "keyboard.h"
 
 extern int kernel_end;
 
@@ -46,9 +47,7 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
 
   puts("Entering protected mode...");
   enter_protected_mode();
-
   // TODO: setup a new stack?
-  puts("Updated GDT");
 
   uint32_t esp = 0;
   uint16_t ss = 0;
@@ -62,5 +61,10 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
        .append("end =").append((uint64_t)&kernel_end, 8, 16, '0'));
 
   setup_interrupts();
-  asm volatile("int 3");  // Test INT3
+  asm volatile("int 3");  // Test debug int
+
+  init_pic();
+  init_keyboard();
+
+  asm volatile("sti");
 }

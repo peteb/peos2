@@ -32,6 +32,5 @@ _start:
         call main
         call _fini  // dtors
 
-        cli
 1:	hlt
         jmp 1b

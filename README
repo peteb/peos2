@@ -20,6 +20,10 @@ Try to make things as simple as possible when taking into account
 current requirements -- not what might be needed in the future. Ie,
 don't abstract out x86 until multi-platform is needed.
 
+DON'T overthink naming. Ie, don't waste time thinking about "init" vs
+"setup", verb-noun vs noun-verb, etc. It doesn't have to be
+consistent.
+
 Build and run
 -------------
 * Build the cross-compiler docker image in build/compiler
@@ -29,3 +33,4 @@ Build and run
 Notes
 -----
 * Kernel isn't started when constructors are run
+* IRQs are mapped to start at 0x20 (IRQ_BASE_INTERRUPT)
