@@ -43,11 +43,16 @@ __attribute__((interrupt)) void interrupt_debug(int_frame_same_cpl *frame) {
        % frame->eflags);
 }
 
+__attribute__((interrupt)) void interrupt_gpf(int_frame_same_cpl *frame) {
+  (void)frame;
+  panic("General protection fault");
+}
 
 void setup_interrupts() {
   static const gdtr idt_ptr = {sizeof(idt_descriptors) - 1, reinterpret_cast<uint32_t>(idt_descriptors)};
   asm volatile("lidt [%0]" : : "m"(idt_ptr));
-  register_interrupt(3, interrupt_debug, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+  register_interrupt(0x3, interrupt_debug, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+  register_interrupt(0xD, interrupt_gpf, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 }
 
 void register_interrupt(int num, void (*handler)(int_frame_same_cpl *), uint16_t segment_selector, uint8_t type) {

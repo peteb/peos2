@@ -17,6 +17,7 @@
 .align 16
 stack_bottom:
 .skip 0x40000
+.global stack_top
 stack_top:
 
 // Entry point
@@ -34,3 +35,25 @@ _start:
 
 1:	hlt
         jmp 1b
+
+
+.global enter_ring3
+.type enter_ring3, @function
+enter_ring3:
+        mov 4(%esp), %ax
+        mov %ax, %ds
+        mov %ax, %es
+        mov %ax, %fs
+        mov %ax, %gs
+        mov %esp, %eax
+        mov 8(%esp), %ebx
+
+        push %ds
+        push %eax
+        pushf
+        push %ebx
+        push $in_ring3
+        iret
+
+in_ring3:
+        ret

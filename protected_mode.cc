@@ -2,6 +2,8 @@
 #include "x86.h"
 #include "assert.h"
 
+static tss_entry tss;
+
 static bool a20_enabled();
 static void enable_a20();
 static void setup_gdt();
@@ -21,7 +23,11 @@ void setup_gdt() {
   static const gdt_descriptor descriptors[] alignas(16) = {
     {0x0, 0x0, 0x0, 0x0},
     {0x0, 0x000FFFFF, GDT_FLAGS_G|GDT_FLAGS_DB, GDT_TYPE_CODE|GDT_TYPE_P|GDT_TYPE_R},
-    {0x0, 0x000FFFFF, GDT_FLAGS_G|GDT_FLAGS_DB, GDT_TYPE_DATA|GDT_TYPE_P|GDT_TYPE_W}
+    {0x0, 0x000FFFFF, GDT_FLAGS_G|GDT_FLAGS_DB, GDT_TYPE_DATA|GDT_TYPE_P|GDT_TYPE_W},
+    {0x0, 0x000FFFFF, GDT_FLAGS_G|GDT_FLAGS_DB, GDT_TYPE_CODE|GDT_TYPE_P|GDT_TYPE_DPL3|GDT_TYPE_R},
+    {0x0, 0x000FFFFF, GDT_FLAGS_G|GDT_FLAGS_DB, GDT_TYPE_DATA|GDT_TYPE_P|GDT_TYPE_DPL3|GDT_TYPE_W},
+
+    {(uint32_t)&tss, sizeof(tss), 0, GDT_TYPE_32TSS_A|GDT_TYPE_DPL3|GDT_TYPE_P}
   };
 
   static const gdtr gdt = {sizeof(descriptors) - 1, reinterpret_cast<uint32_t>(descriptors)};
@@ -30,6 +36,7 @@ void setup_gdt() {
   // TODO: make the switch work when coming from real mode -- the code
   // now expects flat addressing already setup by QEMU multiboot
 
+  // TODO: extract into .s file
   asm volatile("lgdt [%0]\n"                 // Change GDTR
                "jmp %1:update_data_segs\n"   // Far jump, this will read the GDTR and drain pipeline
                "update_data_segs:\n"
@@ -49,8 +56,16 @@ void setup_gdt() {
                "i" (KERNEL_DATA_SEL)
                :
                "eax");
+
+  asm volatile("mov ax, %0\nltr ax" : : "i" (TSS_SEL));
+  tss.ss0 = KERNEL_DATA_SEL;
+  tss.cs = GDT_SEGSEL(3, 1);
+  tss.ss = tss.ds = tss.es = tss.fs = tss.gs = GDT_SEGSEL(3, 2);
 }
 
+void tss_set_kernel_stack(uint32_t esp) {
+  tss.esp0 = esp;
+}
 
 bool a20_enabled() {
   uint32_t cr0 = 0;

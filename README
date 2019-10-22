@@ -34,3 +34,52 @@ Notes
 -----
 * Kernel isn't started when constructors are run
 * IRQs are mapped to start at 0x20 (IRQ_BASE_INTERRUPT)
+
+Plan
+----
+* DONE Basics (compiler, etc)
+* DONE GDT
+* DONE IRQs, INTs, keyboard
+* DONE Ring 3 execution
+* Syscalls different CPL (Ring 3)
+* Simple VFS for device drivers (Syscalls)
+* Single screen terminal controllable from program through /dev/termN (VFS)
+* Multitasking
+* Protected memory through paging + high mem kernel
+* Update syscalls to work with paging
+* Multi screen terminal (Terminal)
+* User permissions in VFS
+* Ramdisk
+* Some way to get a basic FS up with files (user programs, text)
+* FS
+* Disk support
+* QEMU NIC support
+* Basic Ethernet
+* SMP
+
+Terminal emulation
+------------------
+At boot, a number of terminals are spawned and mapped to the F1-F12 keys.
+
+Each terminal is controlled using a /dev/termN special file.
+
+Each terminal gets a buffer.
+
+/dev/termN is a stream of bytes "controlling" the terminal. Ie, bytes
+should be seen as commands for the terminal to execute.
+
+Special commands to the terminal (such as "move to x, y", "change
+color", etc) use escape sequences similar to ANSI.
+
+Special keys from the terminal (such as "left arrow") also use escape
+sequences; no extra syscalls are needed to get the special keys.
+
+keyboard.h -> terminal.h -> {user application -> terminal.h ->} screen.h
+
+Why is keyboard.h separate from terminal.h? Because we might want to
+report keycodes from other sources: USB, for example.
+
+Why is screen.h separate from terminal.h? To abstract VGA-specific
+code.
+
+Start by implementing canonical mode, in terminal.cc.

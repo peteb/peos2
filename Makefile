@@ -27,4 +27,4 @@ clean :
 	$(CXX) -c $< -o $@ -ffreestanding $(CXXFLAGS)
 
 vmpeoz : $(OBJECTS) linker.ld
-	$(CC) -T linker.ld -o vmpeoz -ffreestanding -O2 -nostdlib $(OBJECTS) -lgcc
+	$(CC) -T linker.ld -o vmpeoz -ffreestanding -O3 -nostdlib $(OBJECTS) -lgcc

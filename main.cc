@@ -8,6 +8,7 @@
 #include "keyboard.h"
 
 extern int kernel_end;
+extern char *stack_top;
 
 extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   clear_screen();
@@ -65,6 +66,10 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
 
   init_pic();
   init_keyboard();
-
   asm volatile("sti");
+
+  enter_ring3(USER_DATA_SEL, USER_CODE_SEL);
+  tss_set_kernel_stack((uint32_t)stack_top);  // Used during CPL 3 -> 0 ints
+
+  while (true) {}
 }
