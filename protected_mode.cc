@@ -8,6 +8,8 @@ static bool a20_enabled();
 static void enable_a20();
 static void setup_gdt();
 
+extern "C" void load_gdt(const gdtr *gdt, uint32_t data_segsel);
+
 void enter_protected_mode() {
   outb(0x70, inb(0x70) | 0x80);  // Disable NMIs
   asm volatile("cli");
@@ -35,27 +37,7 @@ void setup_gdt() {
 
   // TODO: make the switch work when coming from real mode -- the code
   // now expects flat addressing already setup by QEMU multiboot
-
-  // TODO: extract into .s file
-  asm volatile("lgdt [%0]\n"                 // Change GDTR
-               "jmp %1:update_data_segs\n"   // Far jump, this will read the GDTR and drain pipeline
-               "update_data_segs:\n"
-               "mov ax, %2\n"                // Update all data segments to point to GDT[2]
-               "mov ds, ax\n"
-               "mov es, ax\n"
-               "mov fs, ax\n"
-               "mov gs, ax\n"
-               "mov ss, ax\n"
-               "mov eax, cr0\n"
-               "or eax, 1\n"
-               "mov cr0, eax\n"                // Set protected mode bit
-               :
-               :
-               "m" (gdt),
-               "i" (KERNEL_CODE_SEL),
-               "i" (KERNEL_DATA_SEL)
-               :
-               "eax");
+  load_gdt(&gdt, KERNEL_DATA_SEL);  // NOTE! It'll do a far jump to 0x08:*
 
   asm volatile("mov ax, %0\nltr ax" : : "i" (TSS_SEL));
   tss.ss0 = KERNEL_DATA_SEL;

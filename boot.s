@@ -57,3 +57,24 @@ enter_ring3:
 
 in_ring3:
         ret
+
+
+.global load_gdt
+.type load_gdt, @function
+load_gdt:
+        mov 4(%esp), %eax        // GDT base + limit
+        mov 8(%esp), %ecx        // Data segment selector
+
+        lgdt (%eax)
+        jmp $0x08, $update_data_segs
+
+update_data_segs:
+        mov %cx, %ds
+        mov %cx, %es
+        mov %cx, %fs
+        mov %cx, %gs
+        mov %cx, %ss
+        mov %cr0, %eax
+        or $1, %eax
+        mov %eax, %cr0
+        ret

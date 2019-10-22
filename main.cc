@@ -48,7 +48,6 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
 
   puts("Entering protected mode...");
   enter_protected_mode();
-  // TODO: setup a new stack?
 
   uint32_t esp = 0;
   uint16_t ss = 0;
@@ -71,5 +70,7 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   enter_ring3(USER_DATA_SEL, USER_CODE_SEL);
   tss_set_kernel_stack((uint32_t)stack_top);  // Used during CPL 3 -> 0 ints
 
+  // We can't use hlt anymore as we're in ring 3, but this place won't
+  // be reached when we're multitasking
   while (true) {}
 }
