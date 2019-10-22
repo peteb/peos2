@@ -13,6 +13,6 @@
 
 void enter_protected_mode();
 void tss_set_kernel_stack(uint32_t esp);
-extern "C" void enter_ring3(uint16_t data_selector, uint16_t code_selector);
+extern "C" void enter_user_mode(uint16_t data_selector, uint16_t code_selector);
 
 #endif // !PEOS2_PROTECTED_MODE_H

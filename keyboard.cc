@@ -101,9 +101,10 @@ static scancode_mapping scancode_set1_map[0xFF] =
 
 static bool shift_depressed = false, ctrl_depressed = false;
 
-__attribute__((interrupt)) void keyboard_interrupt(int_frame_same_cpl *) {
+extern "C" void int_kbd(isr_registers regs) {
   bool gray_keys = false;
   (void)gray_keys;
+  (void)regs;
 
   for (int i = 0; i < 4 && (inb(KBD_STATUS) & 0x01); ++i) {
     uint16_t scancode = inb(0x60);
@@ -167,7 +168,9 @@ __attribute__((interrupt)) void keyboard_interrupt(int_frame_same_cpl *) {
   irq_eoi(IRQ_KEYBOARD);
 }
 
-void init_keyboard() {
+extern "C" void isr_kbd(isr_registers);
+
+void kbd_init() {
   // TODO: verify that the PS/2 controller exists using ACPI
   outb_wait(KBD_CMD, 0xAA);
   if (inb(KBD_DATA) != 0x55) {
@@ -176,7 +179,7 @@ void init_keyboard() {
 
   // TODO: extend setup to make sure we're in a good state
   irq_enable(IRQ_KEYBOARD);
-  register_interrupt(0x20 + IRQ_KEYBOARD, keyboard_interrupt, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+  int_register(0x20 + IRQ_KEYBOARD, isr_kbd, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 
   puts("Initialized keyboard");
 }

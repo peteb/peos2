@@ -37,9 +37,9 @@ _start:
         jmp 1b
 
 
-.global enter_ring3
-.type enter_ring3, @function
-enter_ring3:
+.global enter_user_mode
+.type enter_user_mode, @function
+enter_user_mode:
         mov 4(%esp), %ax
         mov %ax, %ds
         mov %ax, %es
@@ -52,10 +52,10 @@ enter_ring3:
         push %eax
         pushf
         push %ebx
-        push $in_ring3
+        push $.in_ring3
         iret
 
-in_ring3:
+.in_ring3:
         ret
 
 
@@ -66,9 +66,9 @@ load_gdt:
         mov 8(%esp), %ecx        // Data segment selector
 
         lgdt (%eax)
-        jmp $0x08, $update_data_segs
+        jmp $0x08, $.update_data_segs
 
-update_data_segs:
+.update_data_segs:
         mov %cx, %ds
         mov %cx, %es
         mov %cx, %fs
@@ -78,3 +78,19 @@ update_data_segs:
         or $1, %eax
         mov %eax, %cr0
         ret
+
+
+.macro isr_routine name,handler
+.extern \handler
+.global \name
+\name:
+        pusha
+        call \handler
+        popa
+        iret
+.endm
+
+isr_routine   isr_debug, int_debug
+isr_routine     isr_gpf, int_gpf
+isr_routine isr_syscall, int_syscall
+isr_routine     isr_kbd, int_kbd

@@ -9,25 +9,26 @@ namespace p2 {
   template<int _MaxLen>
   class format {
   public:
-    format(const char *fmt) : _fmt_pos(fmt) {}
-    format(char (&data)[_MaxLen], const char *fmt) : _storage(data), _fmt_pos(fmt) {}
-    format(char *(&data), const char *fmt) : _storage(data), _fmt_pos(fmt) {}
+    format(const char *fmt) : _fmt_pos(fmt) {_storage_ptr = &_storage; }
+    format(char (&data)[_MaxLen], const char *fmt) : _storage(data), _fmt_pos(fmt) {_storage_ptr = &_storage; }
+    format(char *(&data), const char *fmt) : _storage(data), _fmt_pos(fmt) {_storage_ptr = &_storage; }
+    format(p2::string<_MaxLen> &other, const char *fmt) : _storage_ptr(&other),  _fmt_pos(fmt) {}
 
     format &operator %(const char *str) {
       expect_string();
-      _storage.append(str);
+      _storage_ptr->append(str);
       return *this;
     }
 
     format &operator %(uint64_t val) {
       number_traits traits = expect_number();
-      _storage.append(val, traits.width, traits.radix, '0');
+      _storage_ptr->append(val, traits.width, traits.radix, '0');
       return *this;
     }
 
     const char *str() {
       fmt_scan();  // to get any leftovers
-      return _storage.str();
+      return _storage_ptr->str();
     }
 
   private:
@@ -46,7 +47,7 @@ namespace p2 {
           }
         }
 
-        _storage.append(*_fmt_pos++);
+        _storage_ptr->append(*_fmt_pos++);
       }
     }
 
@@ -85,6 +86,7 @@ namespace p2 {
     }
 
     p2::string<_MaxLen> _storage;
+    p2::string<_MaxLen> *_storage_ptr;
     const char *_fmt_pos;
   };
 

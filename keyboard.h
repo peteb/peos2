@@ -23,6 +23,6 @@
 #define VK_UP       0x13FF
 #define VK_DOWN     0x14FF
 
-void init_keyboard();
+void kbd_init();
 
 #endif // !PEOS2_KEYBOARD_H

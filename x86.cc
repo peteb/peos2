@@ -32,34 +32,41 @@ idt_descriptor::idt_descriptor(uint32_t offset, uint16_t segment, uint8_t type) 
   this->type = type;
 }
 
-__attribute__((interrupt)) void interrupt_debug(int_frame_same_cpl *frame) {
-  // Note: we're not using pushad/popad to avoid leaking registers; we
-  // leave everything up to gcc to sort out. Ie, definitely use
-  // clobbers in inline asm!! This is probably an untenable situation,
-  // but the "interrupt" attribute is too nice to pass on...
-  puts(p2::format<128>("[debug trap] eip=%x, cs=%x, eflags=%x")
-       % frame->eip
-       % frame->cs
-       % frame->eflags);
+extern "C" void int_debug(isr_registers regs) {
+  puts("== DEBUG =============================");
+  p2::string<256> buf;
+  regs.to_string(buf);
+  puts(buf);
 }
 
-__attribute__((interrupt)) void interrupt_gpf(int_frame_same_cpl *frame) {
-  (void)frame;
+extern "C" void int_gpf(isr_registers regs) {
+  (void)regs;
   panic("General protection fault");
 }
 
-void setup_interrupts() {
-  static const gdtr idt_ptr = {sizeof(idt_descriptors) - 1, reinterpret_cast<uint32_t>(idt_descriptors)};
-  asm volatile("lidt [%0]" : : "m"(idt_ptr));
-  register_interrupt(0x3, interrupt_debug, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
-  register_interrupt(0xD, interrupt_gpf, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+extern "C" void int_syscall(isr_registers regs) {
+  p2::string<256> buf;
+  regs.to_string(buf);
+  puts(buf);
 }
 
-void register_interrupt(int num, void (*handler)(int_frame_same_cpl *), uint16_t segment_selector, uint8_t type) {
+extern "C" void isr_debug(isr_registers);
+extern "C" void isr_gpf(isr_registers);
+extern "C" void isr_syscall(isr_registers);
+
+void int_init() {
+  static const gdtr idt_ptr = {sizeof(idt_descriptors) - 1, reinterpret_cast<uint32_t>(idt_descriptors)};
+  asm volatile("lidt [%0]" : : "m"(idt_ptr));
+  int_register(0x03, isr_debug,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+  int_register(0x0D, isr_gpf,     KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+  int_register(0x90, isr_syscall, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+}
+
+void int_register(int num, void (*handler)(isr_registers), uint16_t segment_selector, uint8_t type) {
   idt_descriptors[num] = {reinterpret_cast<uint32_t>(handler), segment_selector, type};
 }
 
-void init_pic() {
+void pic_init() {
   pic_remap(IRQ_BASE_INTERRUPT, IRQ_BASE_INTERRUPT + 8);
 
   // Mask all IRQs
@@ -81,6 +88,18 @@ void pic_remap(uint8_t master_offset, uint8_t slave_offset) {
   outb_wait(PIC_SLAVE_DATA, slave_offset);    // ICW 2
   outb_wait(PIC_SLAVE_DATA, 0x2);             // ICW 3
   outb_wait(PIC_SLAVE_DATA, 0x01);            // ICW 4: 80x86 mode
+}
+
+void isr_registers::to_string(p2::string<256> &out) const {
+  (p2::format<256>(out,
+                   "edi: %x esi: %x ebp: %x esp: %x\n"
+                   "ebx: %x edx: %x ecx: %x eax: %x\n"
+                   "eip: %x  cs: %x efl: %x ues: %x\n"
+                   " ss: %x")
+   % edi % esi % ebp    % esp
+   % ebx % edx % ecx    % eax
+   % eip % cs  % eflags % user_esp
+   % ss).str();
 }
 
 void irq_disable(uint8_t irq_line) {

@@ -22,6 +22,10 @@ namespace p2 {
       _storage_ref[0] = '\0';
     }
 
+    string(const string<_MaxLen> &other) {
+
+    }
+
     // A nice helper for deducing _MaxLen from array length
     template<typename T>
     string(T (&data)[_MaxLen]) : _storage_ref(data) {

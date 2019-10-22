@@ -48,28 +48,23 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
 
   puts("Entering protected mode...");
   enter_protected_mode();
-
-  uint32_t esp = 0;
-  uint16_t ss = 0;
-  asm("mov %0, esp" : "=m" (esp) :);
-  asm("mov %0, ss" : "=m"(ss) :);
-
-  puts(p2::string<64>()
-       .append("ESP =").append(esp, 8, 16, '0').append("\n")
-       .append("SS  =").append(ss, 8, 16, '0').append("\n")
-       .append("main=").append((uint64_t)&main, 8, 16, '0').append("\n")
-       .append("end =").append((uint64_t)&kernel_end, 8, 16, '0'));
-
-  setup_interrupts();
+  int_init();
   asm volatile("int 3");  // Test debug int
 
-  init_pic();
-  init_keyboard();
+  pic_init();
+  kbd_init();
   asm volatile("sti");
 
-  enter_ring3(USER_DATA_SEL, USER_CODE_SEL);
+  enter_user_mode(USER_DATA_SEL, USER_CODE_SEL);
   tss_set_kernel_stack((uint32_t)stack_top);  // Used during CPL 3 -> 0 ints
 
+  asm volatile("mov ebx, 1\n"
+               "mov ecx, 2\n"
+               "mov edx, 3\n"
+               "mov esi, 4\n"
+               "mov edi, 5\n"
+               "mov ebp, 6\n"
+               "int 0x90");
   // We can't use hlt anymore as we're in ring 3, but this place won't
   // be reached when we're multitasking
   while (true) {}

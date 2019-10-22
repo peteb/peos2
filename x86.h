@@ -4,6 +4,7 @@
 #define PEOS2_X86_H
 
 #include <stdint.h>
+#include "support/string.h"
 
 #define CR0_PE 0x00000001
 #define CR0_MP 0x00000002
@@ -81,11 +82,11 @@ struct idt_descriptor {
   uint16_t offset_16_31;
 } __attribute__((packed));
 
-// Interrupt invoked without CPL decrease
-struct int_frame_same_cpl {
-  uint32_t eip;
-  uint32_t cs;
-  uint32_t eflags;
+struct isr_registers {
+  uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
+  uint32_t eip, cs, eflags, user_esp, ss;
+
+  void to_string(p2::string<256> &out) const;
 };
 
 struct tss_entry {
@@ -143,12 +144,11 @@ inline uint8_t inb(uint16_t port) {
   return ret;
 }
 
-void setup_interrupts();
-void register_interrupt(int num, void (*handler)(int_frame_same_cpl *), uint16_t segment_selector, uint8_t type);
-void init_pic();
+void int_init();
+void int_register(int num, void (*handler)(isr_registers), uint16_t segment_selector, uint8_t type);
+void pic_init();
 void irq_enable(uint8_t irq_line);
 void irq_disable(uint8_t irq_line);
 void irq_eoi(uint8_t irq_line);
-void enter_ring3(void *fun);
 
 #endif // !PEOS2_X86_H
