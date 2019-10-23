@@ -4,6 +4,7 @@
 #define PEOS2_SUPPORT_POOL_H
 
 #include <stdint.h>
+#include "assert.h"
 
 namespace p2 {
   // Allocation time: O(1)
@@ -36,10 +37,11 @@ namespace p2 {
     }
 
     void erase(uint16_t idx) {
+      assert(_watermark > 0);
+      assert(idx < _watermark);
+
       // If it's the final item we can just simplify things and
       // decrease the watermark
-      assert(_watermark > 0);
-
       if (idx == _watermark - 1) {
         --_watermark;
         --_count;

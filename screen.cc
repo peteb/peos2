@@ -18,7 +18,7 @@ static void show_cursor();
 static void hide_cursor();
 
 static inline uint16_t entry(uint8_t bg_color, uint8_t fg_color, char letter) {
-  return ((bg_color & 0xF) << 4 | (fg_color & 0xF)) << 8 | letter;
+  return ((bg_color & 0xF) << 4 | (fg_color & 0xF)) << 8 | (letter & 0x7F);
 }
 
 void clear_screen() {

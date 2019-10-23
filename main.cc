@@ -7,6 +7,7 @@
 #include "panic.h"
 #include "keyboard.h"
 #include "syscalls.h"
+#include "filesystem.h"
 
 extern int kernel_end;
 extern char stack_top;
@@ -58,6 +59,9 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   kbd_init();
   asm volatile("sti");
   syscalls_init();
+  vfs_init();
+
+  vfs_print();
 
   tss_set_kernel_stack((uint32_t)&stack_top);  // Used during CPL 3 -> 0 ints
   enter_user_mode(USER_DATA_SEL, USER_CODE_SEL);

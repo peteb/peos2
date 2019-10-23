@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include "assert.h"
+#include "utils.h"
 
 namespace p2 {
   char digit_as_char(int digit, int radix);
@@ -13,6 +14,7 @@ namespace p2 {
   // allocated by the class, one where we're referencing outside
   // memory. Might want to extract that into a "storage provider"
   // later if we need dynamic allocation
+  // TODO: extract string building logic into its own "string_builder" class
   template<int _MaxLen>
   class string {
   public:
@@ -24,15 +26,51 @@ namespace p2 {
 
     // A nice helper for deducing _MaxLen from array length
     template<typename T>
-    string(T (&data)[_MaxLen]) : _storage_ref(data) {
+    string(T (&data)[_MaxLen])
+      : _storage_ref(data) {
       assert(_MaxLen > 0);
       _storage_ref[0] = '\0';
     }
 
-    template<typename T>
+    /*template<typename T>
     string(T *(&data)) : _storage_ref(data) {
       assert(_MaxLen > 0);
       _storage_ref[0] = '\0';
+      }*/
+
+    string(const char *other)
+      : _storage_ref(_storage) {
+      while (*other) {
+        append(*other++);
+      }
+    }
+
+    string(const char *other, int max_length)
+      : _storage_ref(_storage) {
+      int count = 0;
+      while (*other) {
+        if (count++ >= max_length) {
+          break;
+        }
+        append(*other++);
+      }
+    }
+
+    string(const p2::string<_MaxLen> &other)
+      : _storage_ref(_storage) {
+      for (int i = 0; i < other.size(); ++i) {
+        append(other._storage_ref[i]);
+      }
+    }
+
+    string<_MaxLen> &operator =(const string<_MaxLen> &other) {
+      _position = 0;
+
+      for (int i = 0; i < other.size(); ++i) {
+        append(other._storage_ref[i]);
+      }
+
+      return *this;
     }
 
     string<_MaxLen> &append(char c) {
@@ -87,6 +125,24 @@ namespace p2 {
       return _storage_ref;
     }
 
+    int size() const {
+      return _position;
+    }
+
+    template<int _Size>
+    bool operator ==(const p2::string<_Size> &rhs) const {
+      if (rhs.size() != size()) {
+        return false;
+      }
+
+      for (int i = 0; i < size(); ++i) {
+        if (_storage_ref[i] != rhs._storage_ref[i]) {
+          return false;
+        }
+      }
+      return true;
+    }
+
   private:
     char *_storage_ref;
     // This allocation will usually be optimized out by gcc when
@@ -105,12 +161,6 @@ namespace p2 {
     {
       char buf[100];
       p2::string hej(buf);
-    }
-
-    {
-      char buf[100];
-      char *hello = buf;
-      p2::string<100> hej(hello);
     }
   }
 }

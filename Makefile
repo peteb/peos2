@@ -10,7 +10,7 @@ all : vmpeoz
 CRTBEGIN_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
 INTERNAL_OBJECTS=boot.o main.o screen.o panic.o x86.o protected_mode.o multiboot.o \
-		 keyboard.o syscalls.o support/string.o
+		 keyboard.o syscalls.o filesystem.o support/utils.o support/string.o
 
 OBJECTS=crti.o $(CRTBEGIN_OBJECT) $(INTERNAL_OBJECTS) $(CRTEND_OBJECT) crtn.o
 
