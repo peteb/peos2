@@ -40,11 +40,7 @@ extern "C" void int_debug(isr_registers regs) {
 }
 
 extern "C" void int_gpf(isr_registers regs) {
-  (void)regs;
   panic("General protection fault");
-}
-
-extern "C" void int_syscall(isr_registers regs) {
   p2::string<256> buf;
   regs.to_string(buf);
   puts(buf);
@@ -52,14 +48,13 @@ extern "C" void int_syscall(isr_registers regs) {
 
 extern "C" void isr_debug(isr_registers);
 extern "C" void isr_gpf(isr_registers);
-extern "C" void isr_syscall(isr_registers);
 
 void int_init() {
   static const gdtr idt_ptr = {sizeof(idt_descriptors) - 1, reinterpret_cast<uint32_t>(idt_descriptors)};
   asm volatile("lidt [%0]" : : "m"(idt_ptr));
-  int_register(0x03, isr_debug,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+
+  int_register(0x03, isr_debug,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
   int_register(0x0D, isr_gpf,     KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
-  int_register(0x90, isr_syscall, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
 }
 
 void int_register(int num, void (*handler)(isr_registers), uint16_t segment_selector, uint8_t type) {
@@ -90,7 +85,7 @@ void pic_remap(uint8_t master_offset, uint8_t slave_offset) {
   outb_wait(PIC_SLAVE_DATA, 0x01);            // ICW 4: 80x86 mode
 }
 
-void isr_registers::to_string(p2::string<256> &out) const {
+void isr_registers::to_string(p2::string<256> &out) const volatile {
   (p2::format<256>(out,
                    "edi: %x esi: %x ebp: %x esp: %x\n"
                    "ebx: %x edx: %x ecx: %x eax: %x\n"

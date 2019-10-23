@@ -84,9 +84,9 @@ load_gdt:
 .extern \handler
 .global \name
 \name:
-        pusha
+        pushal
         call \handler
-        popa
+        popal
         iret
 .endm
 

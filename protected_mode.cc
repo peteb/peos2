@@ -2,7 +2,7 @@
 #include "x86.h"
 #include "assert.h"
 
-static tss_entry tss;
+static volatile tss_entry tss;
 
 static bool a20_enabled();
 static void enable_a20();
@@ -39,7 +39,9 @@ void setup_gdt() {
   // now expects flat addressing already setup by QEMU multiboot
   load_gdt(&gdt, KERNEL_DATA_SEL);  // NOTE! It'll do a far jump to 0x08:*
 
-  asm volatile("mov ax, %0\nltr ax" : : "i" (TSS_SEL));
+  asm volatile("mov ax, %0\n"
+               "ltr ax\n"
+               : : "i" (TSS_SEL) : "eax", "memory");
   tss.ss0 = KERNEL_DATA_SEL;
   tss.cs = GDT_SEGSEL(3, 1);
   tss.ss = tss.ds = tss.es = tss.fs = tss.gs = GDT_SEGSEL(3, 2);

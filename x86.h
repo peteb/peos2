@@ -86,7 +86,7 @@ struct isr_registers {
   uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
   uint32_t eip, cs, eflags, user_esp, ss;
 
-  void to_string(p2::string<256> &out) const;
+  void to_string(p2::string<256> &out) const volatile;
 };
 
 struct tss_entry {

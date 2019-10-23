@@ -41,7 +41,7 @@ Plan
 * DONE GDT
 * DONE IRQs, INTs, keyboard
 * DONE Ring 3 execution
-* Syscalls different CPL (Ring 3)
+* DONE Syscalls different CPL (Ring 3)
 * Simple VFS for device drivers (Syscalls)
 * Single screen terminal controllable from program through /dev/termN (VFS)
 * Multitasking
