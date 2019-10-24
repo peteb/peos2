@@ -10,12 +10,12 @@ struct vfs_name_node {
   uint16_t next_sibling = 0, head_child = 0, tail_child = 0;
 };
 
-struct vfs_info_node {
+struct vfs_file_info {
   // Data for a specific file
 };
 
 static p2::pool<vfs_name_node, 256> nodes{};
-static p2::pool<vfs_info_node, 256> files{};
+static p2::pool<vfs_file_info, 256> files{};
 static uint16_t root_idx = 0;
 
 static uint16_t vfs_create_child(uint16_t parent, const char *name, uint16_t vnode) {
