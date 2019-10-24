@@ -26,9 +26,9 @@ namespace p2 {
       return *this;
     }
 
-    const char *str() {
+    const p2::string<_MaxLen> &str() {
       fmt_scan();  // to get any leftovers
-      return _storage_ref.str();
+      return _storage_ref;
     }
 
   private:

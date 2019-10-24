@@ -1,11 +1,8 @@
 #include "support/pool.h"
 #include "unittest.h"
 
-
-void ut_suite_pool() {
-  suite_begin("p2::pool");
-
-  testcase("created item has zero size"); {
+BEGIN_SUITE(p2::pool) {
+  TESTCASE("created pool has zero size") {
     // given
     struct testobj {
       int hello;
@@ -18,7 +15,7 @@ void ut_suite_pool() {
     ASSERT_EQ(items.size(), 0);
   }
 
-  testcase("items can be pushed until the end"); {
+  TESTCASE("items can be pushed until the end") {
     // given
     p2::pool<int, 4> items;
 
@@ -29,7 +26,7 @@ void ut_suite_pool() {
     items.push_back(4);
   }
 
-  testcase("continuous indexes are allocated"); {
+  TESTCASE("continuous indexes are allocated") {
     // given
     p2::pool<int, 4> items;
 
@@ -40,7 +37,7 @@ void ut_suite_pool() {
     ASSERT_EQ(items.push_back(4), 3);
   }
 
-  testcase("add/remove scenario"); {
+  TESTCASE("add/remove scenario") {
     // given
     p2::pool<int, 13> items;
 
@@ -67,7 +64,7 @@ void ut_suite_pool() {
     ASSERT_EQ(items.size(), 0);
   }
 
-  testcase("pushing further than the capacity causes panic"); {
+  TESTCASE("pushing further than the capacity causes panic") {
     // given
     p2::pool<int, 3> items;
 
@@ -77,8 +74,7 @@ void ut_suite_pool() {
     items.push_back(1);
     items.push_back(1);
     items.push_back(1);
-    ASSERT_PANIC();
+    END_ASSERT_PANIC;
   };
 
-  suite_end();
-}
+} END_SUITE;

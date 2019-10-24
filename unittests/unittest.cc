@@ -3,25 +3,33 @@
 #define RED "\033[1;31m"
 #define GREEN "\033[1;32m"
 #define COLOR_RESET "\033[0m"
-#ifdef __STDC_HOSTED__
 
+#if __STDC_HOSTED__ == 1
 #include <iostream>
 #include <iomanip>
 #include <unistd.h>
 
-// When we build the unittests on the host
-extern void ut_suite_pool();
-
 static bool expect_panic = false;
 static bool got_panic = false;
 
+// These below are populated by ld for us, matches the start and end
+// of the "TESTCASES" section
+extern testcase_info __start_TESTCASES;
+extern testcase_info __stop_TESTCASES;
+
 int main() {
-  ut_suite_pool();
+  const testcase_info *tc = &__start_TESTCASES;
+
+  while (tc != &__stop_TESTCASES) {
+    tc->fun();
+    ++tc;
+  }
 }
 
 void panic(const char *explanation) {
   if (expect_panic) {
     got_panic = true;
+    expect_panic = false;
     return;
   }
 
@@ -41,9 +49,7 @@ void stop_assert_panic() {
 bool received_panic() {
   return got_panic;
 }
-
-
-#endif // !__STDC_HOSTED__
+#endif // __STDC_HOSTED__ == 1
 
 static const char *current_case;
 

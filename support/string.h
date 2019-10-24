@@ -3,6 +3,11 @@
 #ifndef PEOS2_STRING_H
 #define PEOS2_STRING_H
 
+#if __STDC_HOSTED__ == 1
+#include <iostream>
+#undef assert
+#endif // __STDC_HOSTED__ == 1
+
 #include <stdint.h>
 #include "assert.h"
 #include "utils.h"
@@ -38,16 +43,11 @@ namespace p2 {
       _storage_ref[0] = '\0';
       }*/
 
-    string(const char *other)
-      : _storage_ref(_storage) {
-      while (*other) {
-        append(*other++);
-      }
-    }
-
-    string(const char *other, int max_length)
+    string(const char *other, int max_length = _MaxLen - 1)
       : _storage_ref(_storage) {
       int count = 0;
+      max_length = p2::min(max_length, _MaxLen - 1);
+
       while (*other) {
         if (count++ >= max_length) {
           break;
@@ -74,7 +74,7 @@ namespace p2 {
     }
 
     string<_MaxLen> &append(char c) {
-      assert(_position < _MaxLen - 1 && "buffer overrun");
+      assert(_position + 1 < _MaxLen && "buffer overrun");
       _storage_ref[_position++] = c;
       _storage_ref[_position] = '\0';
 
@@ -125,6 +125,10 @@ namespace p2 {
       return _storage_ref;
     }
 
+    const char *c_str() const {
+      return _storage_ref;
+    }
+
     int size() const {
       return _position;
     }
@@ -143,6 +147,14 @@ namespace p2 {
       return true;
     }
 
+#if __STDC_HOSTED__ == 1
+    friend std::ostream &operator <<(std::ostream &out, const p2::string<_MaxLen> &rhs) {
+      out << rhs.c_str();
+      return out;
+    }
+#endif // __STDC_HOSTED__ == 1
+
+
   private:
     char *_storage_ref;
     // This allocation will usually be optimized out by gcc when
@@ -150,19 +162,6 @@ namespace p2 {
     char _storage[_MaxLen];
     int _position = 0;
   };
-
-
-  inline void _test_string() {
-    // TODO: get rid of this function when we have usage of all cases
-    {
-      p2::string<123> hej;
-    }
-
-    {
-      char buf[100];
-      p2::string hej(buf);
-    }
-  }
 }
 
 #endif // !PEOS2_STRING_H

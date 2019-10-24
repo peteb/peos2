@@ -18,7 +18,7 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   clear_screen();
 
   if (multiboot_magic != MULTIBOOT_MAGIC) {
-    panic((p2::format<32>("Incorrect mb magic: %x") % multiboot_magic).str());
+    panic((p2::format<32>("Incorrect mb magic: %x") % multiboot_magic).str().c_str());
   }
 
   if (!(multiboot_hdr->flags & MULTIBOOT_INFO_MEM_MAP)) {
@@ -73,7 +73,7 @@ extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   uint32_t ret = SYSCALL1(puts, msg);
 
   char buf[128];
-  msg = (p2::format(buf, "User got: %x") % ret).str();
+  msg = (p2::format(buf, "User got: %x") % ret).str().c_str();
   SYSCALL1(puts, buf);
 
   // We can't use hlt anymore as we're in ring 3, but this place won't

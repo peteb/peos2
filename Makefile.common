@@ -4,7 +4,8 @@
 UTABLE_OBJECTS=support/utils.o support/string.o
 
 # Unittests and framework
-UT_OBJECTS=unittests/test_pool.o unittests/unittest.o
+UT_SOURCE=$(wildcard unittests/test_*.cc)
+UT_OBJECTS=$(UT_SOURCE:.cc=.o) unittests/unittest.o
 
 UNITTESTABLE_OBJECTS=$(addprefix $(OBJDIR)/,$(UTABLE_OBJECTS))
 UNITTEST_OBJECTS=$(addprefix $(OBJDIR)/,$(UT_OBJECTS))
