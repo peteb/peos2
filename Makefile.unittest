@@ -1,0 +1,19 @@
+# -*- makefile -*-
+
+CC=gcc
+CXX=g++
+AS=as
+CFLAGS=-std=gnu99 -masm=intel $(OPT_LEVEL) -Wall -Wextra -fno-threadsafe-statics -DNDEBUG
+CXXFLAGS=-std=c++17 -masm=intel $(OPT_LEVEL) -Wall -Wextra -fno-threadsafe-statics -I. -DNDEBUG
+OBJDIR=hosted
+BINARIES=unittest
+
+all : unittest
+
+include Makefile.common
+
+# TODO: conditional debug mode
+OPT_LEVEL=-O0 -g
+
+unittest : $(UNITTESTABLE_OBJECTS) $(UNITTEST_OBJECTS)
+	$(CXX) -o unittest -g $(OPT_LEVEL) $(UNITTESTABLE_OBJECTS) $(UNITTEST_OBJECTS)

@@ -1,0 +1,2 @@
+#!/bin/bash
+make -f Makefile.unittest all && ./unittest

@@ -20,11 +20,11 @@ namespace p2 {
     uint16_t push_back(const T &value) {
       uint16_t idx;
 
-      if (_freelist_head) {
+      if (idx_valid(_freelist_head)) {
         // We've got items on the freelist which we can use
         idx = _freelist_head;
         _freelist_head = _elements[idx].next_free;
-        _elements[idx].next_free = 0;
+        _elements[idx].next_free = _MaxLen;
       }
       else {
         idx = _watermark++;
@@ -69,8 +69,12 @@ namespace p2 {
     }
 
   private:
-    uint16_t _watermark = 0, _freelist_head = 0, _count = 0;
+    uint16_t _watermark = 0, _freelist_head = _MaxLen, _count = 0;
     node _elements[_MaxLen];
+
+    static bool idx_valid(uint16_t value) {
+      return value < _MaxLen;
+    }
   };
 }
 
