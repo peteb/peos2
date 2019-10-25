@@ -3,8 +3,8 @@
 CC=gcc
 CXX=g++
 AS=as
-CFLAGS=-std=gnu99 -masm=intel $(OPT_LEVEL) -Wall -Wextra -fno-threadsafe-statics -DNDEBUG
-CXXFLAGS=-std=c++17 -masm=intel $(OPT_LEVEL) -Wall -Wextra -fno-threadsafe-statics -I. -DNDEBUG
+CFLAGS=-std=gnu99 -masm=intel $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -DNDEBUG
+CXXFLAGS=-std=c++17 -masm=intel $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -I. -DNDEBUG
 OBJDIR=hosted
 BINARIES=unittest
 
@@ -17,4 +17,4 @@ OPT_LEVEL=$(OPTLEVEL)
 endif
 
 unittest : $(UNITTESTABLE_OBJECTS) $(UNITTEST_OBJECTS)
-	$(CXX) -o unittest $(OPT_LEVEL) $(UNITTESTABLE_OBJECTS) $(UNITTEST_OBJECTS)
+	$(CXX) -o unittest -Werror $(OPT_LEVEL) $(UNITTESTABLE_OBJECTS) $(UNITTEST_OBJECTS)
