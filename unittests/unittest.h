@@ -4,19 +4,31 @@
 #define PEOS2_UNITTEST_H
 
 #include <sstream>
+#include <csetjmp>
+
+#define BARRIER asm("":::"memory")
 
 #define ASSERT_EQ(value, expected) assert_eq((value), (expected), __FILE__, __LINE__)
 #define ASSERT_NEQ(value, expected) assert_neq((value), (expected), __FILE__, __LINE__)
 #define ASSERT_TRUE(value) ASSERT_EQ(value, true)
 #define ASSERT_FALSE(value) ASSERT_EQ(value, false)
 
-#define BEGIN_ASSERT_PANIC start_assert_panic()
-#define END_ASSERT_PANIC ASSERT_EQ(received_panic(), true)
+#define ASSERT_PANIC(code) {                                            \
+  jmp_buf env;                                                          \
+  int paniced = setjmp(env);                                            \
+  set_panic_jmp(&env);                                                  \
+  if (paniced == 0) {                                                   \
+    (code);                                                             \
+    case_report(false, "no panic received");                            \
+  }                                                                     \
+  set_panic_jmp(nullptr);                                               \
+}                                                                       \
+
 #define BEGIN_SUITE(name) static void suite() { \
   suite_begin(#name);
 #define END_SUITE suite_end(); }                                      \
-  __attribute__((section ("TESTCASES"), unused)) static testcase_info tc_info = {suite};
-#define TESTCASE(name) testcase(name);
+  __attribute__((section ("TESTCASES"), used)) static testcase_info tc_info = {suite};
+#define TESTCASE(name) testcase(name); BARRIER;
 
 typedef void (*testcase_fun)() ;
 
@@ -28,13 +40,7 @@ void suite_begin(const char *name);
 void suite_end();
 void testcase(const char *name);
 void case_report(bool succeeded, const char *exp);
-void start_assert_panic();
-void stop_assert_panic();
-bool received_panic();
-
-#if __STDC_HOSTED__ == 1
-void panic(const char *explanation);
-#endif // __STDC_HOSTED == 1
+void set_panic_jmp(jmp_buf *env);
 
 template<typename A, typename B>
 void assert_eq(const A &value, const B &expected, const char *file, int line) {

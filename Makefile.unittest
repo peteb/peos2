@@ -12,8 +12,9 @@ all : unittest
 
 include Makefile.common
 
-# TODO: conditional debug mode
-OPT_LEVEL=-O0 -g
+ifneq ($(OPTLEVEL),)
+OPT_LEVEL=$(OPTLEVEL)
+endif
 
 unittest : $(UNITTESTABLE_OBJECTS) $(UNITTEST_OBJECTS)
-	$(CXX) -o unittest -g $(OPT_LEVEL) $(UNITTESTABLE_OBJECTS) $(UNITTEST_OBJECTS)
+	$(CXX) -o unittest $(OPT_LEVEL) $(UNITTESTABLE_OBJECTS) $(UNITTEST_OBJECTS)

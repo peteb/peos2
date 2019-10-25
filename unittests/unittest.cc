@@ -8,9 +8,10 @@
 #include <iostream>
 #include <iomanip>
 #include <unistd.h>
+#include <chrono>
 
-static bool expect_panic = false;
-static bool got_panic = false;
+static jmp_buf *panic_jmp_env = nullptr;
+static std::chrono::high_resolution_clock::time_point testcase_start;
 
 // These below are populated by ld for us, matches the start and end
 // of the "TESTCASES" section
@@ -27,28 +28,18 @@ int main() {
 }
 
 void panic(const char *explanation) {
-  if (expect_panic) {
-    got_panic = true;
-    expect_panic = false;
+  if (panic_jmp_env) {
+    longjmp(*panic_jmp_env, 1);
     return;
   }
 
   case_report(false, explanation);
 }
 
-void start_assert_panic() {
-  expect_panic = true;
-  got_panic = false;
+void set_panic_jmp(jmp_buf *env) {
+  panic_jmp_env = env;
 }
 
-void stop_assert_panic() {
-  expect_panic = false;
-  got_panic = false;
-}
-
-bool received_panic() {
-  return got_panic;
-}
 #endif // __STDC_HOSTED__ == 1
 
 static const char *current_case;
@@ -83,11 +74,20 @@ void testcase(const char *name) {
 
   green_header("[ RUN        ]") << "  " << name << "\r" << std::flush;
   current_case = name;
+  testcase_start = std::chrono::high_resolution_clock::now();
 }
 
 void case_report(bool succeeded, const char *exp) {
+  std::chrono::duration<double> elapsed_time = std::chrono::high_resolution_clock::now() - testcase_start;
+
   if (succeeded) {
-    green_header("[         OK ]") << "  " << current_case << std::endl;
+    if (elapsed_time.count() > 0.01) {
+      green_header("[         OK ]") << "  " << current_case << " " << std::fixed << std::setprecision(0) << " (" << elapsed_time.count() * 1000.0 << " ms)" << std::endl;
+    }
+    else {
+      green_header("[         OK ]") << "  " << current_case << std::endl;
+    }
+
     current_case = nullptr;
   }
   else {

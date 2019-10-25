@@ -24,13 +24,9 @@ BEGIN_SUITE(p2::string) {
 
   TESTCASE("appending over the end causes panic") {
     p2::string<3> str;
-
     str.append('#');
     str.append('#');
-
-    BEGIN_ASSERT_PANIC;
-    str.append('#');
-    END_ASSERT_PANIC;
+    ASSERT_PANIC(str.append('#'));
   }
 
   TESTCASE("can be created over an external buffer") {
@@ -105,5 +101,4 @@ BEGIN_SUITE(p2::string) {
     ASSERT_TRUE(p2::string<18>() == p2::string<18>());
     ASSERT_TRUE(p2::string<2>("") == p2::string<2>(""));
   }
-
 } END_SUITE;

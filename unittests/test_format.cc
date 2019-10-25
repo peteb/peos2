@@ -42,10 +42,7 @@ BEGIN_SUITE(p2::format) {
     p2::string<3> dat;
     p2::format fmt(dat, "%d");
 
-    BEGIN_ASSERT_PANIC;
-    fmt % 123;
-    fmt.str();
-    END_ASSERT_PANIC;
+    ASSERT_PANIC((fmt % 123).str());
   }
 
 } END_SUITE;

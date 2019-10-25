@@ -69,12 +69,10 @@ BEGIN_SUITE(p2::pool) {
     p2::pool<int, 3> items;
 
     // when/then
-    BEGIN_ASSERT_PANIC;
     items.push_back(1);
     items.push_back(1);
     items.push_back(1);
-    items.push_back(1);
-    END_ASSERT_PANIC;
+    ASSERT_PANIC(items.push_back(1));
   };
 
 } END_SUITE;

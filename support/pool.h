@@ -7,8 +7,15 @@
 #include "assert.h"
 
 namespace p2 {
-  // Allocation time: O(1)
-  // Deletion time: O(1)
+  // Pool allocator, uses a linked list freelist. Why is the freelist
+  // a linked list and not a stack? I've measured the performance of a
+  // stack-backed pool but it was actually ~10% slower (as measured on
+  // the "add/remove scenario" test in test_pool.cc), when compiled
+  // with -O3, but slower with -O0.
+  //
+  // Time complexity:
+  // push_back: O(1)
+  // erase: O(1)
   template<typename T, uint16_t _MaxLen>
   class pool {
     struct node {
