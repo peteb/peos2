@@ -1,7 +1,7 @@
 #include "support/pool.h"
 #include "unittest.h"
 
-BEGIN_SUITE(p2::pool) {
+TESTSUITE(p2::pool) {
   TESTCASE("created pool has zero size") {
     struct testobj {int hello; };
     p2::pool<testobj, 32> items;
@@ -72,5 +72,4 @@ BEGIN_SUITE(p2::pool) {
     items.push_back(1);
     ASSERT_PANIC(items.push_back(1));
   };
-
-} END_SUITE;
+}

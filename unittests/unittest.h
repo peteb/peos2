@@ -24,20 +24,19 @@
   set_panic_jmp(nullptr);                                               \
 }                                                                       \
 
-#define BEGIN_SUITE(name) static void suite() { \
-  suite_begin(#name);
-#define END_SUITE suite_end(); }                                      \
-  __attribute__((section ("TESTCASES"), used)) static testcase_info tc_info = {suite};
+#define TESTSUITE(name) static void suite();                            \
+  __attribute__((section ("TESTSUITES"), used)) static testsuite_info ts_info = {suite, #name}; \
+  static void suite()
+
 #define TESTCASE(name) testcase(name); BARRIER;
 
-typedef void (*testcase_fun)() ;
+typedef void (*testsuite_fun)() ;
 
-struct testcase_info {
-  testcase_fun fun;
+struct testsuite_info {
+  testsuite_fun fun;
+  const char *name;
 };
 
-void suite_begin(const char *name);
-void suite_end();
 void testcase(const char *name);
 void case_report(bool succeeded, const char *exp);
 void set_panic_jmp(jmp_buf *env);

@@ -1,32 +1,41 @@
 #include "unittest.h"
 
-#define RED "\033[1;31m"
-#define GREEN "\033[1;32m"
-#define COLOR_RESET "\033[0m"
-
-#if __STDC_HOSTED__ == 1
 #include <iostream>
 #include <iomanip>
 #include <unistd.h>
 #include <chrono>
 
-static jmp_buf *panic_jmp_env = nullptr;
+#define RED "\033[1;31m"
+#define GREEN "\033[1;32m"
+#define COLOR_RESET "\033[0m"
+
+static jmp_buf *panic_jmp_env;
 static std::chrono::high_resolution_clock::time_point testcase_start;
+static const char *current_case;
+
+static void suite_begin(const char *name);
+static void suite_end();
 
 // These below are populated by ld for us, matches the start and end
-// of the "TESTCASES" section
-extern testcase_info __start_TESTCASES;
-extern testcase_info __stop_TESTCASES;
+// of the "TESTSUITES" section
+extern testsuite_info __start_TESTSUITES;
+extern testsuite_info __stop_TESTSUITES;
 
+// Entry point when running in the host environment
 int main() {
-  const testcase_info *tc = &__start_TESTCASES;
+  const testsuite_info *ts = &__start_TESTSUITES;
 
-  while (tc != &__stop_TESTCASES) {
-    tc->fun();
-    ++tc;
+  while (ts != &__stop_TESTSUITES) {
+    suite_begin(ts->name);
+    ts->fun();
+    suite_end();
+    ++ts;
   }
 }
 
+// Implements the `panic` function declared in the kernel so we can
+// catch it in our tests. We need to use a longjmp here because the
+// rest of the code expects `panic` to not return.
 void panic(const char *explanation) {
   if (panic_jmp_env) {
     longjmp(*panic_jmp_env, 1);
@@ -39,10 +48,6 @@ void panic(const char *explanation) {
 void set_panic_jmp(jmp_buf *env) {
   panic_jmp_env = env;
 }
-
-#endif // __STDC_HOSTED__ == 1
-
-static const char *current_case;
 
 static std::ostream &green_header(const char *header_text) {
   std::cout << GREEN << header_text << " " << COLOR_RESET << " ";
@@ -92,7 +97,6 @@ void case_report(bool succeeded, const char *exp) {
   }
   else {
     red_header("[       FAIL ]") << "  " << current_case << ": " << exp << std::endl;
-    asm("int 3");
-    exit(1);
+    abort();
   }
 }

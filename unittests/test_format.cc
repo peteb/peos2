@@ -1,7 +1,7 @@
 #include "unittest.h"
 #include "support/format.h"
 
-BEGIN_SUITE(p2::format) {
+TESTSUITE(p2::format) {
   TESTCASE("empty format string gives empty out string") {
     p2::format<64> fmt("");
     ASSERT_EQ(fmt.str().c_str()[0], '\0');
@@ -45,4 +45,4 @@ BEGIN_SUITE(p2::format) {
     ASSERT_PANIC((fmt % 123).str());
   }
 
-} END_SUITE;
+}

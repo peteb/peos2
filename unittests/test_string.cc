@@ -1,7 +1,7 @@
 #include "unittest.h"
 #include "support/string.h"
 
-BEGIN_SUITE(p2::string) {
+TESTSUITE(p2::string) {
   TESTCASE("can be created to a good state with internal memory") {
     // given
     p2::string<64> str;
@@ -101,4 +101,4 @@ BEGIN_SUITE(p2::string) {
     ASSERT_TRUE(p2::string<18>() == p2::string<18>());
     ASSERT_TRUE(p2::string<2>("") == p2::string<2>(""));
   }
-} END_SUITE;
+}
