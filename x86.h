@@ -84,7 +84,9 @@ struct idt_descriptor {
 
 struct isr_registers {
   uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
-  uint32_t eip, cs, eflags, user_esp, ss;
+  uint32_t error_code;
+  uint32_t eip, cs, eflags;
+  uint32_t user_esp, ss;  // When changing CPL
 
   void to_string(p2::string<256> &out) const volatile;
 };

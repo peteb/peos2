@@ -14,7 +14,7 @@ extern char stack_top;
 
 SYSCALL_DEF1(puts, 0, const char *)
 
-extern "C" void main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
+extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   clear_screen();
 
   if (multiboot_magic != MULTIBOOT_MAGIC) {

@@ -26,11 +26,11 @@ stack_top:
 .type _start, @function
 _start:
         mov $stack_top, %esp
-        push %ebx   // save multiboot header, argument to main
+        push %ebx   // save multiboot header
         push %eax   // multiboot magic
 
         call _init  // ctors
-        call main
+        call kernel_start
         call _fini  // dtors
 
 1:	hlt
@@ -84,13 +84,26 @@ load_gdt:
 .extern \handler
 .global \name
 \name:
+        push $0  // Dummy error code
         pushal
         call \handler
         popal
+        add $4, %esp
         iret
 .endm
 
-isr_routine   isr_debug, int_debug
-isr_routine     isr_gpf, int_gpf
-isr_routine isr_syscall, int_syscall
-isr_routine     isr_kbd, int_kbd
+.macro isr_routine_err name,handler
+.extern \handler
+.global \name
+\name:
+        pushal
+        call \handler
+        popal
+        add $4, %esp
+        iret
+.endm
+
+isr_routine     isr_debug,   int_debug
+isr_routine_err isr_gpf,     int_gpf
+isr_routine     isr_syscall, int_syscall
+isr_routine     isr_kbd,     int_kbd
