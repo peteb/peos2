@@ -9,15 +9,14 @@
 #include "support/limits.h"
 
 namespace p2 {
-  // Pool allocator, uses a linked list freelist. Why a linked list
-  // and not a stack? I've measured the performance of a stack-backed
-  // pool but it was actually ~10% slower (as measured on the
-  // "add/remove scenario" test in test_pool.cc), when compiled with
-  // -O3, but slower with -O0.
+  // Pool allocator with a linked list freelist. A benefit of the
+  // linked list is that the next pointers are next to the element
+  // data, leading to fewer cache misses. This solution been measured
+  // to be faster than a stack based allocator but more tests need to
+  // be done to conclusively say so.
   //
-  // Time complexity:
-  // push_back: O(1)
-  // erase: O(1)
+  // Time complexity: push_back:
+  // O(1) erase: O(1)
   template<typename T, size_t _MaxLen, typename _IndexT = uint16_t>
   class pool {
     struct node {
@@ -39,7 +38,7 @@ namespace p2 {
         // We've got items on the freelist which we can use
         idx = _freelist_head;
         _freelist_head = _elements[idx].next_free;
-        _elements[idx].next_free = _MaxLen;
+        _elements[idx].next_free = END_SENTINEL;
       }
       else {
         idx = _watermark++;
@@ -81,6 +80,10 @@ namespace p2 {
 
     size_t size() const {
       return _count;
+    }
+
+    _IndexT end() const {
+      return END_SENTINEL;
     }
 
   private:

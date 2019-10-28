@@ -1,3 +1,3 @@
 #!/bin/bash
 cd `dirname $0`
-docker run -it -v "`pwd`/../":/opt/src i686-elf-compiler bash
+docker run -it --privileged -v "`pwd`/../":/opt/src i686-elf-compiler bash

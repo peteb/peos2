@@ -63,6 +63,8 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
 
   vfs_print();
 
+  vfs_write("/dev/term0", "123", 3);
+
   tss_set_kernel_stack((uint32_t)&stack_top);  // Used during CPL 3 -> 0 ints
   enter_user_mode(USER_DATA_SEL, USER_CODE_SEL);
 
