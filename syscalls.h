@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #define SYSCALL_NUM_WRITE 1
+#define SYSCALL_NUM_READ  2
 
 // These macros are for the client, the solution is inspired by JamesM
 

@@ -20,5 +20,9 @@ all : vmpeoz
 
 include Makefile.common
 
+ifneq ($(OPTLEVEL),)
+OPT_LEVEL=$(OPTLEVEL)
+endif
+
 vmpeoz : $(OBJECTS) linker.ld
 	$(CC) -T linker.ld -o vmpeoz -ffreestanding $(OPT_LEVEL) -Werror -nostdlib $(OBJECTS) -lgcc

@@ -17,5 +17,4 @@
 
 void term_init(const char *name);
 
-
 #endif // !PEOS2_TERMINAL_H

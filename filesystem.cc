@@ -7,6 +7,7 @@
 #include "syscalls.h"
 
 static uint32_t syscall_write(const char *path, const char *data, int length);
+static uint32_t syscall_read(const char *path, char *data, int length);
 
 static p2::pool<vfs_node, 256, vfs_node_handle> nodes;
 static p2::pool<vfs_dirent, 256, decltype(vfs_node::info_node)> directories;
@@ -32,6 +33,7 @@ void vfs_set_driver(vfs_node_handle driver_node, vfs_device_driver *driver, void
 void vfs_init() {
   root_dir = vfs_create_node(VFS_DIRECTORY);
   syscall_register(SYSCALL_NUM_WRITE, (syscall_fun)syscall_write);
+  syscall_register(SYSCALL_NUM_READ, (syscall_fun)syscall_read);
 }
 
 static vfs_dirent *find_dirent(vfs_node_handle dir_node, const p2::string<32> &name) {
@@ -140,8 +142,8 @@ static ffd_retval find_first_driver(vfs_node_handle parent_idx, const char *path
   return {nodes.end(), next_segment};
 }
 
-int vfs_write(const char *path, const char *data, int length) {
-  auto driver = find_first_driver(root_dir, path);
+static uint32_t syscall_write(const char *path, const char *data, int length) {
+   auto driver = find_first_driver(root_dir, path);
   assert(driver.node_idx != nodes.end());
 
   const vfs_node &driver_node = nodes[driver.node_idx];
@@ -156,6 +158,18 @@ int vfs_write(const char *path, const char *data, int length) {
   return device_node.driver->write(&device_node, driver.rest_path, data, length);
 }
 
-static uint32_t syscall_write(const char *path, const char *data, int length) {
-  return vfs_write(path, data, length);
+static uint32_t syscall_read(const char *path, char *data, int length) {
+  auto driver = find_first_driver(root_dir, path);
+  assert(driver.node_idx != nodes.end());
+
+  const vfs_node &driver_node = nodes[driver.node_idx];
+  assert(driver_node.type == VFS_CHAR_DEVICE);
+  assert(driver_node.info_node != drivers.end());
+
+  vfs_char_device &device_node = drivers[driver_node.info_node];
+  assert(device_node.driver);
+  assert(device_node.driver->write);
+  // TODO: handle the error cases better than asserts
+
+  return device_node.driver->read(&device_node, driver.rest_path, data, length);
 }

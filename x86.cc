@@ -44,7 +44,7 @@ extern "C" void int_gpf(isr_registers regs) {
   regs.to_string(buf);
   puts(buf);
   uint32_t eip_inst = *(char *)regs.eip & 0xFF;
-  panic((p2::format<128>("General protection fault: %x (eip: %x)") % regs.error_code % eip_inst).str().c_str());
+  panic((p2::format<128>("General protection fault: %x ([eip]: %x)") % regs.error_code % eip_inst).str().c_str());
 }
 
 extern "C" void isr_debug(isr_registers);

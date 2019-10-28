@@ -15,6 +15,7 @@ struct vfs_char_device;
 
 struct vfs_device_driver {
   int (*write)(vfs_char_device *device, const char *path, const char *data, int length);
+  int (*read)(vfs_char_device *device, const char *path, char *data, int length);
 };
 
 struct vfs_node {
@@ -42,8 +43,5 @@ vfs_node_handle vfs_create_node(uint8_t type);
 void vfs_add_dirent(vfs_node_handle dir_node, const char *name, vfs_node_handle node);
 void vfs_set_driver(vfs_node_handle dev_node, vfs_device_driver *driver, void *opaque);
 vfs_node_handle vfs_lookup(const char *path);
-
-// User functions that'll route to the drivers
-int vfs_write(const char *path, const char *data, int length);
 
 #endif // !PEOS2_FILESYSTEM_H

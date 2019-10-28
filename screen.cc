@@ -29,10 +29,10 @@ void clear_screen() {
   screen_position = 0;
 }
 
-void print(const char *message) {
+void print(const char *message, int count) {
   bool clear_until_end = false;
 
-  while (*message) {
+  while (*message && (count == -1 || count--)) {
     const bool newline = *message == '\n';
 
     if (newline) {
