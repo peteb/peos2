@@ -85,12 +85,15 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
 
   asm volatile("int 3");
 
-  char input[32] = {0};
-  int read = SYSCALL3(read, "/dev/term0", input, sizeof(input));
+  while (true) {
+    char input[80] = {0};
+    int read = SYSCALL3(read, "/dev/term0", input, sizeof(input) - 1);
+    input[read] = '\0';
 
-  p2::format<64> output("Read %d bytes: %s");
-  output % read % input;
-  SYSCALL3(write, "/dev/term0", output.str().c_str(), output.str().size());
+    p2::format<128> output("Read %d bytes: %s\n");
+    output % read % input;
+    SYSCALL3(write, "/dev/term0", output.str().c_str(), output.str().size());
+  }
 
   // We can't use hlt anymore as we're in ring 3, but this place won't
   // be reached when we're multitasking

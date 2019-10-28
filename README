@@ -42,8 +42,8 @@ Plan
 * DONE IRQs, INTs, keyboard
 * DONE Ring 3 execution
 * DONE Syscalls different CPL (Ring 3)
-* Simple VFS for device drivers (Syscalls)
-* Single screen terminal controllable from program through /dev/termN (VFS)
+* DONE Simple VFS for device drivers (Syscalls)
+* DONE Single screen terminal controllable from program through /dev/termN (VFS)
 * Multitasking
 * Protected memory through paging + high mem kernel
 * Update syscalls to work with paging

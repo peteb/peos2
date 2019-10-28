@@ -2,6 +2,7 @@
 #include "x86.h"
 #include "screen.h"
 #include "protected_mode.h"
+#include "terminal.h"
 
 #define KBD_DATA   0x60
 #define KBD_CMD    0x64
@@ -158,9 +159,8 @@ extern "C" void int_kbd(isr_registers regs) {
         key_code = mapped_scancode->no_mod;
       }
 
-      if (key_code >= 0 && key_code < 0x7F) {
-        char buf[2] = {static_cast<char>(key_code & 0x7F), 0};
-        print(buf);
+      if (key_code) {
+        term_keypress(key_code);
       }
     }
   }

@@ -15,6 +15,9 @@
 #ifndef PEOS2_TERMINAL_H
 #define PEOS2_TERMINAL_H
 
+#include <stdint.h>
+
 void term_init(const char *name);
+void term_keypress(uint16_t keycode);
 
 #endif // !PEOS2_TERMINAL_H

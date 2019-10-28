@@ -11,6 +11,7 @@
 void clear_screen();
 void print(const char *message, int count = -1);
 void set_cursor(uint16_t position);
+void screen_backspace();
 
 template<int N>      void print(const p2::string<N> &fs) {print(fs.str()); }
 template<int N>      void print(p2::format<N> &fm) {print(fm.str()); }

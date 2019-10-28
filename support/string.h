@@ -133,6 +133,25 @@ namespace p2 {
       return _position;
     }
 
+    int capacity() const {
+      return _MaxLen;
+    }
+
+    void clear() {
+      _position = 0;
+      _storage_ref[_position] = '\0';
+    }
+
+    char operator [](int idx) const {
+      return _storage_ref[idx];
+    }
+
+    void backspace() {
+      if (_position > 0) {
+        _storage_ref[--_position] = '\0';
+      }
+    }
+
     template<int _Size>
     bool operator ==(const p2::string<_Size> &rhs) const {
       if (rhs.size() != size()) {

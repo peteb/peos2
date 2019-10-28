@@ -89,3 +89,8 @@ void __attribute__ ((unused)) hide_cursor() {
   outb(0x3D4, 0x0A);
   outb(0x3D5, inb(0x3D5) | 0x10);
 }
+
+void screen_backspace() {
+  FRAMEBUFFER[--screen_position] = ' ';
+  set_cursor(screen_position);
+}
