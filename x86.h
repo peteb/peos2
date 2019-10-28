@@ -152,5 +152,6 @@ void pic_init();
 void irq_enable(uint8_t irq_line);
 void irq_disable(uint8_t irq_line);
 void irq_eoi(uint8_t irq_line);
+void pit_init();
 
 #endif // !PEOS2_X86_H

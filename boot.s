@@ -107,3 +107,4 @@ isr_routine     isr_debug,   int_debug
 isr_routine_err isr_gpf,     int_gpf
 isr_routine     isr_syscall, int_syscall
 isr_routine     isr_kbd,     int_kbd
+isr_routine     isr_timer,   int_timer

@@ -8,6 +8,8 @@ static idt_descriptor idt_descriptors[256] alignas(8);
 
 static void pic_remap(uint8_t master_offset, uint8_t slave_offset);
 
+extern "C" void isr_timer(isr_registers);
+
 gdt_descriptor::gdt_descriptor(uint32_t base,
                                uint32_t limit,
                                uint8_t flags,
@@ -132,4 +134,21 @@ void irq_eoi(uint8_t irq_line) {
   }
 
   outb(PIC_MASTER_CMD, 0x20);
+}
+
+static void pit_set_phase(int hz) {
+  int divisor = 1193180 / hz;
+  outb(0x43, 0x36);           // Command 0x36
+  outb(0x40, divisor & 0xFF); // Low byte to data port
+  outb(0x40, divisor >> 8);   // High byte to data port
+}
+
+extern "C" void int_timer(isr_registers) {
+  irq_eoi(IRQ_SYSTEM_TIMER);
+}
+
+void pit_init() {
+  pit_set_phase(10);
+  irq_enable(IRQ_SYSTEM_TIMER);
+  int_register(IRQ_BASE_INTERRUPT + IRQ_SYSTEM_TIMER, isr_timer, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 }

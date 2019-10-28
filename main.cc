@@ -62,14 +62,16 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
 
   pic_init();
   kbd_init();
-  asm volatile("sti");
   syscalls_init();
+  asm volatile("sti");
 
   // Setup filesystem
   vfs_init();
   vfs_add_dirent(vfs_lookup("/"), "dev", vfs_create_node(VFS_DIRECTORY));
   term_init("term0");
   vfs_print();
+
+  pit_init();
 
   // User mode stuff
   tss_set_kernel_stack((uint32_t)interrupt_stack + sizeof(interrupt_stack));  // Used during CPL 3 -> 0 ints
