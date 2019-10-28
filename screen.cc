@@ -91,6 +91,6 @@ void __attribute__ ((unused)) hide_cursor() {
 }
 
 void screen_backspace() {
-  FRAMEBUFFER[--screen_position] = ' ';
+  FRAMEBUFFER[--screen_position] = entry(0x0, 0xF, ' ');
   set_cursor(screen_position);
 }
