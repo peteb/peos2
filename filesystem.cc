@@ -4,16 +4,14 @@
 #include "support/utils.h"
 #include "screen.h"
 #include "assert.h"
+#include "syscalls.h"
+
+static uint32_t syscall_write(const char *path, const char *data, int length);
 
 static p2::pool<vfs_node, 256, vfs_node_handle> nodes;
 static p2::pool<vfs_dirent, 256, decltype(vfs_node::info_node)> directories;
 static p2::pool<vfs_char_device, 64, decltype(vfs_node::info_node)> drivers;
 static vfs_node_handle root_dir;
-
-static int dummy_write(vfs_char_device *, const char *path, const char *data, int length) {
-  puts(p2::format<64>("dummy_write: path=%s, data=%x, length=%d") % path % (uintptr_t)data % length);
-  return 0;
-}
 
 vfs_node_handle vfs_create_node(uint8_t type) {
   return nodes.push_back({type, directories.end()});
@@ -33,14 +31,7 @@ void vfs_set_driver(vfs_node_handle driver_node, vfs_device_driver *driver, void
 
 void vfs_init() {
   root_dir = vfs_create_node(VFS_DIRECTORY);
-
-  auto dev_dir = vfs_create_node(VFS_DIRECTORY);
-  vfs_add_dirent(root_dir, "dev", dev_dir);
-
-  static vfs_device_driver driver = {dummy_write};
-  auto term_driver = vfs_create_node(VFS_CHAR_DEVICE);
-  vfs_set_driver(term_driver, &driver, nullptr);
-  vfs_add_dirent(dev_dir, "term0", term_driver);
+  syscall_register(SYSCALL_NUM_WRITE, (syscall_fun)syscall_write);
 }
 
 static vfs_dirent *find_dirent(vfs_node_handle dir_node, const p2::string<32> &name) {
@@ -86,6 +77,7 @@ static vfs_node_handle vfs_lookup_aux(vfs_node_handle parent, const char *path) 
 }
 
 vfs_node_handle vfs_lookup(const char *path) {
+  // TODO: a better way to return "path not found" than nodes.end()
   return vfs_lookup_aux(root_dir, path);
 }
 
@@ -162,4 +154,8 @@ int vfs_write(const char *path, const char *data, int length) {
   // TODO: handle the error cases better than asserts
 
   return device_node.driver->write(&device_node, driver.rest_path, data, length);
+}
+
+static uint32_t syscall_write(const char *path, const char *data, int length) {
+  return vfs_write(path, data, length);
 }

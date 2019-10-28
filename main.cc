@@ -8,11 +8,12 @@
 #include "keyboard.h"
 #include "syscalls.h"
 #include "filesystem.h"
+#include "terminal.h"
 
 extern int kernel_end;
 extern char stack_top;
 
-SYSCALL_DEF1(puts, 0, const char *)
+SYSCALL_DEF3(write, SYSCALL_NUM_WRITE, const char *, const char *, int);
 
 extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   clear_screen();
@@ -50,6 +51,7 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
 
   puts(p2::format<32>("Total avail mem: %d MB") % (memory_available / 1024 / 1024));
 
+  // x86 basic stuff setup
   puts("Entering protected mode...");
   enter_protected_mode();
   int_init();
@@ -59,24 +61,21 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
   kbd_init();
   asm volatile("sti");
   syscalls_init();
-  vfs_init();
 
+  // Setup filesystem
+  vfs_init();
+  vfs_add_dirent(vfs_lookup("/"), "dev", vfs_create_node(VFS_DIRECTORY));
+  term_init("term0");
   vfs_print();
 
-  vfs_write("/dev/term0", "123", 3);
-
+  // User mode stuff
   tss_set_kernel_stack((uint32_t)&stack_top);  // Used during CPL 3 -> 0 ints
   enter_user_mode(USER_DATA_SEL, USER_CODE_SEL);
 
   asm volatile("int 3");
 
   // Do some testing from user mode
-  const char *msg = "Hello from user mode!";
-  uint32_t ret = SYSCALL1(puts, msg);
-
-  char buf[128];
-  msg = (p2::format(buf, "User got: %x") % ret).str().c_str();
-  SYSCALL1(puts, buf);
+  SYSCALL3(write, "/dev/term0", "Hellote!", 8);
 
   // We can't use hlt anymore as we're in ring 3, but this place won't
   // be reached when we're multitasking
