@@ -12,7 +12,7 @@
 .long FLAGS
 .long CHECKSUM
 
-// Stack for kernel
+// Initial stack for kernel
 .section .bss
 .align 16
 stack_bottom:
@@ -20,7 +20,9 @@ stack_bottom:
 .global stack_top
 stack_top:
 
+//
 // Entry point
+//
 .section .text
 .global _start
 .type _start, @function
@@ -80,6 +82,33 @@ load_gdt:
         ret
 
 
+//
+// Switches kernel task without relying on interrupt specific logic.
+//
+.global switch_task
+switch_task:
+        push %ebx
+        push %esi
+        push %edi
+        push %ebp
+
+        // Save old esp so we can return at this point
+        mov 20(%esp), %ebx
+        mov %esp, (%ebx)
+
+        // Change esp
+        mov 24(%esp), %esp
+
+        pop %ebp
+        pop %edi
+        pop %esi
+        pop %ebx
+        ret
+
+.global switch_task_iret
+switch_task_iret:
+        iret
+
 .macro isr_routine name,handler
 .extern \handler
 .global \name
@@ -99,7 +128,7 @@ load_gdt:
         pushal
         call \handler
         popal
-        add $4, %esp
+        add $4, %esp  // Consume the error code
         iret
 .endm
 

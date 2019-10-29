@@ -9,14 +9,59 @@
 #include "syscalls.h"
 #include "filesystem.h"
 #include "terminal.h"
+#include "process.h"
 
 extern int kernel_end;
 extern char stack_top;
 
-static char interrupt_stack[1024] alignas(16);
+static uint32_t interrupt_stack[1024] alignas(16);
 
 SYSCALL_DEF3(write, SYSCALL_NUM_WRITE, const char *, const char *, int);
 SYSCALL_DEF3(read, SYSCALL_NUM_READ, const char *, char *, int);
+SYSCALL_DEF0(yield, SYSCALL_NUM_YIELD);
+
+static void my_thread() {
+  SYSCALL3(write, "/dev/term0", "Hello from thread\n", 18);
+
+  while (true) {
+    SYSCALL3(write, "/dev/term0", "A", 2);
+    SYSCALL0(yield);
+  }
+}
+
+static void my_thread2() {
+  SYSCALL3(write, "/dev/term0", "Thread 2!\n", 10);
+
+  while (true) {
+    SYSCALL3(write, "/dev/term0", "B", 2);
+    SYSCALL0(yield);
+  }
+}
+
+
+void test_multitasking() {
+  proc_handle pid1 = proc_create((void *)my_thread);
+  proc_create((void *)my_thread2);
+  proc_switch(pid1);
+}
+
+void test_termio() {
+  SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
+  SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
+  SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
+  SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
+
+  while (true) {
+    char input[80] = {0};
+    int read = SYSCALL3(read, "/dev/term0", input, sizeof(input) - 1);
+    input[read] = '\0';
+
+    p2::format<128> output("Read %d bytes: %s\n");
+    output % read % input;
+    SYSCALL3(write, "/dev/term0", output.str().c_str(), output.str().size());
+  }
+}
+
 
 extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   clear_screen();
@@ -72,30 +117,13 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
   vfs_print();
 
   pit_init();
+  proc_init();
 
   // User mode stuff
-  tss_set_kernel_stack((uint32_t)interrupt_stack + sizeof(interrupt_stack));  // Used during CPL 3 -> 0 ints
-  enter_user_mode(USER_DATA_SEL, USER_CODE_SEL);
+  size_t interrupt_stack_length = sizeof(interrupt_stack) / sizeof(interrupt_stack[0]);
+  tss_set_kernel_stack((uint32_t)&interrupt_stack[interrupt_stack_length - 1]); // Used during CPL 3 -> 0 i
 
-  // Do some testing from user mode
-  asm volatile("int 3");
-
-  SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
-  SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
-  SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
-  SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
-
-  asm volatile("int 3");
-
-  while (true) {
-    char input[80] = {0};
-    int read = SYSCALL3(read, "/dev/term0", input, sizeof(input) - 1);
-    input[read] = '\0';
-
-    p2::format<128> output("Read %d bytes: %s\n");
-    output % read % input;
-    SYSCALL3(write, "/dev/term0", output.str().c_str(), output.str().size());
-  }
+  test_multitasking();
 
   // We can't use hlt anymore as we're in ring 3, but this place won't
   // be reached when we're multitasking

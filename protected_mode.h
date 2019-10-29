@@ -4,6 +4,7 @@
 #define PEOS2_PROTECTED_MODE_H
 
 #include <stdint.h>
+#include "x86.h"
 
 #define KERNEL_CODE_SEL GDT_SEGSEL(0, 1)
 #define KERNEL_DATA_SEL GDT_SEGSEL(0, 2)

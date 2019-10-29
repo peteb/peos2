@@ -143,7 +143,7 @@ static ffd_retval find_first_driver(vfs_node_handle parent_idx, const char *path
 }
 
 static uint32_t syscall_write(const char *path, const char *data, int length) {
-   auto driver = find_first_driver(root_dir, path);
+  auto driver = find_first_driver(root_dir, path);
   assert(driver.node_idx != nodes.end());
 
   const vfs_node &driver_node = nodes[driver.node_idx];
