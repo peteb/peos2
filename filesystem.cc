@@ -6,6 +6,39 @@
 #include "assert.h"
 #include "syscalls.h"
 
+struct vfs_node {
+  vfs_node(uint8_t type, vfs_node_handle info_node)
+    : type(type),
+      info_node(info_node)
+  {}
+
+  uint8_t type;
+  // TODO: permissions, owner, etc.
+  vfs_node_handle info_node;  // Index into type-specific block
+};
+
+struct vfs_dirent {
+  vfs_dirent(const char *name, vfs_node_handle node, uint16_t next_dirent)
+    : name(name),
+      node(node),
+      next_dirent(next_dirent)
+  {}
+
+  const char *name;
+  vfs_node_handle node;
+  uint16_t next_dirent;
+};
+
+struct vfs_char_device {
+  vfs_char_device(vfs_device_driver *driver, void *opaque)
+    : driver(driver),
+      opaque(opaque)
+  {}
+
+  vfs_device_driver *driver;
+  void *opaque;
+};
+
 static uint32_t syscall_write(const char *path, const char *data, int length);
 static uint32_t syscall_read(const char *path, char *data, int length);
 
@@ -15,13 +48,13 @@ static p2::pool<vfs_char_device, 64, decltype(vfs_node::info_node)> drivers;
 static vfs_node_handle root_dir;
 
 vfs_node_handle vfs_create_node(uint8_t type) {
-  return nodes.push_back({type, directories.end()});
+  return nodes.emplace_back(type, directories.end());
 }
 
 void vfs_add_dirent(vfs_node_handle dir_node, const char *name, vfs_node_handle node) {
   vfs_node &parent = nodes[dir_node];
   assert(parent.type == VFS_DIRECTORY);
-  parent.info_node = directories.push_back({name, node, parent.info_node});
+  parent.info_node = directories.emplace_back(name, node, parent.info_node);
 }
 
 void vfs_set_driver(vfs_node_handle driver_node, vfs_device_driver *driver, void *opaque) {

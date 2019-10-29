@@ -40,6 +40,9 @@ public:
   uint32_t *kernel_esp, *kernel_stack, *user_esp;
 };
 
+//
+// Wrapper for a kernel or user stack.
+//
 template<size_t N>
 struct stack {
   uint32_t *bottom_of_stack() {
@@ -62,12 +65,12 @@ static p2::pool<stack<256>, 16> kernel_stacks;
 static process_control_block *current_task = nullptr;
 
 static uint32_t *alloc_kernel_stack() {
-  uint16_t id = kernel_stacks.push_back({});
+  uint16_t id = kernel_stacks.emplace_back();
   return kernel_stacks[id].bottom_of_stack();
 }
 
 static uint32_t *alloc_user_stack() {
-  uint16_t id = user_stacks.push_back({});
+  uint16_t id = user_stacks.emplace_back();
   return user_stacks[id].bottom_of_stack();
 }
 
@@ -76,7 +79,7 @@ void proc_init() {
 }
 
 proc_handle proc_create(void *eip) {
-  proc_handle pid = processes.push_back({});
+  proc_handle pid = processes.emplace_back();
   process_control_block &pcb = processes[pid];
 
   pcb.kernel_stack = alloc_kernel_stack();

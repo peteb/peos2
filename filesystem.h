@@ -18,23 +18,6 @@ struct vfs_device_driver {
   int (*read)(vfs_char_device *device, const char *path, char *data, int length);
 };
 
-struct vfs_node {
-  uint8_t type;
-  // TODO: permissions, owner, etc.
-  uint16_t info_node;  // Index into type-specific block
-};
-
-struct vfs_dirent {
-  const char *name;
-  vfs_node_handle node;
-  uint16_t next_dirent;
-};
-
-struct vfs_char_device {
-  vfs_device_driver *driver;
-  void *opaque;
-};
-
 // Kernel/driver functions
 void vfs_init();
 void vfs_print();

@@ -72,4 +72,83 @@ TESTSUITE(p2::pool) {
     items.push_back(1);
     ASSERT_PANIC(items.push_back(1));
   };
+
+  TESTCASE("ctors for items are not called at initialization") {
+    static int ctor_count = 0;
+    struct item_t {
+      item_t() {++ctor_count; }
+    };
+
+    // given
+    p2::pool<item_t, 10> items;
+
+    // then
+    ASSERT_EQ(ctor_count, 0);
+  }
+
+  TESTCASE("push_back: calls copy-ctor once and default ctor once") {
+    static int ctor_count = 0, default_ctor_count = 0;
+    struct item_t {
+      item_t() {++default_ctor_count; }
+      item_t(const item_t &) {++ctor_count; }
+    };
+
+    // given
+    p2::pool<item_t, 10> items;
+
+    // when
+    items.push_back(item_t());
+
+    // then
+    ASSERT_EQ(ctor_count, 1);
+    ASSERT_EQ(default_ctor_count, 1);
+  }
+
+  TESTCASE("emplace_back: does not require copy-constructible objects") {
+    struct item_t {
+      item_t() = delete;
+      item_t(int) {}
+      item_t(const item_t &) = delete;
+      item_t &operator =(const item_t &) = delete;
+    };
+
+    // given
+    p2::pool<item_t, 10> items;
+
+    // then
+    items.emplace_back(123);
+  }
+
+  TESTCASE("emplace_back: ctor is used when given arguments") {
+    struct item_t {
+      item_t(int one, int two) : one(one), two(two) {}
+      int one, two;
+    };
+
+    // given
+    p2::pool<item_t, 10> items;
+    uint16_t idx = items.emplace_back(333, 222);
+    ASSERT_EQ(items[idx].one, 333);
+    ASSERT_EQ(items[idx].two, 222);
+  }
+
+  TESTCASE("emplace_back: default ctor is used when given no arguments") {
+    static int ctor_count = 0;
+    struct item_t {
+      item_t() : value(123) {++ctor_count; }
+      item_t(int value) : value(value * 10) {}
+      item_t &operator =(const item_t &) = delete;
+      int value;
+    };
+
+    // given
+    p2::pool<item_t, 10> items;
+
+    // when
+    uint16_t idx = items.emplace_back();
+
+    // then
+    ASSERT_EQ(items[idx].value, 123);
+    ASSERT_EQ(ctor_count, 1);
+  }
 }
