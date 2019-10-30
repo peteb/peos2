@@ -1,4 +1,7 @@
 // -*- c++ -*-
+//
+// PS/2 keyboard, sets up and sends input to the rest of the system.
+//
 
 #ifndef PEOS2_KEYBOARD_H
 #define PEOS2_KEYBOARD_H

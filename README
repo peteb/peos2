@@ -45,13 +45,14 @@ Plan
 * DONE Syscalls different CPL (Ring 3)
 * DONE Simple VFS for device drivers (Syscalls)
 * DONE Single screen terminal controllable from program through /dev/termN (VFS)
-* Multitasking
+* DONE Multitasking
+* Preemptive multitasking, blocking calls, scheduling
 * Protected memory through paging + high mem kernel
 * Update syscalls to work with paging
 * Multi screen terminal (Terminal)
+* Some way to get a basic FS up with files (user programs, text)
 * User permissions in VFS
 * Ramdisk
-* Some way to get a basic FS up with files (user programs, text)
 * FS
 * Disk support
 * QEMU NIC support
@@ -76,11 +77,3 @@ Special keys from the terminal (such as "left arrow") also use escape
 sequences; no extra syscalls are needed to get the special keys.
 
 keyboard.h -> terminal.h -> {user application -> terminal.h ->} screen.h
-
-Why is keyboard.h separate from terminal.h? Because we might want to
-report keycodes from other sources: USB, for example.
-
-Why is screen.h separate from terminal.h? To abstract VGA-specific
-code.
-
-Start by implementing canonical mode, in terminal.cc.

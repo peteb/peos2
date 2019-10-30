@@ -1,7 +1,7 @@
 // -*- c++ -*-
 //
 // Implements context switch and everything related to the management
-// of processes. No scheduling logic.
+// of processes.
 //
 
 #ifndef PEOS2_PROCESS_H
@@ -11,8 +11,11 @@
 
 typedef uint16_t proc_handle;
 
-void proc_init();
+void        proc_init();
 proc_handle proc_create(void *eip);
-void proc_switch(proc_handle pid);
+void        proc_switch(proc_handle pid);
+void        proc_suspend(proc_handle pid);
+void        proc_resume(proc_handle pid);
+void        proc_yield();
 
 #endif // !PEOS2_PROCESS_H

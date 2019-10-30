@@ -18,34 +18,24 @@ static uint32_t interrupt_stack[1024] alignas(16);
 
 SYSCALL_DEF3(write, SYSCALL_NUM_WRITE, const char *, const char *, int);
 SYSCALL_DEF3(read, SYSCALL_NUM_READ, const char *, char *, int);
-SYSCALL_DEF0(yield, SYSCALL_NUM_YIELD);
 
-static void my_thread() {
+void mt_test_t1() {
   SYSCALL3(write, "/dev/term0", "Hello from thread\n", 18);
 
   while (true) {
     SYSCALL3(write, "/dev/term0", "A", 2);
-    SYSCALL0(yield);
   }
 }
 
-static void my_thread2() {
+void mt_test_t2() {
   SYSCALL3(write, "/dev/term0", "Thread 2!\n", 10);
 
   while (true) {
     SYSCALL3(write, "/dev/term0", "B", 2);
-    SYSCALL0(yield);
   }
 }
 
-
-void test_multitasking() {
-  proc_handle pid1 = proc_create((void *)my_thread);
-  proc_create((void *)my_thread2);
-  proc_switch(pid1);
-}
-
-void test_termio() {
+void tio_test() {
   SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
   SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
   SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
@@ -60,6 +50,15 @@ void test_termio() {
     output % read % input;
     SYSCALL3(write, "/dev/term0", output.str().c_str(), output.str().size());
   }
+}
+
+void test_multitasking() {
+  proc_create((void *)mt_test_t1);
+  proc_create((void *)mt_test_t2);
+}
+
+void test_termio() {
+  proc_create((void *)tio_test);
 }
 
 
@@ -108,7 +107,6 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
   pic_init();
   kbd_init();
   syscalls_init();
-  asm volatile("sti");
 
   // Setup filesystem
   vfs_init();
@@ -116,16 +114,16 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
   term_init("term0");
   vfs_print();
 
-  pit_init();
   proc_init();
 
-  // User mode stuff
+  // Prepare for any interrupts that might happen before we start multitasking
   size_t interrupt_stack_length = sizeof(interrupt_stack) / sizeof(interrupt_stack[0]);
-  tss_set_kernel_stack((uint32_t)&interrupt_stack[interrupt_stack_length - 1]); // Used during CPL 3 -> 0 i
-
+  tss_set_kernel_stack((uint32_t)&interrupt_stack[interrupt_stack_length - 1]);
   test_multitasking();
 
-  // We can't use hlt anymore as we're in ring 3, but this place won't
-  // be reached when we're multitasking
+  // Let the mayhem begin
+  asm volatile("sti");
+  proc_yield();
+
   while (true) {}
 }

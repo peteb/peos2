@@ -1,7 +1,7 @@
 // -*- c++ -*-
 
 #ifndef PEOS2_SUPPORT_LIMITS_H
-#define PEOS2_SUPPORT_LIIMTS_H
+#define PEOS2_SUPPORT_LIMITS_H
 
 #include <stdint.h>
 

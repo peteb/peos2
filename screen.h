@@ -1,4 +1,8 @@
 // -*- c++ -*-
+//
+// VGA screen, abstracts VGA-specific logic like memory addresses,
+// colors, etc.
+//
 
 #ifndef PEOS2_SCREEN_H
 #define PEOS2_SCREEN_H
