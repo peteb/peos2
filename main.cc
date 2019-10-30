@@ -39,8 +39,16 @@ void mt_test_t2() {
   }
 }
 
-void tio_test() {
+void tio_test(int argc, char *argv[]) {
   SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
+  char buf[64];
+  auto fmt = (p2::format(buf, "Received %d argument(-s):\n") % argc);
+
+  SYSCALL3(write, "/dev/term0", fmt.str().c_str(), fmt.str().size());
+
+  for (int i = 0; i < argc; ++i) {
+    SYSCALL3(write, "/dev/term0", argv[i], strlen(argv[i]));
+  }
 
   while (true) {
     char input[80] = {0};
@@ -65,10 +73,10 @@ uint32_t mt_exiting_fun() {
 }
 
 void setup_test_program() {
-  proc_create((void *)tio_test);
-  proc_create((void *)mt_test_t1);
-  proc_create((void *)mt_test_t2);
-  proc_create((void *)mt_exiting_fun);
+  proc_create((void *)tio_test, "<--test-->");
+  proc_create((void *)mt_test_t1, "");
+  proc_create((void *)mt_test_t2, "");
+  proc_create((void *)mt_exiting_fun, "");
 }
 
 extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {

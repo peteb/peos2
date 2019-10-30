@@ -12,7 +12,7 @@
 typedef uint16_t proc_handle;
 
 void        proc_init();
-proc_handle proc_create(void *eip);
+proc_handle proc_create(void *eip, const char *argument);
 void        proc_switch(proc_handle pid);
 void        proc_suspend(proc_handle pid);
 void        proc_resume(proc_handle pid);

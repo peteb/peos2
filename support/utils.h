@@ -33,6 +33,7 @@ namespace p2 {
 }
 
 const char *strchr(const char *str, char c);
+size_t strlen(const char *str);
 
 // Functions used by the compiler sometimes for optimization
 extern "C" void *memset(void *dest, int value, size_t len);

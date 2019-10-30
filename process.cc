@@ -20,7 +20,9 @@ public:
       suspended(false),
       terminating(false),
       last_tick(0)
-  {}
+  {
+    argv[0] = argument.c_str();
+  }
 
   process_control_block(const process_control_block &other) = delete;
   process_control_block &operator =(const process_control_block &other) = delete;
@@ -41,9 +43,14 @@ public:
   uint32_t *kernel_stack;
   uint32_t *user_esp;
   uint16_t kernel_stack_idx, user_stack_idx;
+
+  const char *argv[1];
+  p2::string<64> argument;
+
   bool suspended, terminating;
   proc_handle prev_process, next_process;
   uint64_t last_tick;
+
 };
 
 //
@@ -75,7 +82,7 @@ static uint32_t    syscall_yield();
 static uint32_t    syscall_exit(uint32_t exit_code);
 static uint32_t    syscall_kill(uint32_t pid);
 static proc_handle decide_next_process();
-static proc_handle create_process(void *eip);
+static proc_handle create_process(void *eip, const char *argument);
 static void        destroy_process(proc_handle pid);
 static void        switch_process(proc_handle pid);
 
@@ -107,11 +114,12 @@ void proc_init() {
   irq_enable(IRQ_SYSTEM_TIMER);
   int_register(IRQ_BASE_INTERRUPT + IRQ_SYSTEM_TIMER, isr_timer, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 
-  idle_process = create_process((void *)idle_main);
+  idle_process = create_process((void *)idle_main, "");
 }
 
-proc_handle proc_create(void *eip) {
-  proc_handle pid = create_process(eip);
+proc_handle proc_create(void *eip, const char *argument) {
+  // TODO: support multiple arguments
+  proc_handle pid = create_process(eip, argument);
   enqueue_front(pid, &running_head);
   return pid;
 }
@@ -260,7 +268,7 @@ static proc_handle decide_next_process() {
   return minimum_pid;
 }
 
-static proc_handle create_process(void *eip) {
+static proc_handle create_process(void *eip, const char *argument) {
   uint16_t ks_idx = kernel_stacks.emplace_back();
   uint16_t us_idx = user_stacks.emplace_back();
 
@@ -269,9 +277,12 @@ static proc_handle create_process(void *eip) {
   process_control_block &pcb = processes[pid];
   pcb.kernel_stack_idx = ks_idx;
   pcb.user_stack_idx = us_idx;
+  pcb.argument = argument;
 
   // Push user space stack things first: the kernel stack references
   // the user ESP.
+  pcb.upush((uint32_t)pcb.argv);         // argv
+  pcb.upush(1);                          // argc
   pcb.upush((uint32_t)_user_proc_cleanup);
 
   // We need a stack that can invoke iret as soon as possible, without
