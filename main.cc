@@ -10,6 +10,7 @@
 #include "filesystem.h"
 #include "terminal.h"
 #include "process.h"
+#include "memory.h"
 
 extern int kernel_end;
 extern char stack_top;
@@ -96,6 +97,7 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
 
   puts("Memory map:");
   uint64_t memory_available = 0;
+  region largest_region = {0, 0};
 
   while (mmap_ptr < mmap_ptr_end) {
     const multiboot_mmap_entry *const mmap_entry = reinterpret_cast<const multiboot_mmap_entry *>(mmap_ptr);
@@ -108,6 +110,11 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
 
     if (mmap_entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
       memory_available += mmap_entry->len;
+
+      if (mmap_entry->len > (largest_region.end - largest_region.start)) {
+        largest_region.start = mmap_entry->addr;
+        largest_region.end = mmap_entry->addr + mmap_entry->len;
+      }
     }
 
     mmap_ptr += mmap_entry->size + sizeof(mmap_entry->size);
@@ -136,6 +143,14 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
   // Prepare for any interrupts that might happen before we start multitasking
   size_t interrupt_stack_length = sizeof(interrupt_stack) / sizeof(interrupt_stack[0]);
   tss_set_kernel_stack((uint32_t)&interrupt_stack[interrupt_stack_length - 1]);
+
+  // Adjust the memory region from which we'll allocate pages
+  largest_region.start = p2::max(largest_region.start, (uintptr_t)&kernel_end);
+  largest_region.start = ALIGN_UP(largest_region.start, 0x1000);
+  largest_region.end = ALIGN_DOWN(largest_region.end, 0x1000);
+
+  mem_init(&largest_region, 1);
+  mem_init_paging();
 
   setup_test_program();
 

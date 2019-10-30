@@ -34,6 +34,9 @@
 #define GDT_FLAGS_DB         0x04  // 0 = 16-bit segment, 1 = 32-bit
 #define GDT_FLAGS_G          0x08  // Granularity. 1 = limit is increments of 4k
 
+#define CR0_PE               0x00000001  // Protection enabled
+#define CR0_PG               0x80000000  // Paging enabled
+
 #define IDT_TYPE_D           0x08  // Size of gate; 1 = 32 bits, 0 = 16 bits
 #define IDT_TYPE_INTERRUPT   0x06  // Interrupt gate
 #define IDT_TYPE_DPL3        0x60  // Descriptor privilege level
@@ -51,6 +54,10 @@
 #define IRQ_CASCADE        2
 
 #define IRQ_BASE_INTERRUPT 0x20
+
+#define INT_DEBUG          3
+#define INT_GPF            13
+#define INT_PAGEFAULT      14
 
 #define GDT_SEGSEL(rpl, index) (((rpl) & 0x3) | ((index) << 3))
 

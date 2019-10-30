@@ -31,9 +31,14 @@ Build and run
 * Use build/build-shell to get a bash shell with the cross-compiler and run `make`
 * Run with `run-qemu`
 
+Unittests on host
+-----------------
+* ./run_unittests
+* make -f Makefile.unittests clean
+
 Notes
 -----
-* Kernel isn't started when constructors are run
+* Kernel isn't started when constructors are run, only use them for trivial init
 * IRQs are mapped to start at 0x20 (IRQ_BASE_INTERRUPT)
 
 Plan
@@ -51,8 +56,8 @@ Plan
 * Update syscalls to work with paging
 * Multi screen terminal (Terminal)
 * Some way to get a basic FS up with files (user programs, text)
-* User permissions in VFS
 * Ramdisk
+* User permissions in VFS
 * FS
 * Disk support
 * QEMU NIC support

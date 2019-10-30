@@ -1,6 +1,7 @@
 #include "utils.h"
 
 extern "C" void *memset(void *dest, int value, size_t len) {
+  // TODO: optimize
   char *ptr = (char *)dest;
   while (len--) {
     *ptr++ = value;
