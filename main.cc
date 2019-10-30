@@ -18,12 +18,15 @@ static uint32_t interrupt_stack[1024] alignas(16);
 
 SYSCALL_DEF3(write, SYSCALL_NUM_WRITE, const char *, const char *, int);
 SYSCALL_DEF3(read, SYSCALL_NUM_READ, const char *, char *, int);
+//SYSCALL_DEF0(yield, SYSCALL_NUM_YIELD);
 
 void mt_test_t1() {
   SYSCALL3(write, "/dev/term0", "Hello from thread\n", 18);
 
   while (true) {
-    SYSCALL3(write, "/dev/term0", "A", 2);
+    static int count = 0;
+    *(volatile char *)0xB8002 = 'A' + count;
+    count = (count + 1) % 26;
   }
 }
 
@@ -31,14 +34,13 @@ void mt_test_t2() {
   SYSCALL3(write, "/dev/term0", "Thread 2!\n", 10);
 
   while (true) {
-    SYSCALL3(write, "/dev/term0", "B", 2);
+    static int count = 0;
+    *(volatile char *)0xB8004 = 'A' + count;
+    count = (count + 1) % 26;
   }
 }
 
 void tio_test() {
-  SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
-  SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
-  SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
   SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
 
   while (true) {
@@ -46,7 +48,7 @@ void tio_test() {
     int read = SYSCALL3(read, "/dev/term0", input, sizeof(input) - 1);
     input[read] = '\0';
 
-    p2::format<128> output("Read %d bytes: %s\n");
+    p2::format<128> output("Read %d bytes: %s");
     output % read % input;
     SYSCALL3(write, "/dev/term0", output.str().c_str(), output.str().size());
   }
@@ -59,8 +61,8 @@ void test_multitasking() {
 
 void test_termio() {
   proc_create((void *)tio_test);
+  test_multitasking();
 }
-
 
 extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   clear_screen();
@@ -119,7 +121,8 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
   // Prepare for any interrupts that might happen before we start multitasking
   size_t interrupt_stack_length = sizeof(interrupt_stack) / sizeof(interrupt_stack[0]);
   tss_set_kernel_stack((uint32_t)&interrupt_stack[interrupt_stack_length - 1]);
-  test_multitasking();
+  //test_multitasking();
+  test_termio();
 
   // Let the mayhem begin
   asm volatile("sti");

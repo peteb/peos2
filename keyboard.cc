@@ -160,7 +160,9 @@ extern "C" void int_kbd(isr_registers regs) {
       }
 
       if (key_code) {
-        term_keypress(key_code);
+        irq_eoi(IRQ_KEYBOARD);
+        term_keypress(key_code);  // Can take a while to return if a context switch happens
+        return;
       }
     }
   }

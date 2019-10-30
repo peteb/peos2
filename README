@@ -46,7 +46,7 @@ Plan
 * DONE Simple VFS for device drivers (Syscalls)
 * DONE Single screen terminal controllable from program through /dev/termN (VFS)
 * DONE Multitasking
-* Preemptive multitasking, blocking calls, scheduling
+* DONE Preemptive multitasking, blocking calls, scheduling
 * Protected memory through paging + high mem kernel
 * Update syscalls to work with paging
 * Multi screen terminal (Terminal)

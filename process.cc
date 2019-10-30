@@ -76,7 +76,7 @@ static void idle_main();
 static p2::pool<process_control_block, 16, proc_handle> processes;
 static p2::pool<stack<1024>, 16> user_stacks;
 static p2::pool<stack<256>, 16> kernel_stacks;
-static process_control_block *current_task;
+static proc_handle current_pid = processes.end();
 static proc_handle running_head = processes.end(), suspended_head = processes.end();
 static proc_handle idle_process = processes.end();
 
@@ -97,8 +97,11 @@ void proc_init() {
 proc_handle proc_create(void *eip) {
   proc_handle pid = create_process(eip);
   enqueue_front(pid, &running_head);
-
   return pid;
+}
+
+proc_handle proc_current_pid() {
+  return current_pid;
 }
 
 extern "C" void int_timer(isr_registers) {
@@ -116,18 +119,18 @@ void proc_switch(proc_handle pid) {
   pcb.activate_kernel_stack();
   pcb.last_tick = tick_count;
 
-  uint32_t *current_task_esp = 0;
-  uint32_t **current_task_esp_ptr = &current_task_esp;
-
-  if (current_task == &pcb) {
+  if (current_pid == pid) {
     return;
   }
 
-  if (current_task) {
-    current_task_esp_ptr = &current_task->kernel_esp;
+  uint32_t *current_task_esp = 0;
+  uint32_t **current_task_esp_ptr = &current_task_esp;
+
+  if (current_pid != processes.end()) {
+    current_task_esp_ptr = &processes[current_pid].kernel_esp;
   }
 
-  current_task = &pcb;
+  current_pid = pid;
   switch_task((uint32_t *)current_task_esp_ptr, (uint32_t)pcb.kernel_esp);
 }
 
@@ -143,6 +146,7 @@ void proc_suspend(proc_handle pid) {
 
   dequeue(pid, &running_head);
   enqueue_front(pid, &suspended_head);
+  pcb.suspended = true;
 }
 
 void proc_resume(proc_handle pid) {
@@ -153,6 +157,7 @@ void proc_resume(proc_handle pid) {
 
   dequeue(pid, &suspended_head);
   enqueue_front(pid, &running_head);
+  pcb.suspended = false;
 }
 
 static void enqueue_front(proc_handle pid, proc_handle *head) {
@@ -225,7 +230,7 @@ static proc_handle create_process(void *eip) {
   // a stack good for `switch_task`. As we set the return address to
   // be `switch_task_iret`, we also need to push values for IRET.
   pcb.kpush(USER_DATA_SEL);              // SS
-  pcb.kpush((uint32_t)pcb.user_esp); // ESP
+  pcb.kpush((uint32_t)pcb.user_esp);     // ESP
   pcb.kpush(0x202);                      // EFLAGS, IF
   pcb.kpush(USER_CODE_SEL);              // CS
   pcb.kpush((uint32_t)eip);              // Return EIP from switch_task_iret
@@ -248,5 +253,6 @@ static void idle_main() {
   while (true) {
     *(volatile char *)0xB8000 = 'A' + count;
     count = (count + 1) % 26;
+    __builtin_ia32_pause();
   }
 }
