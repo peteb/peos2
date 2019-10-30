@@ -18,5 +18,6 @@ void        proc_suspend(proc_handle pid);
 void        proc_resume(proc_handle pid);
 void        proc_yield();
 proc_handle proc_current_pid();
+void        proc_kill(proc_handle pid, uint32_t exit_status);
 
 #endif // !PEOS2_PROCESS_H

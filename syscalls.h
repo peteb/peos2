@@ -8,6 +8,8 @@
 #define SYSCALL_NUM_WRITE        1
 #define SYSCALL_NUM_READ         2
 #define SYSCALL_NUM_YIELD       10
+#define SYSCALL_NUM_EXIT        11
+#define SYSCALL_NUM_KILL        12
 
 // These macros are for the client, the solution is inspired by JamesM
 
@@ -15,7 +17,7 @@
 // referenced data.
 
 #define SYSCALL_DEF0(name, num)                           \
-static int syscall_##name() {                             \
+static int _syscall_##name() {                            \
   int ret;                                                \
   asm volatile("int 0x90"                                 \
                : "=a"(ret)                                \
@@ -24,7 +26,7 @@ static int syscall_##name() {                             \
 }
 
 #define SYSCALL_DEF1(name, num, P1)                       \
-static int syscall_##name(P1 p1) {                        \
+static int _syscall_##name(P1 p1) {                       \
   int ret;                                                \
   asm volatile("int 0x90"                                 \
                : "=a"(ret)                                \
@@ -35,7 +37,7 @@ static int syscall_##name(P1 p1) {                        \
 }
 
 #define SYSCALL_DEF3(name, num, P1, P2, P3)               \
-static int syscall_##name(P1 p1, P2 p2, P3 p3) {          \
+static int _syscall_##name(P1 p1, P2 p2, P3 p3) {         \
   int ret;                                                \
   asm volatile("int 0x90"                                 \
                : "=a"(ret)                                \
@@ -47,9 +49,9 @@ static int syscall_##name(P1 p1, P2 p2, P3 p3) {          \
   return ret;                                             \
 }
 
-#define SYSCALL0(name) syscall_##name()
-#define SYSCALL1(name, p1) syscall_##name(p1)
-#define SYSCALL3(name, p1, p2, p3) syscall_##name(p1, p2, p3)
+#define SYSCALL0(name) _syscall_##name()
+#define SYSCALL1(name, p1) _syscall_##name(p1)
+#define SYSCALL3(name, p1, p2, p3) _syscall_##name(p1, p2, p3)
 
 typedef uint32_t (*syscall_fun)(...);
 

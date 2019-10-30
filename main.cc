@@ -18,7 +18,6 @@ static uint32_t interrupt_stack[1024] alignas(16);
 
 SYSCALL_DEF3(write, SYSCALL_NUM_WRITE, const char *, const char *, int);
 SYSCALL_DEF3(read, SYSCALL_NUM_READ, const char *, char *, int);
-//SYSCALL_DEF0(yield, SYSCALL_NUM_YIELD);
 
 void mt_test_t1() {
   SYSCALL3(write, "/dev/term0", "Hello from thread\n", 18);
@@ -54,14 +53,22 @@ void tio_test() {
   }
 }
 
-void test_multitasking() {
-  proc_create((void *)mt_test_t1);
-  proc_create((void *)mt_test_t2);
+uint32_t mt_exiting_fun() {
+  for (int i = 0; i < 5; ++i) {
+    p2::format<64> out("Counter reached %d...\n");
+    out % i;
+    SYSCALL3(write, "/dev/term0", out.str().c_str(), out.str().size());
+  }
+
+  SYSCALL3(write, "/dev/term0", "Bye bye!\n", 9);
+  return 123;
 }
 
-void test_termio() {
+void setup_test_program() {
   proc_create((void *)tio_test);
-  test_multitasking();
+  proc_create((void *)mt_test_t1);
+  proc_create((void *)mt_test_t2);
+  proc_create((void *)mt_exiting_fun);
 }
 
 extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
@@ -121,8 +128,8 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
   // Prepare for any interrupts that might happen before we start multitasking
   size_t interrupt_stack_length = sizeof(interrupt_stack) / sizeof(interrupt_stack[0]);
   tss_set_kernel_stack((uint32_t)&interrupt_stack[interrupt_stack_length - 1]);
-  //test_multitasking();
-  test_termio();
+
+  setup_test_program();
 
   // Let the mayhem begin
   asm volatile("sti");

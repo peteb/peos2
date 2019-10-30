@@ -9,6 +9,8 @@
 #include "support/format.h"
 #include "support/limits.h"
 
+SYSCALL_DEF1(exit, SYSCALL_NUM_EXIT, uint32_t);
+
 class process_control_block {
 public:
   process_control_block(uint32_t *kernel_stack, uint32_t *user_stack)
@@ -16,6 +18,7 @@ public:
       kernel_stack(kernel_stack),
       user_esp(user_stack),
       suspended(false),
+      terminating(false),
       last_tick(0)
   {}
 
@@ -26,6 +29,10 @@ public:
     *--kernel_esp = value;
   }
 
+  void upush(uint32_t value) {
+    *--user_esp = value;
+  }
+
   void activate_kernel_stack() {
     tss_set_kernel_stack((uint32_t)kernel_stack);
   }
@@ -33,7 +40,8 @@ public:
   uint32_t *kernel_esp;
   uint32_t *kernel_stack;
   uint32_t *user_esp;
-  bool suspended;
+  uint16_t kernel_stack_idx, user_stack_idx;
+  bool suspended, terminating;
   proc_handle prev_process, next_process;
   uint64_t last_tick;
 };
@@ -63,19 +71,25 @@ extern "C" void switch_task_iret();
 extern "C" void isr_timer(isr_registers);
 
 // Statics
-static uint32_t syscall_yield();
-static uint32_t *alloc_kernel_stack();
-static uint32_t *alloc_user_stack();
+static uint32_t    syscall_yield();
+static uint32_t    syscall_exit(uint32_t exit_code);
+static uint32_t    syscall_kill(uint32_t pid);
 static proc_handle decide_next_process();
-static void enqueue_front(proc_handle pid, proc_handle *head);
-static void dequeue(proc_handle pid, proc_handle *head);
 static proc_handle create_process(void *eip);
-static void idle_main();
+static void        destroy_process(proc_handle pid);
+static void        switch_process(proc_handle pid);
+
+static void        enqueue_front(proc_handle pid, proc_handle *head);
+static void        dequeue(proc_handle pid, proc_handle *head);
+
+static void        idle_main();
+static void        _user_proc_cleanup();
 
 // Global state
 static p2::pool<process_control_block, 16, proc_handle> processes;
 static p2::pool<stack<1024>, 16> user_stacks;
 static p2::pool<stack<256>, 16> kernel_stacks;
+
 static proc_handle current_pid = processes.end();
 static proc_handle running_head = processes.end(), suspended_head = processes.end();
 static proc_handle idle_process = processes.end();
@@ -85,6 +99,8 @@ static uint64_t tick_count;
 void proc_init() {
   // Syscalls
   syscall_register(SYSCALL_NUM_YIELD, (syscall_fun)syscall_yield);
+  syscall_register(SYSCALL_NUM_EXIT, (syscall_fun)syscall_exit);
+  syscall_register(SYSCALL_NUM_KILL, (syscall_fun)syscall_kill);
 
   // Timer for preemptive task switching
   pit_set_phase(10);
@@ -100,6 +116,23 @@ proc_handle proc_create(void *eip) {
   return pid;
 }
 
+static void destroy_process(proc_handle pid) {
+  process_control_block &pcb = processes[pid];
+
+  // Free up memory used by the process
+  user_stacks.erase(pcb.user_stack_idx);
+  kernel_stacks.erase(pcb.kernel_stack_idx);
+  pcb.kernel_esp = pcb.kernel_stack = pcb.user_esp = nullptr;
+
+  // Remove the process so it won't get picked for execution
+  dequeue(pid, pcb.suspended ? &suspended_head : &running_head);
+
+  // TODO: we might want to keep the PCB around for a while so we can
+  // read the exit status, detect dangling PIDs, etc...
+  processes.erase(pid);
+}
+
+
 proc_handle proc_current_pid() {
   return current_pid;
 }
@@ -111,6 +144,22 @@ extern "C" void int_timer(isr_registers) {
 }
 
 void proc_switch(proc_handle pid) {
+  process_control_block &pcb = processes[pid];
+  assert(!pcb.suspended && "please resume the process before switching to it");
+
+  if (pcb.terminating) {
+    puts("proc: trying to switch to terminating process");
+    // The process has been terminated, so we cannot run it. This can
+    // happen if the process was in a blocking syscall when someone
+    // else asked to kill it.
+    destroy_process(pid);
+    pid = decide_next_process();
+  }
+
+  switch_process(pid);
+}
+
+static void switch_process(proc_handle pid) {
   // Receiving an interrupt between updating TSS.ESP0 and IRET is not
   // something we want, so disable interrupts.
   asm volatile("cli");
@@ -187,16 +236,6 @@ static void dequeue(proc_handle pid, proc_handle *head) {
   }
 }
 
-static uint32_t *alloc_kernel_stack() {
-  uint16_t id = kernel_stacks.emplace_back();
-  return kernel_stacks[id].bottom_of_stack();
-}
-
-static uint32_t *alloc_user_stack() {
-  uint16_t id = user_stacks.emplace_back();
-  return user_stacks[id].bottom_of_stack();
-}
-
 static proc_handle decide_next_process() {
   // TODO: this algorithm has a bias towards the front of the list due
   // to the < comparison. Make it more fair.
@@ -222,8 +261,18 @@ static proc_handle decide_next_process() {
 }
 
 static proc_handle create_process(void *eip) {
-  proc_handle pid = processes.emplace_back(alloc_kernel_stack(), alloc_user_stack());
+  uint16_t ks_idx = kernel_stacks.emplace_back();
+  uint16_t us_idx = user_stacks.emplace_back();
+
+  proc_handle pid = processes.emplace_back(kernel_stacks[ks_idx].bottom_of_stack(),
+                                           user_stacks[us_idx].bottom_of_stack());
   process_control_block &pcb = processes[pid];
+  pcb.kernel_stack_idx = ks_idx;
+  pcb.user_stack_idx = us_idx;
+
+  // Push user space stack things first: the kernel stack references
+  // the user ESP.
+  pcb.upush((uint32_t)_user_proc_cleanup);
 
   // We need a stack that can invoke iret as soon as possible, without
   // invoking any gcc function epilogues or prologues.  First, we need
@@ -248,6 +297,36 @@ static uint32_t syscall_yield() {
   return 0;
 }
 
+void proc_kill(proc_handle pid, uint32_t exit_status) {
+  process_control_block &pcb = processes[pid];
+
+  if (pcb.suspended) {
+    // If the process is suspended we need to wait for the driver
+    puts(p2::format<64>("pid %d exiting with status %d") % pid % exit_status);
+    pcb.terminating = true;
+    return;
+  }
+
+  puts(p2::format<64>("pid %d exited with status %d") % pid % exit_status);
+  destroy_process(pid);
+}
+
+static uint32_t syscall_exit(uint32_t exit_status) {
+  proc_kill(proc_current_pid(), exit_status);
+  proc_yield();
+  assert(false && "unreachable");
+  // We can't return from this one; there's nothing left to do in the process
+  return 0;
+}
+
+static uint32_t syscall_kill(uint32_t pid) {
+  proc_kill(pid, 123);
+  return 1;
+}
+
+//
+// Idling process: when there's nothing else to do.
+//
 static void idle_main() {
   static int count = 0;
   while (true) {
@@ -255,4 +334,16 @@ static void idle_main() {
     count = (count + 1) % 26;
     __builtin_ia32_pause();
   }
+}
+
+//
+// Called in the user process when the main function has
+// returned. Should be generated by the user space compiler/linker in
+// the future, but we don't have any memory protection now so a
+// runaway process will crash the whole system.
+//
+static void _user_proc_cleanup() {
+  uint32_t retval;
+  asm volatile("" : "=a"(retval));
+  SYSCALL1(exit, retval);
 }
