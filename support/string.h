@@ -144,7 +144,7 @@ namespace p2 {
       _storage_ref[_position] = '\0';
     }
 
-    char operator [](int idx) const {
+    const char &operator [](int idx) const {
       return _storage_ref[idx];
     }
 

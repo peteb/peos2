@@ -53,11 +53,11 @@ void tio_test(int argc, char *argv[]) {
   }
 
   while (true) {
-    char input[80] = {0};
+    char input[240];
     int read = SYSCALL3(read, "/dev/term0", input, sizeof(input) - 1);
     input[read] = '\0';
 
-    p2::format<128> output("Read %d bytes: %s");
+    p2::format<sizeof(input) + 50> output("Read %d bytes: %s");
     output % read % input;
     SYSCALL3(write, "/dev/term0", output.str().c_str(), output.str().size());
   }
