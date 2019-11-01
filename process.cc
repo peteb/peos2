@@ -4,6 +4,7 @@
 #include "assert.h"
 #include "syscalls.h"
 #include "x86.h"
+#include "memareas.h"
 
 #include "support/pool.h"
 #include "support/format.h"
@@ -341,7 +342,7 @@ static uint32_t syscall_kill(uint32_t pid) {
 static void idle_main() {
   static int count = 0;
   while (true) {
-    *(volatile char *)0xB8000 = 'A' + count;
+    *(volatile char *)PHYS2KERVIRT(0xB8000) = 'A' + count;
     count = (count + 1) % 26;
     __builtin_ia32_pause();
   }

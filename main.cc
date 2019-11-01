@@ -11,6 +11,7 @@
 #include "terminal.h"
 #include "process.h"
 #include "memory.h"
+#include "memareas.h"
 
 extern int kernel_end;
 extern char stack_top;
@@ -25,7 +26,7 @@ void mt_test_t1() {
 
   while (true) {
     static int count = 0;
-    *(volatile char *)0xB8002 = 'A' + count;
+    *(volatile char *)PHYS2KERVIRT(0xB8002) = 'A' + count;
     count = (count + 1) % 26;
   }
 }
@@ -35,7 +36,7 @@ void mt_test_t2() {
 
   while (true) {
     static int count = 0;
-    *(volatile char *)0xB8004 = 'A' + count;
+    *(volatile char *)PHYS2KERVIRT(0xB8004) = 'A' + count;
     count = (count + 1) % 26;
   }
 }
@@ -145,7 +146,7 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
   tss_set_kernel_stack((uint32_t)&interrupt_stack[interrupt_stack_length - 1]);
 
   // Adjust the memory region from which we'll allocate pages
-  largest_region.start = p2::max(largest_region.start, (uintptr_t)&kernel_end);
+  largest_region.start = p2::max(largest_region.start, KERVIRT2PHYS((uintptr_t)&kernel_end));
   largest_region.start = ALIGN_UP(largest_region.start, 0x1000);
   largest_region.end = ALIGN_DOWN(largest_region.end, 0x1000);
 

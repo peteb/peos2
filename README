@@ -40,6 +40,8 @@ Notes
 -----
 * Kernel isn't started when constructors are run, only use them for trivial init
 * IRQs are mapped to start at 0x20 (IRQ_BASE_INTERRUPT)
+* The kernel starts with paging enabled and two identity mappings, one at 0x0, the other at 0xC0000000, with
+  EIP being in the latter
 
 Plan
 ----
@@ -52,11 +54,12 @@ Plan
 * DONE Single screen terminal controllable from program through /dev/termN (VFS)
 * DONE Multitasking
 * DONE Preemptive multitasking, blocking calls, scheduling
-* Protected memory through paging + high mem kernel
-* Update syscalls to work with paging
+* DONE Protected memory through paging + high mem kernel
+* DONE Update syscalls to work with paging
 * Multi screen terminal (Terminal)
 * Some way to get a basic FS up with files (user programs, text)
 * Ramdisk
+* Improved memory protection with kernel memory marked for supervisor
 * User permissions in VFS
 * FS
 * Disk support

@@ -5,7 +5,8 @@
 .set MAGIC,    0x1BADB002       // 'magic number' lets bootloader find the header
 .set CHECKSUM, -(MAGIC + FLAGS)
 
-// Header according to the multiboot spec
+// Header according to the multiboot spec. It needs to be early in the binary so
+// we put it in its own section so we can control that.
 .section .mbhdr
 .align 4
 .long MAGIC
@@ -14,19 +15,37 @@
 
 // Initial stack for kernel
 .section .bss
-.align 16
-stack_bottom:
-.skip 0x40000
 .global stack_top
+        .align 16
+stack_bottom:
+        .skip 0x40000
 stack_top:
+
+        .align 0x1000
+page_directory:
+        .skip 4096
+page_table:
+        .skip 4096
+        // TODO: calculate the needed number of page tables depending
+        // on kernel size
+
+
+
+.section .text
 
 //
 // Entry point
 //
-.section .text
 .global _start
-.type _start, @function
 _start:
+        push %ebx
+        push %eax
+
+        jmp map_high_mem
+
+back:   pop %eax
+        pop %ebx
+
         mov $stack_top, %esp
         push %ebx   // save multiboot header
         push %eax   // multiboot magic
@@ -39,8 +58,53 @@ _start:
         jmp 1b
 
 
+// All aboslute addresses in the kernel are above 0xC0000000,
+// but there's no physical memory there, so we need to fix this
+// with paging.
+map_high_mem:
+        // Setup two equally mapped page dir entries
+        mov $(page_table - 0xC0000000), %eax
+        or $3, %eax
+        mov %eax, (page_directory - 0xC0000000 + 0)
+        mov %eax, (page_directory - 0xC0000000 + 3072)
+
+        // Start at physical address 0
+        mov $0, %edi
+
+        // End at how many pages we can map using our only page table
+        mov $(1024 * 4096), %ecx
+
+        // ESI points into our page table
+        mov $(page_table - 0xC0000000), %esi
+
+        // Map the physical memory pages in the page table
+1:      cmp %ecx, %edi
+        jge 2f
+
+        mov %edi, %ebx
+        or $3, %ebx
+        movl %ebx, (%esi)
+
+        add $4096, %edi
+        add $4, %esi
+        jmp 1b
+
+        // Setup control register to point at our page directory
+2:      mov $(page_directory - 0xC0000000), %ecx
+        mov %ecx, %cr3
+
+        // Enable paging
+        mov %cr0, %ecx
+        or $0x80010000, %ecx
+        mov %ecx, %cr0
+
+        // Do a long jump so EIP is in the upper part the address space
+        lea 4f, %ecx
+        jmp *%ecx
+
+4:      jmp back
+
 .global enter_user_mode
-.type enter_user_mode, @function
 enter_user_mode:
         mov 4(%esp), %ax
         mov %ax, %ds
@@ -62,7 +126,6 @@ enter_user_mode:
 
 
 .global load_gdt
-.type load_gdt, @function
 load_gdt:
         mov 4(%esp), %eax        // GDT base + limit
         mov 8(%esp), %ecx        // Data segment selector

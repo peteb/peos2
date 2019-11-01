@@ -1,0 +1,8 @@
+#ifndef PEOS2_MEMAREAS_H
+#define PEOS2_MEMAREAS_H
+
+#define KERNEL_VIRTUAL_BASE 0xC0000000
+#define PHYS2KERVIRT(value) ((value) + KERNEL_VIRTUAL_BASE)
+#define KERVIRT2PHYS(value) ((value) - KERNEL_VIRTUAL_BASE)
+
+#endif // !PEOS2_MEMAREAS_H

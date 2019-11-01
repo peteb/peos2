@@ -2,13 +2,15 @@
 
 #include "support/mem_range.h"
 #include "x86.h"
+#include "memareas.h"
 
 using namespace p2;
 
 // Constants
 static const int NUM_COLUMNS = 80;
 static const int NUM_ROWS    = 25;
-static const mem_range<uint16_t> FRAMEBUFFER = {0xB8000, 0xB8000 + 2 * NUM_COLUMNS * NUM_ROWS};
+static const mem_range<uint16_t> FRAMEBUFFER = {PHYS2KERVIRT(0xB8000),
+                                                PHYS2KERVIRT(0xB8000 + 2 * NUM_COLUMNS * NUM_ROWS)};
 
 // Global state
 static int screen_position = 0;
