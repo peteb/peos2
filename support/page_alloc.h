@@ -24,8 +24,8 @@ namespace p2 {
       assert((end_adr & 0xFFF) == 0 && "range must be 4k aligned");
 
       // Calculate how much space we need for the freelist stack
-      uintptr_t requested_num_pages = (end_adr - start_adr) / 0x1000;
-      uintptr_t freelist_size_pages = (requested_num_pages * sizeof(uintptr_t)) / 0x1000;
+      uintptr_t needed_for_bookkeeping = ((end_adr - start_adr) / 0x1000) * sizeof(uintptr_t);
+      uintptr_t freelist_size_pages = (needed_for_bookkeeping + 0x0FFF) / 0x1000;
 
       // TODO: we're wasting some space here because the freelist
       // takes space out of the allocatable region. Make this tighter.

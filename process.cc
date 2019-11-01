@@ -5,6 +5,7 @@
 #include "syscalls.h"
 #include "x86.h"
 #include "memareas.h"
+#include "memory.h"
 
 #include "support/pool.h"
 #include "support/format.h"
@@ -14,10 +15,11 @@ SYSCALL_DEF1(exit, SYSCALL_NUM_EXIT, uint32_t);
 
 class process_control_block {
 public:
-  process_control_block(uint32_t *kernel_stack, uint32_t *user_stack)
+  process_control_block(uint32_t *kernel_stack, uint32_t *user_stack, mem_adrspc address_space)
     : kernel_esp(kernel_stack),
       kernel_stack(kernel_stack),
       user_esp(user_stack),
+      address_space(address_space),
       suspended(false),
       terminating(false),
       last_tick(0)
@@ -36,8 +38,9 @@ public:
     *--user_esp = value;
   }
 
-  void activate_kernel_stack() {
+  void activate() {
     tss_set_kernel_stack((uint32_t)kernel_stack);
+    mem_activate_address_space(address_space);
   }
 
   uint32_t *kernel_esp;
@@ -48,10 +51,11 @@ public:
   const char *argv[1];
   p2::string<64> argument;
 
+  mem_adrspc address_space;
+
   bool suspended, terminating;
   proc_handle prev_process, next_process;
   uint64_t last_tick;
-
 };
 
 //
@@ -132,6 +136,7 @@ static void destroy_process(proc_handle pid) {
   user_stacks.erase(pcb.user_stack_idx);
   kernel_stacks.erase(pcb.kernel_stack_idx);
   pcb.kernel_esp = pcb.kernel_stack = pcb.user_esp = nullptr;
+  mem_destroy_address_space(pcb.address_space);
 
   // Remove the process so it won't get picked for execution
   dequeue(pid, pcb.suspended ? &suspended_head : &running_head);
@@ -174,7 +179,7 @@ static void switch_process(proc_handle pid) {
   asm volatile("cli");
 
   process_control_block &pcb = processes[pid];
-  pcb.activate_kernel_stack();
+  pcb.activate();
   pcb.last_tick = tick_count;
 
   if (current_pid == pid) {
@@ -274,7 +279,8 @@ static proc_handle create_process(void *eip, const char *argument) {
   uint16_t us_idx = user_stacks.emplace_back();
 
   proc_handle pid = processes.emplace_back(kernel_stacks[ks_idx].bottom_of_stack(),
-                                           user_stacks[us_idx].bottom_of_stack());
+                                           user_stacks[us_idx].bottom_of_stack(),
+                                           mem_create_address_space());
   process_control_block &pcb = processes[pid];
   pcb.kernel_stack_idx = ks_idx;
   pcb.user_stack_idx = us_idx;

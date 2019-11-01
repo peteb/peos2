@@ -6,6 +6,7 @@
 #include "memareas.h"
 
 #include "support/page_alloc.h"
+#include "support/pool.h"
 
 // Structs
 struct page_dir_entry {
@@ -18,15 +19,23 @@ struct page_table_entry {
   uint32_t frame_11_31:20;
 } __attribute__((packed));
 
+struct address_space {
+  page_dir_entry *page_dir;
+};
+
 // Externs
 extern "C" void isr_page_fault(isr_registers);
 extern int kernel_end;
 
 // Global state
-static page_dir_entry kernel_page_dir[1024] alignas(0x1000);
 static page_table_entry kernel_page_table[1024] alignas(0x1000);
+static char page_dir_area[sizeof(page_dir_entry) * 1024 * 100] alignas(0x1000);
 
 static p2::page_allocator *pmem;
+static p2::page_allocator page_dir_allocator((uintptr_t)page_dir_area,
+                                             (uintptr_t)(page_dir_area + sizeof(page_dir_area)));
+static p2::pool<address_space, 16, mem_adrspc> address_spaces;
+static mem_adrspc current_address_space = address_spaces.end();
 
 
 void mem_map_page(void *page_directory, uint32_t virt, uint32_t phys) {
@@ -73,16 +82,10 @@ void mem_init(const region *regions, size_t region_count) {
   static p2::page_allocator alloc{largest_region.start, largest_region.end};
   // TODO: fix this hackery
   pmem = &alloc;
-}
 
-void mem_init_paging() {
   int_register(INT_PAGEFAULT, isr_page_fault, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 
-  // Overwrite the current mappings for the kernel to only include the
-  // relevant parts and only at KERNEL_VIRT_BASE.
-  kernel_page_dir[(KERNEL_VIRTUAL_BASE >> 20) / 4].table_11_31 = KERVIRT2PHYS((uintptr_t)kernel_page_table) >> 12;
-  kernel_page_dir[(KERNEL_VIRTUAL_BASE >> 20) / 4].flags = MEM_PDE_P|MEM_PDE_R|MEM_PDE_U;
-
+  // Prepare the kernel page tables
   uintptr_t kernel_end_phys = ALIGN_UP(KERVIRT2PHYS((uintptr_t)&kernel_end), 0x1000);
   uintptr_t phys_addr = 0;
 
@@ -91,18 +94,6 @@ void mem_init_paging() {
     kernel_page_table[i].flags = MEM_PTE_P|MEM_PTE_R|MEM_PTE_U;
     phys_addr += 0x1000;
   }
-
-  // Point to our page directory
-  uintptr_t kernel_page_dir_phys = KERVIRT2PHYS((uintptr_t)&kernel_page_dir);
-  asm volatile("mov cr3, %0" : : "a"(kernel_page_dir_phys) : "memory");
-  // TODO: fix all inline asm to have the same syntax (AT&T vs Intel) as *.s files
-
-  // Enable paging
-  /*asm volatile("mov eax, cr0\n"
-               "or eax, %0\n"
-               "mov cr0, eax"
-               :: "i"(CR0_PG));*/
-  // Paging is already enabled before the kernel starts
 }
 
 void mem_free_page_dir(void *page_directory) {
@@ -147,6 +138,42 @@ void mem_free_page(void *page) {
        % pmem->free_space());
 }
 
+mem_adrspc mem_create_address_space() {
+  page_dir_entry *page_dir = (page_dir_entry *)page_dir_allocator.alloc_page_zero();
+
+  // Map the kernel into the address space
+  page_dir[(KERNEL_VIRTUAL_BASE >> 20) / 4].table_11_31 = KERVIRT2PHYS((uintptr_t)kernel_page_table) >> 12;
+  page_dir[(KERNEL_VIRTUAL_BASE >> 20) / 4].flags = MEM_PDE_P|MEM_PDE_R|MEM_PDE_U;
+
+  return address_spaces.push_back({page_dir});
+}
+
+void mem_destroy_address_space(mem_adrspc adrspc) {
+  if (adrspc == current_address_space) {
+    // We assume that the kernel fallback address space (0) is
+    // compatible with `adrspc`.
+
+    // TODO: remove magic 0 constant
+    mem_activate_address_space(0);
+  }
+
+  address_space *space = &address_spaces[adrspc];
+  page_dir_allocator.free_page(space->page_dir);
+  space->page_dir = nullptr;
+  address_spaces.erase(adrspc);
+}
+
+void mem_activate_address_space(mem_adrspc adrspc) {
+  if (current_address_space == adrspc) {
+    return;
+  }
+
+  current_address_space = adrspc;
+  address_space *space = &address_spaces[adrspc];
+  uintptr_t page_dir_phys = KERVIRT2PHYS((uintptr_t)space->page_dir);
+  asm volatile("mov cr3, %0" : : "a"(page_dir_phys) : "memory");
+  // TODO: fix all inline asm to have the same syntax (AT&T vs Intel) as *.s files
+}
 
 extern "C" void int_page_fault(isr_registers regs) {
   p2::string<256> buf;

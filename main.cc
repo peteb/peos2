@@ -151,7 +151,12 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
   largest_region.end = ALIGN_DOWN(largest_region.end, 0x1000);
 
   mem_init(&largest_region, 1);
-  mem_init_paging();
+
+  // Overwrite the current mappings for the kernel to only include the
+  // relevant parts and only at KERNEL_VIRT_BASE.
+  mem_adrspc addr = mem_create_address_space();
+  mem_activate_address_space(addr);
+
 
   setup_test_program();
 
