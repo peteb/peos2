@@ -23,8 +23,9 @@ void vfs_init();
 void vfs_print();
 
 vfs_node_handle vfs_create_node(uint8_t type);
-void vfs_add_dirent(vfs_node_handle dir_node, const char *name, vfs_node_handle node);
-void vfs_set_driver(vfs_node_handle dev_node, vfs_device_driver *driver, void *opaque);
+void            vfs_add_dirent(vfs_node_handle dir_node, const char *name, vfs_node_handle node);
+void            vfs_set_driver(vfs_node_handle dev_node, vfs_device_driver *driver, void *opaque);
 vfs_node_handle vfs_lookup(const char *path);
+void            *vfs_get_opaque(vfs_char_device *device);
 
 #endif // !PEOS2_FILESYSTEM_H

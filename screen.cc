@@ -68,6 +68,9 @@ void screen_seek(screen_buffer buffer_handle, uint16_t position) {
   }
 }
 
+screen_buffer screen_current_buffer() {
+  return current_buffer;
+}
 
 void set_cursor(uint16_t position) {
   // 0x3D4 = CRT Controller Address Register for color mode

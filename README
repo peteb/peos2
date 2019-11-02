@@ -56,15 +56,15 @@ Plan
 * DONE Preemptive multitasking, blocking calls, scheduling
 * DONE Protected memory through paging + high mem kernel
 * DONE Update syscalls to work with paging
-* Multi screen terminal (Terminal)
-* Some way to get a basic FS up with files (user programs, text)
-* Ramdisk
+* DONE Multi screen terminal (Terminal)
+* Some way to get a basic FS up with files/a ramdisk (user programs, text)
+* Start user process from binary on filesystem
 * Improved memory protection with kernel memory marked for supervisor
+* QEMU NIC support
+* Basic Ethernet
 * User permissions in VFS
 * FS
 * Disk support
-* QEMU NIC support
-* Basic Ethernet
 * SMP
 
 Terminal emulation

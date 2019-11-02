@@ -20,6 +20,7 @@ void          screen_init();
 screen_buffer screen_create_buffer();
 void          screen_switch_buffer(screen_buffer buffer_handle);
 void          screen_set_target_buffer(screen_buffer buffer_handle);
+screen_buffer screen_current_buffer();
 void          screen_print(screen_buffer buffer_handle, const char *message, int count = -1);
 void          screen_seek(screen_buffer buffer_handle, uint16_t position);
 

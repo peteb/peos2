@@ -63,6 +63,20 @@ void tio_test(int argc, char *argv[]) {
   }
 }
 
+void tio_test2() {
+  SYSCALL3(write, "/dev/term1", "Hello to the second terminal\n", 29);
+
+  while (true) {
+    char input[240];
+    int read = SYSCALL3(read, "/dev/term1", input, sizeof(input) - 1);
+    input[read] = '\0';
+
+    p2::format<sizeof(input) + 50> output("Read %d bytes: %s");
+    output % read % input;
+    SYSCALL3(write, "/dev/term1", output.str().c_str(), output.str().size());
+  }
+}
+
 uint32_t mt_exiting_fun() {
   for (int i = 0; i < 2; ++i) {
     p2::format<64> out("Counter reached %d...\n");
@@ -76,6 +90,7 @@ uint32_t mt_exiting_fun() {
 
 void setup_test_program() {
   proc_create((void *)tio_test, "<--test-->");
+  proc_create((void *)tio_test2, "");
   proc_create((void *)mt_test_t1, "");
   proc_create((void *)mt_test_t2, "");
   proc_create((void *)mt_exiting_fun, "");
@@ -127,8 +142,6 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
                       ((uintptr_t)&kernel_end - (uintptr_t)&kernel_start) / 1024,
                       (uintptr_t)&kernel_end));
 
-
-
   // x86 basic stuff setup
   puts("Entering protected mode...");
   enter_protected_mode();
@@ -142,9 +155,13 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   // Setup filesystem
   vfs_init();
   vfs_add_dirent(vfs_lookup("/"), "dev", vfs_create_node(VFS_DIRECTORY));
-  term_init("term0");
-  vfs_print();
+  term_init("term0", screen_current_buffer());
 
+  for (int i = 1; i < 12; ++i) {
+    term_init(p2::format<10>("term%d", i).str().c_str(), screen_create_buffer());
+  }
+
+  vfs_print();
   proc_init();
 
   // Prepare for any interrupts that might happen before we start multitasking
@@ -155,7 +172,6 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   largest_region.start = p2::max(largest_region.start, KERVIRT2PHYS((uintptr_t)&kernel_end));
   largest_region.start = ALIGN_UP(largest_region.start, 0x1000);
   largest_region.end = ALIGN_DOWN(largest_region.end, 0x1000);
-
   mem_init(&largest_region, 1);
 
   // Overwrite the current mappings for the kernel to only include the

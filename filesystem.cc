@@ -24,7 +24,7 @@ struct vfs_dirent {
       next_dirent(next_dirent)
   {}
 
-  const char *name;
+  p2::string<32> name;
   vfs_node_handle node;
   uint16_t next_dirent;
 };
@@ -205,4 +205,8 @@ static uint32_t syscall_read(const char *path, char *data, int length) {
   // TODO: handle the error cases better than asserts
 
   return device_node.driver->read(&device_node, driver.rest_path, data, length);
+}
+
+void *vfs_get_opaque(vfs_char_device *device) {
+  return device->opaque;
 }
