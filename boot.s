@@ -51,7 +51,7 @@ back:   pop %eax
         push %eax   // multiboot magic
 
         call _init  // ctors
-        call kernel_start
+        call kernel_main
         call _fini  // dtors
 
 1:	hlt

@@ -13,7 +13,7 @@
 #include "memory.h"
 #include "memareas.h"
 
-extern int kernel_end;
+extern int kernel_start, kernel_end;
 extern char stack_top;
 
 static uint32_t interrupt_stack[1024] alignas(16);
@@ -64,7 +64,7 @@ void tio_test(int argc, char *argv[]) {
 }
 
 uint32_t mt_exiting_fun() {
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 2; ++i) {
     p2::format<64> out("Counter reached %d...\n");
     out % i;
     SYSCALL3(write, "/dev/term0", out.str().c_str(), out.str().size());
@@ -81,7 +81,7 @@ void setup_test_program() {
   proc_create((void *)mt_exiting_fun, "");
 }
 
-extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
+extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   clear_screen();
 
   if (multiboot_magic != MULTIBOOT_MAGIC) {
@@ -122,6 +122,9 @@ extern "C" void kernel_start(uint32_t multiboot_magic, multiboot_info *multiboot
   }
 
   puts(p2::format<32>("Total avail mem: %d MB") % (memory_available / 1024 / 1024));
+  puts(p2::format<64>("Kernel size: %d KB (ends at %x)")
+       % (((uintptr_t)&kernel_end - (uintptr_t)&kernel_start) / 1024)
+       % (uintptr_t)&kernel_end);
 
   // x86 basic stuff setup
   puts("Entering protected mode...");
