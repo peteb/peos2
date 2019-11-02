@@ -122,9 +122,11 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   }
 
   puts(p2::format<32>("Total avail mem: %d MB") % (memory_available / 1024 / 1024));
-  puts(p2::format<64>("Kernel size: %d KB (ends at %x)")
-       % (((uintptr_t)&kernel_end - (uintptr_t)&kernel_start) / 1024)
-       % (uintptr_t)&kernel_end);
+
+  puts(p2::format<64>("Kernel size: %d KB (ends at %x)",
+                      ((uintptr_t)&kernel_end - (uintptr_t)&kernel_start) / 1024,
+                      (uintptr_t)&kernel_end));
+
 
   // x86 basic stuff setup
   puts("Entering protected mode...");

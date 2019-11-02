@@ -14,6 +14,16 @@ namespace p2 {
     format(char *(&data), const char *fmt) : _storage(data), _storage_ref(_storage), _fmt_pos(fmt) {}
     format(p2::string<_MaxLen> &other, const char *fmt) : _storage_ref(other),  _fmt_pos(fmt) {}
 
+    template<typename... _ArgsT>
+    format(const char *fmt, _ArgsT... args) : format(fmt) {
+      (*this)(args...);
+      str();  // To output the rest of the format
+    }
+
+    // The % operator is a bit messy to use due to associativity;
+    // sometimes it binds tighter to the arguments than wanted,
+    // causing a modulus operation instead (and a lot of wasted time
+    // debugging...), so prefer the `format(fmt, args...)` ctor.
     format &operator %(const char *str) {
       expect_string();
       _storage_ref.append(str);
@@ -26,8 +36,24 @@ namespace p2 {
       return *this;
     }
 
+    template<typename T>
+    format &operator()(T head) {
+      return (*this) % head;
+    }
+
+    template<typename T, typename... _ArgsT>
+    format &operator()(T head, _ArgsT... rest) {
+      (*this) % head;
+      return (*this)(rest...);
+    }
+
     const p2::string<_MaxLen> &str() {
       fmt_scan();  // to get any leftovers
+      return _storage_ref;
+    }
+
+    const p2::string<_MaxLen> &str() const {
+      assert(!*_fmt_pos && "format has to be consumed before calling const str()");
       return _storage_ref;
     }
 

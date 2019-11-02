@@ -45,4 +45,19 @@ TESTSUITE(p2::format) {
     ASSERT_PANIC((fmt % 123).str());
   }
 
+  TESTCASE("formatting can happen using operator()") {
+    p2::format<64> fmt("hello %s %d!");
+    fmt("peter", 123);
+    ASSERT_EQ(fmt.str(), p2::string<64>("hello peter 123!"));
+  }
+
+  TESTCASE("formatting using ctor variadic template") {
+    p2::format<64> fmt("Hello %s, %d", "peter", 123);
+    ASSERT_EQ(fmt.str(), p2::string<64>("Hello peter, 123"));
+  }
+
+  TESTCASE("inline formatting works") {
+    ASSERT_EQ(p2::format<64>("hello %s!", "pete").str(),
+              p2::string<64>("hello pete!"));
+  }
 }

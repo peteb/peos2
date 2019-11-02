@@ -19,6 +19,6 @@ void screen_backspace();
 
 template<int N>      void print(const p2::string<N> &fs) {print(fs.str()); }
 template<int N>      void print(p2::format<N> &fm) {print(fm.str()); }
-template<typename T> void puts(T &val) {print(val); print("\n"); }
+template<typename T> void puts(T val) {print(val); print("\n"); }
 
 #endif // !PEOS2_SCREEN_H
