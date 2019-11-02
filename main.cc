@@ -82,7 +82,7 @@ void setup_test_program() {
 }
 
 extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
-  clear_screen();
+  screen_init();
 
   if (multiboot_magic != MULTIBOOT_MAGIC) {
     panic((p2::format<32>("Incorrect mb magic: %x") % multiboot_magic).str().c_str());
@@ -126,6 +126,7 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   puts(p2::format<64>("Kernel size: %d KB (ends at %x)",
                       ((uintptr_t)&kernel_end - (uintptr_t)&kernel_start) / 1024,
                       (uintptr_t)&kernel_end));
+
 
 
   // x86 basic stuff setup

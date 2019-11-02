@@ -8,9 +8,11 @@
 #include "support/string.h"
 #include "support/blocking_queue.h"
 
+// Statics
 static int write(vfs_char_device *, const char *path, const char *data, int length);
 static int read(vfs_char_device *device, const char *path, char *data, int length);
 
+// Global state
 static p2::string<200> line_buffer;
 static p2::blocking_data_queue<1000> input_queue;
 
@@ -52,7 +54,7 @@ void term_keypress(uint16_t keycode) {
   }
   else if (keycode == '\r') {
     if (line_buffer.size() > 0) {
-      screen_backspace();
+      print("\r");
       line_buffer.backspace();
     }
   }

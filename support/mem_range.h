@@ -45,7 +45,7 @@ namespace p2 {
 
     mem_range subrange(int substart, int length = -1) const {
       if (length == -1) {
-        length = end - start;
+        length = end - start - substart;
       }
 
       return mem_range<T>(start + substart, start + substart + length);
@@ -59,6 +59,11 @@ namespace p2 {
       for (size_t i = 0; i < min_length; ++i) {
         (*this)[i] = rhs[i];
       }
+    }
+
+    void assign_disjunct(const mem_range<T> &rhs) const {
+      // TODO
+      assign_overlap(rhs);
     }
 
   private:

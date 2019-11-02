@@ -1,77 +1,73 @@
 #include "screen.h"
-
-#include "support/mem_range.h"
 #include "x86.h"
 #include "memareas.h"
 
-using namespace p2;
-
-// Constants
-static const int NUM_COLUMNS = 80;
-static const int NUM_ROWS    = 25;
-static const mem_range<uint16_t> FRAMEBUFFER = {PHYS2KERVIRT(0xB8000),
-                                                PHYS2KERVIRT(0xB8000 + 2 * NUM_COLUMNS * NUM_ROWS)};
-
-// Global state
-static int screen_position = 0;
+#include "support/pool.h"
 
 // Declarations
 static void show_cursor();
 static void hide_cursor();
+static void set_cursor(uint16_t position);
 
-static inline uint16_t entry(uint8_t bg_color, uint8_t fg_color, char letter) {
-  return ((bg_color & 0xF) << 4 | (fg_color & 0xF)) << 8 | (letter & 0x7F);
+// Classes etc
+#include "screen_private.h"
+
+// Global state
+static buffer front_buffer(PHYS2KERVIRT(0xB8000), PHYS2KERVIRT(0xB8000 + 2 * NUM_COLUMNS * NUM_ROWS));
+static p2::pool<buffer, 16, screen_buffer> buffers;
+static screen_buffer current_buffer = buffers.end(), target_buffer = buffers.end();
+
+void screen_init() {
+  hide_cursor();
+
+  // Create the initial screen
+  screen_buffer main_back_buffer = screen_create_buffer();
+  screen_set_target_buffer(main_back_buffer);
+  screen_switch_buffer(main_back_buffer);
 }
 
-void clear_screen() {
-  FRAMEBUFFER.fill(entry(0x0, 0xF, ' '));
+screen_buffer screen_create_buffer() {
+  return buffers.emplace_back();
+}
 
-  set_cursor(0);
+void screen_switch_buffer(screen_buffer buffer_handle) {
+  if (current_buffer == buffer_handle) {
+    return;
+  }
+
+  buffer *buf = &buffers[buffer_handle];
+  current_buffer = buffer_handle;
+  front_buffer.assign(*buf);
+  set_cursor(buf->position);
   show_cursor();
-  screen_position = 0;
+}
+
+void screen_print(screen_buffer buffer_handle, const char *message, int count) {
+  if (buffer_handle == current_buffer) {
+    front_buffer.print(message, count);
+  }
+
+  buffers[buffer_handle].print(message, count);
 }
 
 void print(const char *message, int count) {
-  bool clear_until_end = false;
-
-  while (*message && (count == -1 || count--)) {
-    const bool newline = *message == '\n';
-
-    if (newline) {
-      screen_position += NUM_COLUMNS - screen_position % NUM_COLUMNS;  // Move cursor to start of next line
-    }
-
-    if (screen_position >= NUM_COLUMNS * NUM_ROWS) {
-      screen_position -= NUM_COLUMNS;  // Move to start of line. Beware, this doesn't protect against large overruns
-
-      // Scroll
-      FRAMEBUFFER
-        .subrange(0, NUM_COLUMNS * (NUM_ROWS - 1))
-        .assign_overlap(FRAMEBUFFER.subrange(NUM_COLUMNS));
-
-      if (newline) {
-        // Clear the row immediately as we're not filling up the rows
-        FRAMEBUFFER.subrange(screen_position).fill(entry(0x0, 0xF, ' '));
-      }
-      else {
-        // Delay clearing the rest of the buffer to minimize overwrite
-        clear_until_end = true;
-      }
-    }
-
-    if (!newline) {
-      FRAMEBUFFER[screen_position++] = entry(0x0, 0xF, *message);
-    }
-
-    ++message;
-  }
-
-  if (clear_until_end) {
-    FRAMEBUFFER.subrange(screen_position).fill(entry(0x0, 0xF, ' '));
-  }
-
-  set_cursor(screen_position);
+  screen_print(target_buffer, message, count);
 }
+
+void screen_set_target_buffer(screen_buffer buffer_handle) {
+  target_buffer = buffer_handle;
+}
+
+void screen_seek(screen_buffer buffer_handle, uint16_t position) {
+  buffer *buf = &buffers[buffer_handle];
+  buf->position = position;
+
+  if (buffer_handle == current_buffer) {
+    front_buffer.position = position;
+    set_cursor(position);
+  }
+}
+
 
 void set_cursor(uint16_t position) {
   // 0x3D4 = CRT Controller Address Register for color mode
@@ -87,12 +83,7 @@ void show_cursor() {
   outb(0x3D5, inb(0x3D5) & ~0x10);
 }
 
-void __attribute__ ((unused)) hide_cursor() {
+void hide_cursor() {
   outb(0x3D4, 0x0A);
   outb(0x3D5, inb(0x3D5) | 0x10);
-}
-
-void screen_backspace() {
-  FRAMEBUFFER[--screen_position] = entry(0x0, 0xF, ' ');
-  set_cursor(screen_position);
 }
