@@ -42,6 +42,7 @@ Notes
 * IRQs are mapped to start at 0x20 (IRQ_BASE_INTERRUPT)
 * The kernel starts with paging enabled and two identity mappings, one at 0x0, the other at 0xC0000000, with
   EIP being in the latter
+* Everything is "work in progress" and you can expect iterations
 
 Plan
 ----
@@ -58,13 +59,12 @@ Plan
 * DONE Update syscalls to work with paging
 * DONE Multi screen terminal (Terminal)
 * Some way to get a basic FS up with files/a ramdisk (user programs, text)
-* Start user process from binary on filesystem
+* Start user process from binary on filesystem, ELF
 * Improved memory protection with kernel memory marked for supervisor
-* QEMU NIC support
+* PCI device enumeration
+* RTL8139 support
 * Basic Ethernet
 * User permissions in VFS
-* FS
-* Disk support
 * SMP
 
 Terminal emulation

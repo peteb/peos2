@@ -1,5 +1,5 @@
 #!/bin/bash
 cd `dirname $0`
 
-qemu-system-i386 -kernel vmpeoz -d pcall,cpu_reset,guest_errors -monitor stdio
+qemu-system-i386 -kernel vmpeoz --no-reboot -d pcall,cpu_reset,guest_errors -monitor stdio -initrd test.tar
 

@@ -7,15 +7,18 @@
 #include "support/string.h"
 
 #define VFS_DIRECTORY    0x01
-#define VFS_CHAR_DEVICE  0x02
+#define VFS_DRIVER       0x02
+#define VFS_CHAR_DEVICE  (0x10|VFS_DRIVER)
+#define VFS_FILESYSTEM   (0x20|VFS_DRIVER|VFS_DIRECTORY)
 
 typedef uint16_t vfs_node_handle;
 
-struct vfs_char_device;
+struct vfs_device;
 
 struct vfs_device_driver {
-  int (*write)(vfs_char_device *device, const char *path, const char *data, int length);
-  int (*read)(vfs_char_device *device, const char *path, char *data, int length);
+  int (*write)(int handle, const char *data, int length);
+  int (*read)(int handle, char *data, int length);
+  int (*open)(vfs_device *device, const char *path, uint32_t flags);
 };
 
 // Kernel/driver functions
@@ -26,6 +29,6 @@ vfs_node_handle vfs_create_node(uint8_t type);
 void            vfs_add_dirent(vfs_node_handle dir_node, const char *name, vfs_node_handle node);
 void            vfs_set_driver(vfs_node_handle dev_node, vfs_device_driver *driver, void *opaque);
 vfs_node_handle vfs_lookup(const char *path);
-void            *vfs_get_opaque(vfs_char_device *device);
+void            *vfs_get_opaque(vfs_device *device);
 
 #endif // !PEOS2_FILESYSTEM_H

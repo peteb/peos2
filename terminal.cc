@@ -9,8 +9,10 @@
 #include "terminal_private.h"
 
 // Statics
-static int write(vfs_char_device *, const char *path, const char *data, int length);
-static int read(vfs_char_device *device, const char *path, char *data, int length);
+static int write(int handle, const char *data, int length);
+static int read(int handle, char *data, int length);
+static int open(vfs_device *device, const char *path, uint32_t flags);
+
 static void focus_terminal(uint16_t term_id);
 
 // Global state
@@ -20,7 +22,8 @@ static uint16_t current_terminal = terminals.end();
 static vfs_device_driver interface =
 {
   .write = write,
-  .read = read
+  .read = read,
+  .open = open
 };
 
 void term_init(const char *name, screen_buffer buffer) {
@@ -49,14 +52,19 @@ void term_keypress(uint16_t keycode) {
   terminals[current_terminal].on_key(keycode);
 }
 
-static int write(vfs_char_device *device, const char *path, const char *data, int length) {
-  assert(path[0] == '\0');  // No subpaths possible on terminal
-  return terminals[(uintptr_t)vfs_get_opaque(device)].syscall_write(data, length);
+static int write(int handle, const char *data, int length) {
+  return terminals[handle].syscall_write(data, length);
 }
 
-static int read(vfs_char_device *device, const char *path, char *data, int length) {
+static int read(int handle, char *data, int length) {
+  return terminals[handle].syscall_read(data, length);
+}
+
+static int open(vfs_device *device, const char *path, uint32_t flags) {
+  (void)flags;
+  // TODO: handle flags
   assert(path[0] == '\0');
-  return terminals[(uintptr_t)vfs_get_opaque(device)].syscall_read(data, length);
+  return (int)vfs_get_opaque(device);
 }
 
 static void focus_terminal(uint16_t term_id) {

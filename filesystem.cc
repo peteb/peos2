@@ -5,6 +5,7 @@
 #include "screen.h"
 #include "assert.h"
 #include "syscalls.h"
+#include "process.h"
 
 struct vfs_node {
   vfs_node(uint8_t type, vfs_node_handle info_node)
@@ -29,8 +30,8 @@ struct vfs_dirent {
   uint16_t next_dirent;
 };
 
-struct vfs_char_device {
-  vfs_char_device(vfs_device_driver *driver, void *opaque)
+struct vfs_device {
+  vfs_device(vfs_device_driver *driver, void *opaque)
     : driver(driver),
       opaque(opaque)
   {}
@@ -39,12 +40,13 @@ struct vfs_char_device {
   void *opaque;
 };
 
-static uint32_t syscall_write(const char *path, const char *data, int length);
-static uint32_t syscall_read(const char *path, char *data, int length);
+static uint32_t syscall_write(int fd, const char *data, int length);
+static uint32_t syscall_read(int fd, char *data, int length);
+static int syscall_open(const char *filename, uint32_t flags);
 
 static p2::pool<vfs_node, 256, vfs_node_handle> nodes;
 static p2::pool<vfs_dirent, 256, decltype(vfs_node::info_node)> directories;
-static p2::pool<vfs_char_device, 64, decltype(vfs_node::info_node)> drivers;
+static p2::pool<vfs_device, 64, decltype(vfs_node::info_node)> drivers;
 static vfs_node_handle root_dir;
 
 vfs_node_handle vfs_create_node(uint8_t type) {
@@ -59,7 +61,7 @@ void vfs_add_dirent(vfs_node_handle dir_node, const char *name, vfs_node_handle 
 
 void vfs_set_driver(vfs_node_handle driver_node, vfs_device_driver *driver, void *opaque) {
   vfs_node &node = nodes[driver_node];
-  assert(node.type == VFS_CHAR_DEVICE);
+  assert(node.type & VFS_DRIVER);
   node.info_node = drivers.push_back({driver, opaque});
 }
 
@@ -67,6 +69,7 @@ void vfs_init() {
   root_dir = vfs_create_node(VFS_DIRECTORY);
   syscall_register(SYSCALL_NUM_WRITE, (syscall_fun)syscall_write);
   syscall_register(SYSCALL_NUM_READ, (syscall_fun)syscall_read);
+  syscall_register(SYSCALL_NUM_OPEN, (syscall_fun)syscall_open);
 }
 
 static vfs_dirent *find_dirent(vfs_node_handle dir_node, const p2::string<32> &name) {
@@ -149,7 +152,7 @@ struct ffd_retval {
 };
 
 static ffd_retval find_first_driver(vfs_node_handle parent_idx, const char *path) {
-  if (nodes[parent_idx].type == VFS_CHAR_DEVICE) {
+  if (nodes[parent_idx].type & VFS_DRIVER) {
     return {parent_idx, path};
   }
 
@@ -175,38 +178,44 @@ static ffd_retval find_first_driver(vfs_node_handle parent_idx, const char *path
   return {nodes.end(), next_segment};
 }
 
-static uint32_t syscall_write(const char *path, const char *data, int length) {
-  auto driver = find_first_driver(root_dir, path);
-  assert(driver.node_idx != nodes.end());
-
-  const vfs_node &driver_node = nodes[driver.node_idx];
-  assert(driver_node.type == VFS_CHAR_DEVICE);
-  assert(driver_node.info_node != drivers.end());
-
-  vfs_char_device &device_node = drivers[driver_node.info_node];
-  assert(device_node.driver);
-  assert(device_node.driver->write);
-  // TODO: handle the error cases better than asserts
-
-  return device_node.driver->write(&device_node, driver.rest_path, data, length);
-}
-
-static uint32_t syscall_read(const char *path, char *data, int length) {
-  auto driver = find_first_driver(root_dir, path);
-  assert(driver.node_idx != nodes.end());
-
-  const vfs_node &driver_node = nodes[driver.node_idx];
-  assert(driver_node.type == VFS_CHAR_DEVICE);
-  assert(driver_node.info_node != drivers.end());
-
-  vfs_char_device &device_node = drivers[driver_node.info_node];
-  assert(device_node.driver);
-  assert(device_node.driver->write);
-  // TODO: handle the error cases better than asserts
-
-  return device_node.driver->read(&device_node, driver.rest_path, data, length);
-}
-
-void *vfs_get_opaque(vfs_char_device *device) {
+void *vfs_get_opaque(vfs_device *device) {
   return device->opaque;
+}
+
+static uint32_t syscall_write(int fd, const char *data, int length) {
+  proc_fd *pfd = proc_get_fd(proc_current_pid(), fd);
+  assert(pfd);
+
+  vfs_device *device_node = (vfs_device *)pfd->opaque;
+  assert(device_node && device_node->driver && device_node->driver->write);
+
+  return device_node->driver->write(pfd->value, data, length);
+}
+
+static uint32_t syscall_read(int fd, char *data, int length) {
+  proc_fd *pfd = proc_get_fd(proc_current_pid(), fd);
+  assert(pfd);
+
+  vfs_device *device_node = (vfs_device *)pfd->opaque;
+  assert(device_node && device_node->driver && device_node->driver->read);
+
+  return device_node->driver->read(pfd->value, data, length);
+}
+
+static int syscall_open(const char *filename, uint32_t flags) {
+  auto driver = find_first_driver(root_dir, filename);
+  assert(driver.node_idx != nodes.end());
+
+  const vfs_node &driver_node = nodes[driver.node_idx];
+  assert(driver_node.type & VFS_DRIVER);
+  assert(driver_node.info_node != drivers.end());
+
+  vfs_device &device_node = drivers[driver_node.info_node];
+  assert(device_node.driver);
+  assert(device_node.driver->open);
+  // TODO: handle the error cases better than asserts
+
+  int retval = device_node.driver->open(&device_node, driver.rest_path, flags);
+  // TODO: check that it returned OK
+  return proc_create_fd(proc_current_pid(), {(void *)&device_node, retval});
 }

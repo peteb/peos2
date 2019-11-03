@@ -12,89 +12,60 @@
 #include "process.h"
 #include "memory.h"
 #include "memareas.h"
+#include "ramfs.h"
 
 extern int kernel_start, kernel_end;
 extern char stack_top;
 
 static uint32_t interrupt_stack[1024] alignas(16);
 
-SYSCALL_DEF3(write, SYSCALL_NUM_WRITE, const char *, const char *, int);
-SYSCALL_DEF3(read, SYSCALL_NUM_READ, const char *, char *, int);
+SYSCALL_DEF3(write, SYSCALL_NUM_WRITE, int, const char *, int);
+SYSCALL_DEF3(read, SYSCALL_NUM_READ, int, char *, int);
+SYSCALL_DEF2(open, SYSCALL_NUM_OPEN, const char *, uint32_t);
 
-void mt_test_t1() {
-  SYSCALL3(write, "/dev/term0", "Hello from thread\n", 18);
+int kernel_setup_proc() {
+  // Setup
+  int stdout = SYSCALL2(open, "/dev/term0", 0);
+  int stdin = SYSCALL2(open, "/dev/term0", 0);
 
-  while (true) {
-    static int count = 0;
-    *(volatile char *)PHYS2KERVIRT(0xB8002) = 'A' + count;
-    count = (count + 1) % 26;
+  // Create a file in the ramfs
+  static char contents[] = "hello there";
+  int test_fd = SYSCALL2(open, "/ramfs/test_file", 0);
+  ramfs_set_file_range(test_fd, (uintptr_t)contents, sizeof(contents) - 1);
+
+  {
+    // Try to read it
+    int read_fd = SYSCALL2(open, "/ramfs/test_file", 0);
+    char buf[10];
+
+    int bytes_read;
+    while ((bytes_read = SYSCALL3(read, read_fd, buf, sizeof(buf) - 1)) > 0) {
+      buf[bytes_read] = '\0';
+      p2::format<256> out("Read %d bytes: \"%s\"\n", bytes_read, buf);
+      SYSCALL3(write, stdout, out.str().c_str(), out.str().size());
+    }
   }
-}
 
-void mt_test_t2() {
-  SYSCALL3(write, "/dev/term0", "Thread 2!\n", 10);
-
-  while (true) {
-    static int count = 0;
-    *(volatile char *)PHYS2KERVIRT(0xB8004) = 'A' + count;
-    count = (count + 1) % 26;
-  }
-}
-
-void tio_test(int argc, char *argv[]) {
-  SYSCALL3(write, "/dev/term0", "Hellote!\n", 9);
-  char buf[64];
-  auto fmt = (p2::format(buf, "Received %d argument(-s):\n") % argc);
-
-  SYSCALL3(write, "/dev/term0", fmt.str().c_str(), fmt.str().size());
-
-  for (int i = 0; i < argc; ++i) {
-    SYSCALL3(write, "/dev/term0", argv[i], strlen(argv[i]));
-  }
+  // Start I/O
+  SYSCALL3(write, stdout, "Hellote!\n", 9);
 
   while (true) {
     char input[240];
-    int read = SYSCALL3(read, "/dev/term0", input, sizeof(input) - 1);
+    int read = SYSCALL3(read, stdin, input, sizeof(input) - 1);
     input[read] = '\0';
 
     p2::format<sizeof(input) + 50> output("Read %d bytes: %s");
     output % read % input;
-    SYSCALL3(write, "/dev/term0", output.str().c_str(), output.str().size());
-  }
-}
-
-void tio_test2() {
-  SYSCALL3(write, "/dev/term1", "Hello to the second terminal\n", 29);
-
-  while (true) {
-    char input[240];
-    int read = SYSCALL3(read, "/dev/term1", input, sizeof(input) - 1);
-    input[read] = '\0';
-
-    p2::format<sizeof(input) + 50> output("Read %d bytes: %s");
-    output % read % input;
-    SYSCALL3(write, "/dev/term1", output.str().c_str(), output.str().size());
-  }
-}
-
-uint32_t mt_exiting_fun() {
-  for (int i = 0; i < 2; ++i) {
-    p2::format<64> out("Counter reached %d...\n");
-    out % i;
-    SYSCALL3(write, "/dev/term0", out.str().c_str(), out.str().size());
+    SYSCALL3(write, stdout, output.str().c_str(), output.str().size());
   }
 
-  SYSCALL3(write, "/dev/term0", "Bye bye!\n", 9);
-  return 123;
+  return 0;
 }
 
 void setup_test_program() {
-  proc_create((void *)tio_test, "<--test-->");
-  proc_create((void *)tio_test2, "");
-  proc_create((void *)mt_test_t1, "");
-  proc_create((void *)mt_test_t2, "");
-  proc_create((void *)mt_exiting_fun, "");
+  proc_create((void *)kernel_setup_proc, "<--test-->");
 }
+
 
 extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   screen_init();
@@ -157,11 +128,13 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   vfs_add_dirent(vfs_lookup("/"), "dev", vfs_create_node(VFS_DIRECTORY));
   term_init("term0", screen_current_buffer());
 
-  for (int i = 1; i < 12; ++i) {
+  for (int i = 1; i < 5; ++i) {
     term_init(p2::format<10>("term%d", i).str().c_str(), screen_create_buffer());
   }
 
+  ramfs_init();
   vfs_print();
+
   proc_init();
 
   // Prepare for any interrupts that might happen before we start multitasking
@@ -178,7 +151,6 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   // relevant parts and only at KERNEL_VIRT_BASE.
   mem_adrspc addr = mem_create_address_space();
   mem_activate_address_space(addr);
-
 
   setup_test_program();
 

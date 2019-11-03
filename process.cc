@@ -53,6 +53,8 @@ public:
 
   mem_adrspc address_space;
 
+  p2::pool<proc_fd, 32> file_descriptors;
+
   bool suspended, terminating;
   proc_handle prev_process, next_process;
   uint64_t last_tick;
@@ -327,6 +329,15 @@ void proc_kill(proc_handle pid, uint32_t exit_status) {
 
   puts(p2::format<64>("pid %d exited with status %d") % pid % exit_status);
   destroy_process(pid);
+}
+
+int proc_create_fd(proc_handle pid, proc_fd fd) {
+  process_control_block &pcb = processes[pid];
+  return pcb.file_descriptors.push_back(fd);
+}
+
+proc_fd *proc_get_fd(proc_handle pid, int fd) {
+  return &processes[pid].file_descriptors[fd];
 }
 
 static uint32_t syscall_exit(uint32_t exit_status) {
