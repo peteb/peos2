@@ -9,8 +9,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define ALIGN_UP(val, align) ((val) + (align) - (val) % (align))
-#define ALIGN_DOWN(val, align) ((val) - (val) % (align))
+#define ALIGN_UP(val, align) (((val) + (align) - 1) & ~((align) - 1))
+#define ALIGN_DOWN(val, align) ((val) & ~((align) - 1))
 
 #define MEM_PDE_P   0x0001  // Present
 #define MEM_PDE_R   0x0002  // Read/write
@@ -35,18 +35,16 @@ struct region {
 
 typedef uint16_t mem_adrspc;
 
-void  mem_init(const region *regions, size_t region_count);
-void *mem_create_page_dir();
-void  mem_free_page_dir(void *page_dir);
-void  mem_map_page(void *page_directory, uint32_t virt, uint32_t phys);
+void       mem_init(const region *regions, size_t region_count);
 
-void *mem_alloc_page();
-void *mem_alloc_page_zero();
-void  mem_free_page(void *page);
+void      *mem_alloc_page();
+void      *mem_alloc_page_zero();
+void       mem_free_page(void *page);
 
 mem_adrspc mem_create_address_space();
-void mem_destroy_address_space(mem_adrspc address_space);
-void mem_activate_address_space(mem_adrspc address_space);
+void       mem_destroy_address_space(mem_adrspc address_space);
+void       mem_activate_address_space(mem_adrspc address_space);
+void       mem_map_page(mem_adrspc, uint32_t virt, uint32_t phys);
 
 
 #endif // !PEOS2_MEMORY_H

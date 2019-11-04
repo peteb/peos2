@@ -5,6 +5,7 @@
 #ifndef PEOS2_SYSCALL_DECLS_H
 #define PEOS2_SYSCALL_DECLS_H
 
+#include <stdint.h>
 #include "syscall_macros.h"
 
 // Syscall numbers

@@ -29,36 +29,21 @@ extern int kernel_end;
 
 // Global state
 static page_table_entry kernel_page_table[1024] alignas(0x1000);
-static char page_dir_area[sizeof(page_dir_entry) * 1024 * 100] alignas(0x1000);
 
-static p2::page_allocator *pmem;
+// ... space for paging structures in kernel space
+static char page_dir_area[sizeof(page_dir_entry) * 1024 * 100] alignas(0x1000);
+static char page_table_area[sizeof(page_table_entry) * 1024 * 100] alignas(0x1000);
+
 static p2::page_allocator page_dir_allocator((uintptr_t)page_dir_area,
                                              (uintptr_t)(page_dir_area + sizeof(page_dir_area)));
+static p2::page_allocator page_table_allocator((uintptr_t)page_table_area,
+                                               (uintptr_t)(page_table_area + sizeof(page_table_area)));
+
+static p2::page_allocator *pmem;
 static p2::pool<address_space, 16, mem_adrspc> address_spaces;
 static mem_adrspc current_address_space = address_spaces.end();
 
 
-void mem_map_page(void *page_directory, uint32_t virt, uint32_t phys) {
-  assert((virt & 0xFFF) == 0 && "can only map on page boundaries");
-  assert((phys & 0xFFF) == 0 && "can only map on page boundaries");
-
-  page_dir_entry *page_dir = (page_dir_entry *)page_directory;
-  page_table_entry *page_table = nullptr;
-  int directory_idx = virt >> 22;
-
-  if (!(page_dir[directory_idx].flags & MEM_PDE_P)) {
-    page_table = (page_table_entry *)mem_alloc_page_zero();
-    page_dir[directory_idx].table_11_31 = ((uintptr_t)page_table) >> 12;
-    page_dir[directory_idx].flags = MEM_PDE_P|MEM_PDE_R|MEM_PDE_U;
-  }
-  else {
-    page_table = (page_table_entry *)(page_dir[directory_idx].table_11_31 << 12);
-  }
-
-  int table_idx = (virt >> 12) & 0x3FF;
-  page_table[table_idx].frame_11_31 = (phys >> 12);
-  page_table[table_idx].flags = MEM_PTE_P|MEM_PTE_R|MEM_PTE_U;
-}
 
 void mem_init(const region *regions, size_t region_count) {
   uintptr_t largest_region_size = 0;
@@ -140,6 +125,7 @@ void mem_free_page(void *page) {
 
 mem_adrspc mem_create_address_space() {
   page_dir_entry *page_dir = (page_dir_entry *)page_dir_allocator.alloc_page_zero();
+  puts(p2::format<64>("mem: created page dir %x", (uintptr_t)page_dir));
 
   // Map the kernel into the address space
   page_dir[(KERNEL_VIRTUAL_BASE >> 20) / 4].table_11_31 = KERVIRT2PHYS((uintptr_t)kernel_page_table) >> 12;
@@ -171,8 +157,34 @@ void mem_activate_address_space(mem_adrspc adrspc) {
   current_address_space = adrspc;
   address_space *space = &address_spaces[adrspc];
   uintptr_t page_dir_phys = KERVIRT2PHYS((uintptr_t)space->page_dir);
+
   asm volatile("mov cr3, %0" : : "a"(page_dir_phys) : "memory");
   // TODO: fix all inline asm to have the same syntax (AT&T vs Intel) as *.s files
+}
+
+void mem_map_page(mem_adrspc adrspc, uint32_t virt, uint32_t phys) {
+  assert((virt & 0xFFF) == 0 && "can only map on page boundaries");
+  assert((phys & 0xFFF) == 0 && "can only map on page boundaries");
+
+  page_dir_entry *page_dir = address_spaces[adrspc].page_dir;
+  page_table_entry *page_table = nullptr;
+  int directory_idx = virt >> 22;
+
+  if (!(page_dir[directory_idx].flags & MEM_PDE_P)) {
+    page_table = (page_table_entry *)page_table_allocator.alloc_page_zero();
+    page_dir[directory_idx].table_11_31 = KERVIRT2PHYS((uintptr_t)page_table) >> 12;
+    page_dir[directory_idx].flags = MEM_PDE_P|MEM_PDE_R|MEM_PDE_U;
+    puts(p2::format<64>("mem: created page table %x", (uintptr_t)page_table));
+  }
+  else {
+    page_table = (page_table_entry *)PHYS2KERVIRT(page_dir[directory_idx].table_11_31 << 12);
+  }
+
+  int table_idx = (virt >> 12) & 0x3FF;
+  page_table[table_idx].frame_11_31 = (phys >> 12);
+  page_table[table_idx].flags = MEM_PTE_P|MEM_PTE_R|MEM_PTE_U;
+
+  // TODO: flush tlb if current address space
 }
 
 extern "C" void int_page_fault(isr_registers regs) {

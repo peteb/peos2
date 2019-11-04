@@ -277,6 +277,10 @@ proc_fd *proc_get_fd(proc_handle pid, int fd) {
   return &processes[pid].file_descriptors[fd];
 }
 
+mem_adrspc proc_get_address_space(proc_handle pid) {
+  return processes[pid].address_space;
+}
+
 static uint32_t syscall_exit(uint32_t exit_status) {
   proc_kill(proc_current_pid(), exit_status);
   proc_yield();

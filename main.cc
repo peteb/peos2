@@ -18,50 +18,30 @@
 
 extern int kernel_start, kernel_end;
 extern char stack_top;
+extern "C" int init_main();
 
 static uint32_t interrupt_stack[1024] alignas(16);
 
-int kernel_setup_proc() {
-  // Setup
-  int stdout = SYSCALL2(open, "/dev/term0", 0);
-  int stdin = SYSCALL2(open, "/dev/term0", 0);
+extern int __start_TEXT_INIT;
+extern int __stop_TEXT_INIT;
 
-  // Create a file in the ramfs
-  static char contents[] = "hello there";
-  int test_fd = SYSCALL2(open, "/ramfs/test_file", 0);
-  SYSCALL4(control, test_fd, CTRL_RAMFS_SET_FILE_RANGE, (uint32_t)contents, sizeof(contents) - 1);
+void setup_init() {
+  size_t init_size = (uintptr_t)&__stop_TEXT_INIT - (uintptr_t)&__start_TEXT_INIT;
 
-  {
-    // Try to read it
-    int read_fd = SYSCALL2(open, "/ramfs/test_file", 0);
-    char buf[10];
+  puts(p2::format<64>("Init size: %d bytes (%x - %x), fun at %x",
+                      init_size,
+                      (uintptr_t)&__start_TEXT_INIT,
+                      (uintptr_t)&__stop_TEXT_INIT,
+                      (uintptr_t)&init_main));
 
-    int bytes_read;
-    while ((bytes_read = SYSCALL3(read, read_fd, buf, sizeof(buf) - 1)) > 0) {
-      buf[bytes_read] = '\0';
-      p2::format<256> out("Read %d bytes: \"%s\"\n", bytes_read, buf);
-      SYSCALL3(write, stdout, out.str().c_str(), out.str().size());
-    }
+  proc_handle pid = proc_create((void *)init_main, "");
+  mem_adrspc adrspc = proc_get_address_space(pid);
+
+  for (uintptr_t base = ALIGN_UP((uintptr_t)&__start_TEXT_INIT, 0x1000);
+       base < ALIGN_UP((uintptr_t)&__stop_TEXT_INIT, 0x1000);
+       base += 0x1000) {
+    mem_map_page(adrspc, base, base);
   }
-
-  // Start I/O
-  SYSCALL3(write, stdout, "Hellote!\n", 9);
-
-  while (true) {
-    char input[240];
-    int read = SYSCALL3(read, stdin, input, sizeof(input) - 1);
-    input[read] = '\0';
-
-    p2::format<sizeof(input) + 50> output("Read %d bytes: %s");
-    output % read % input;
-    SYSCALL3(write, stdout, output.str().c_str(), output.str().size());
-  }
-
-  return 0;
-}
-
-void setup_test_program() {
-  proc_create((void *)kernel_setup_proc, "<--test-->");
 }
 
 
@@ -150,7 +130,7 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   mem_adrspc addr = mem_create_address_space();
   mem_activate_address_space(addr);
 
-  setup_test_program();
+  setup_init();
 
   // Let the mayhem begin
   asm volatile("sti");

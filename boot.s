@@ -7,7 +7,7 @@
 
 // Header according to the multiboot spec. It needs to be early in the binary so
 // we put it in its own section so we can control that.
-.section .mbhdr
+.section .text.mbhdr
 .align 4
 .long MAGIC
 .long FLAGS
