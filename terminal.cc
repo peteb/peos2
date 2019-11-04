@@ -12,21 +12,22 @@
 static int write(int handle, const char *data, int length);
 static int read(int handle, char *data, int length);
 static int open(vfs_device *device, const char *path, uint32_t flags);
-
 static void focus_terminal(uint16_t term_id);
 
 // Global state
 static p2::pool<terminal, 16> terminals;
 static uint16_t current_terminal = terminals.end();
 
-static vfs_device_driver interface =
-{
-  .write = write,
-  .read = read,
-  .open = open
-};
-
+// Definitions
 void term_init(const char *name, screen_buffer buffer) {
+  static vfs_device_driver interface =
+  {
+    .write = write,
+    .read = read,
+    .open = open,
+    .control = nullptr
+  };
+
   uintptr_t term_id = terminals.emplace_back(buffer);
 
   vfs_node_handle term_driver = vfs_create_node(VFS_CHAR_DEVICE);

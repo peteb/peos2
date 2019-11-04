@@ -37,6 +37,7 @@ size_t strlen(const char *str);
 
 // Functions used by the compiler sometimes for optimization
 extern "C" void *memset(void *dest, int value, size_t len);
+extern "C" void *memcpy(void *dest, const void *src, size_t length);
 
 #if __STDC_HOSTED__ == 0
 // Placement new operator overloads

@@ -7,7 +7,13 @@
 #define TOSTRING(x) STRINGIFY(x)
 
 #ifdef NDEBUG
-#define assert(exp) {if (!(exp)) {panic("ASSERT " __FILE__ ":" TOSTRING(__LINE__) ": " #exp); } }
+#define assert(exp)                                                     \
+  {                                                                     \
+    if (!(exp)) {                                                       \
+      panic("ASSERT " __FILE__ ":" TOSTRING(__LINE__) ": " #exp);       \
+    }                                                                   \
+  }
+
 #else
 #define assert(exp)
 #endif

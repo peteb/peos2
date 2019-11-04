@@ -9,6 +9,18 @@ extern "C" void *memset(void *dest, int value, size_t len) {
   return dest;
 }
 
+extern "C" void *memcpy(void *dest, const void *src, size_t length) {
+  // TODO: optimize aligned copy etc
+  char *d = (char *)dest;
+  const char *s = (const char *)src;
+
+  for (size_t i = 0; i < length; ++i) {
+    *d++ = *s++;
+  }
+
+  return dest;
+}
+
 const char *strchr(const char *str, char c) {
   while (*str != c) {
     if (!*str++) {

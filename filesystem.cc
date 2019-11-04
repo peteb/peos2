@@ -1,54 +1,28 @@
 #include "filesystem.h"
-#include "support/pool.h"
-#include "support/string.h"
-#include "support/utils.h"
 #include "screen.h"
 #include "assert.h"
 #include "syscalls.h"
 #include "process.h"
 
-struct vfs_node {
-  vfs_node(uint8_t type, vfs_node_handle info_node)
-    : type(type),
-      info_node(info_node)
-  {}
+#include "support/pool.h"
+#include "support/string.h"
+#include "support/utils.h"
 
-  uint8_t type;
-  // TODO: permissions, owner, etc.
-  vfs_node_handle info_node;  // Index into type-specific block
-};
+#include "filesystem_private.h"
 
-struct vfs_dirent {
-  vfs_dirent(const char *name, vfs_node_handle node, uint16_t next_dirent)
-    : name(name),
-      node(node),
-      next_dirent(next_dirent)
-  {}
-
-  p2::string<32> name;
-  vfs_node_handle node;
-  uint16_t next_dirent;
-};
-
-struct vfs_device {
-  vfs_device(vfs_device_driver *driver, void *opaque)
-    : driver(driver),
-      opaque(opaque)
-  {}
-
-  vfs_device_driver *driver;
-  void *opaque;
-};
-
+// Statics
 static uint32_t syscall_write(int fd, const char *data, int length);
 static uint32_t syscall_read(int fd, char *data, int length);
 static int syscall_open(const char *filename, uint32_t flags);
+static int syscall_control(int fd, uint32_t function, uint32_t param1, uint32_t param2);
 
+// Global state
 static p2::pool<vfs_node, 256, vfs_node_handle> nodes;
 static p2::pool<vfs_dirent, 256, decltype(vfs_node::info_node)> directories;
 static p2::pool<vfs_device, 64, decltype(vfs_node::info_node)> drivers;
 static vfs_node_handle root_dir;
 
+// Definitions
 vfs_node_handle vfs_create_node(uint8_t type) {
   return nodes.emplace_back(type, directories.end());
 }
@@ -70,6 +44,7 @@ void vfs_init() {
   syscall_register(SYSCALL_NUM_WRITE, (syscall_fun)syscall_write);
   syscall_register(SYSCALL_NUM_READ, (syscall_fun)syscall_read);
   syscall_register(SYSCALL_NUM_OPEN, (syscall_fun)syscall_open);
+  syscall_register(SYSCALL_NUM_CONTROL, (syscall_fun)syscall_control);
 }
 
 static vfs_dirent *find_dirent(vfs_node_handle dir_node, const p2::string<32> &name) {
@@ -195,7 +170,6 @@ static uint32_t syscall_write(int fd, const char *data, int length) {
 static uint32_t syscall_read(int fd, char *data, int length) {
   proc_fd *pfd = proc_get_fd(proc_current_pid(), fd);
   assert(pfd);
-
   vfs_device *device_node = (vfs_device *)pfd->opaque;
   assert(device_node && device_node->driver && device_node->driver->read);
 
@@ -218,4 +192,13 @@ static int syscall_open(const char *filename, uint32_t flags) {
   int retval = device_node.driver->open(&device_node, driver.rest_path, flags);
   // TODO: check that it returned OK
   return proc_create_fd(proc_current_pid(), {(void *)&device_node, retval});
+}
+
+static int syscall_control(int fd, uint32_t function, uint32_t param1, uint32_t param2) {
+  proc_fd *pfd = proc_get_fd(proc_current_pid(), fd);
+  assert(pfd);
+  vfs_device *device_node = (vfs_device *)pfd->opaque;
+  assert(device_node && device_node->driver && device_node->driver->control);
+
+  return device_node->driver->control(fd, function, param1, param2);
 }

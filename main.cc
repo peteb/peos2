@@ -14,14 +14,12 @@
 #include "memareas.h"
 #include "ramfs.h"
 
+#include "syscall_decls.h"
+
 extern int kernel_start, kernel_end;
 extern char stack_top;
 
 static uint32_t interrupt_stack[1024] alignas(16);
-
-SYSCALL_DEF3(write, SYSCALL_NUM_WRITE, int, const char *, int);
-SYSCALL_DEF3(read, SYSCALL_NUM_READ, int, char *, int);
-SYSCALL_DEF2(open, SYSCALL_NUM_OPEN, const char *, uint32_t);
 
 int kernel_setup_proc() {
   // Setup
@@ -31,7 +29,7 @@ int kernel_setup_proc() {
   // Create a file in the ramfs
   static char contents[] = "hello there";
   int test_fd = SYSCALL2(open, "/ramfs/test_file", 0);
-  ramfs_set_file_range(test_fd, (uintptr_t)contents, sizeof(contents) - 1);
+  SYSCALL4(control, test_fd, CTRL_RAMFS_SET_FILE_RANGE, (uint32_t)contents, sizeof(contents) - 1);
 
   {
     // Try to read it
