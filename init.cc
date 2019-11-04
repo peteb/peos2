@@ -4,15 +4,20 @@
 //
 // Kernel kicks off execution of this user space program "as soon as
 // possible", which is after the kernel and all the drivers have been
-// initialized.  The function is run at 0x00101000, the page after the
-// multiboot header, and that's the reason why we put the code in the
-// .text.init section.
+// initialized.
+//
+// The function is run at 0x00101000, the page after the multiboot
+// header, and that's the reason why we put the code in the .text.init
+// section.
+//
+// The init process has full access to the kernel's memory so that it
+// can execute support functions.
+// TODO: there's no use putting this in a separate section. Remove that.
 //
 extern "C" __attribute__((section(".text.init"))) int init_main() {
   // Setup
   int stdout = SYSCALL2(open, "/dev/term0", 0);
-  //int stdin = SYSCALL2(open, "/dev/term0", 0);
-
+  int stdin = SYSCALL2(open, "/dev/term0", 0);
 
   static char bss_data = 0;
   char stack_data = 0;
@@ -22,8 +27,7 @@ extern "C" __attribute__((section(".text.init"))) int init_main() {
     SYSCALL3(write, stdout, out.str().c_str(), out.str().size());
   }
 
-  while (true) {}
-  /*// Create a file in the ramfs
+  // Create a file in the ramfs
   static char contents[] = "hello there";
   int test_fd = SYSCALL2(open, "/ramfs/test_file", 0);
   SYSCALL4(control, test_fd, CTRL_RAMFS_SET_FILE_RANGE, (uint32_t)contents, sizeof(contents) - 1);
@@ -52,7 +56,7 @@ extern "C" __attribute__((section(".text.init"))) int init_main() {
     p2::format<sizeof(input) + 50> output("Read %d bytes: %s");
     output % read % input;
     SYSCALL3(write, stdout, output.str().c_str(), output.str().size());
-    }*/
+  }
 
   return 0;
 }

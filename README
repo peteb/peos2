@@ -58,9 +58,10 @@ Plan
 * DONE Protected memory through paging + high mem kernel
 * DONE Update syscalls to work with paging
 * DONE Multi screen terminal (Terminal)
-* Some way to get a basic FS up with files/a ramdisk (user programs, text)
-* Start user process from binary on filesystem, ELF
+* DONE Some way to get a basic FS up with files/a ramdisk (user programs, text)
 * Improved memory protection with kernel memory marked for supervisor
+* TAR parsing for initial ramdisk
+* Start user process from binary on filesystem, ELF
 * PCI device enumeration
 * RTL8139 support
 * Basic Ethernet

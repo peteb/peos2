@@ -15,6 +15,18 @@ SECTIONS {
     .target/init.o (.text)
   }
 
+  .bss.init : {
+    .target/init.o (.bss)
+  }
+
+  .rodata.init : {
+    .target/init.o (.rodata)
+  }
+
+  .data.init : {
+    .target/init.o (.data)
+  }
+
   . = ALIGN(4K);
   __stop_TEXT_INIT = .;
 

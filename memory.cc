@@ -28,9 +28,6 @@ extern "C" void isr_page_fault(isr_registers);
 extern int kernel_end;
 
 // Global state
-static page_table_entry kernel_page_table[1024] alignas(0x1000);
-
-// ... space for paging structures in kernel space
 static char page_dir_area[sizeof(page_dir_entry) * 1024 * 100] alignas(0x1000);
 static char page_table_area[sizeof(page_table_entry) * 1024 * 100] alignas(0x1000);
 
@@ -69,23 +66,13 @@ void mem_init(const region *regions, size_t region_count) {
   pmem = &alloc;
 
   int_register(INT_PAGEFAULT, isr_page_fault, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
-
-  // Prepare the kernel page tables
-  uintptr_t kernel_end_phys = ALIGN_UP(KERVIRT2PHYS((uintptr_t)&kernel_end), 0x1000);
-  uintptr_t phys_addr = 0;
-
-  for (int i = 0; i < 1024 && phys_addr < kernel_end_phys; ++i) {
-    kernel_page_table[i].frame_11_31 = phys_addr >> 12;
-    kernel_page_table[i].flags = MEM_PTE_P|MEM_PTE_R|MEM_PTE_U;
-    phys_addr += 0x1000;
-  }
 }
 
 void mem_free_page_dir(void *page_directory) {
   page_dir_entry *page_dir = (page_dir_entry *)page_directory;
 
   for (int i = 0; i < 1024; ++i) {
-    if (page_dir[i].flags & MEM_PDE_P) {
+    if (page_dir[i].flags & MEM_PE_P) {
       mem_free_page((void *)(page_dir[i].table_11_31 << 12));
     }
   }
@@ -126,12 +113,15 @@ void mem_free_page(void *page) {
 mem_adrspc mem_create_address_space() {
   page_dir_entry *page_dir = (page_dir_entry *)page_dir_allocator.alloc_page_zero();
   puts(p2::format<64>("mem: created page dir %x", (uintptr_t)page_dir));
-
-  // Map the kernel into the address space
-  page_dir[(KERNEL_VIRTUAL_BASE >> 20) / 4].table_11_31 = KERVIRT2PHYS((uintptr_t)kernel_page_table) >> 12;
-  page_dir[(KERNEL_VIRTUAL_BASE >> 20) / 4].flags = MEM_PDE_P|MEM_PDE_R|MEM_PDE_U;
-
   return address_spaces.push_back({page_dir});
+}
+
+void mem_map_kernel(mem_adrspc adrspc, uint32_t flags) {
+  for (uintptr_t address = KERNEL_VIRTUAL_BASE;
+       address < ALIGN_UP((uintptr_t)&kernel_end, 0x1000);
+       address += 0x1000) {
+    mem_map_page(adrspc, address, KERVIRT2PHYS(address), flags);
+  }
 }
 
 void mem_destroy_address_space(mem_adrspc adrspc) {
@@ -162,27 +152,30 @@ void mem_activate_address_space(mem_adrspc adrspc) {
   // TODO: fix all inline asm to have the same syntax (AT&T vs Intel) as *.s files
 }
 
-void mem_map_page(mem_adrspc adrspc, uint32_t virt, uint32_t phys) {
+void mem_map_page(mem_adrspc adrspc, uint32_t virt, uint32_t phys, uint16_t flags) {
   assert((virt & 0xFFF) == 0 && "can only map on page boundaries");
   assert((phys & 0xFFF) == 0 && "can only map on page boundaries");
 
   page_dir_entry *page_dir = address_spaces[adrspc].page_dir;
   page_table_entry *page_table = nullptr;
   int directory_idx = virt >> 22;
+  uint16_t pde_flags = flags & ~(MEM_PDE_S|MEM_PTE_D);
 
-  if (!(page_dir[directory_idx].flags & MEM_PDE_P)) {
+  if (!(page_dir[directory_idx].flags & MEM_PE_P)) {
     page_table = (page_table_entry *)page_table_allocator.alloc_page_zero();
     page_dir[directory_idx].table_11_31 = KERVIRT2PHYS((uintptr_t)page_table) >> 12;
-    page_dir[directory_idx].flags = MEM_PDE_P|MEM_PDE_R|MEM_PDE_U;
+    page_dir[directory_idx].flags = pde_flags;
     puts(p2::format<64>("mem: created page table %x", (uintptr_t)page_table));
   }
   else {
+    //assert(page_dir[directory_idx].flags == pde_flags && "conflicting flags for pde");
+    page_dir[directory_idx].flags |= pde_flags;
     page_table = (page_table_entry *)PHYS2KERVIRT(page_dir[directory_idx].table_11_31 << 12);
   }
 
   int table_idx = (virt >> 12) & 0x3FF;
   page_table[table_idx].frame_11_31 = (phys >> 12);
-  page_table[table_idx].flags = MEM_PTE_P|MEM_PTE_R|MEM_PTE_U;
+  page_table[table_idx].flags = flags;
 
   // TODO: flush tlb if current address space
 }
@@ -191,5 +184,9 @@ extern "C" void int_page_fault(isr_registers regs) {
   p2::string<256> buf;
   regs.to_string(buf);
   puts(buf);
-  panic("Page fault");
+
+  uint32_t cr2 = 0;
+  asm volatile("mov cr2, eax" : "=a"(cr2));
+
+  panic(p2::format<64>("Page fault (error %x) at %x", regs.error_code, cr2).str().c_str());
 }

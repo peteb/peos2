@@ -65,8 +65,9 @@ struct stack {
     // [ESP].
   }
 
-  // Stacks need to be aligned on 16 byte boundaries
-  uint32_t data[N] alignas(16);
+  // Stacks need to be aligned on 4096 byte boundaries as we map them
+  // into the process
+  uint32_t data[N] alignas(0x1000);
 };
 
 

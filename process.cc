@@ -25,7 +25,7 @@ static uint32_t    syscall_yield();
 static uint32_t    syscall_exit(uint32_t exit_code);
 static uint32_t    syscall_kill(uint32_t pid);
 static proc_handle decide_next_process();
-static proc_handle create_process(void *eip, const char *argument);
+static proc_handle create_process(void *eip, uint32_t flags, const char *argument);
 static void        destroy_process(proc_handle pid);
 static void        switch_process(proc_handle pid);
 
@@ -58,12 +58,12 @@ void proc_init() {
   irq_enable(IRQ_SYSTEM_TIMER);
   int_register(IRQ_BASE_INTERRUPT + IRQ_SYSTEM_TIMER, isr_timer, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 
-  idle_process = create_process((void *)idle_main, "");
+  idle_process = create_process((void *)idle_main, PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, "");
 }
 
-proc_handle proc_create(void *eip, const char *argument) {
+proc_handle proc_create(void *eip, uint32_t flags, const char *argument) {
   // TODO: support multiple arguments
-  proc_handle pid = create_process(eip, argument);
+  proc_handle pid = create_process(eip, flags, argument);
   enqueue_front(pid, &running_head);
   return pid;
 }
@@ -213,39 +213,59 @@ static proc_handle decide_next_process() {
   return minimum_pid;
 }
 
-static proc_handle create_process(void *eip, const char *argument) {
+static proc_handle create_process(void *eip, uint32_t flags, const char *argument) {
   uint16_t ks_idx = kernel_stacks.emplace_back();
   uint16_t us_idx = user_stacks.emplace_back();
 
+  mem_adrspc adrspc = mem_create_address_space();
+  uint16_t mapping_flags = MEM_PE_P|MEM_PE_RW;
+  // We must always map the kernel as RW; it's going to be used in
+  // syscalls and other interrupts even if the U bit isn't set.
+  assert(flags & PROC_USER_SPACE);
+
+  if (flags & PROC_KERNEL_ACCESSIBLE) {
+    mapping_flags |= MEM_PE_U;
+  }
+
+  mem_map_kernel(adrspc, mapping_flags);
+
   proc_handle pid = processes.emplace_back(kernel_stacks[ks_idx].bottom_of_stack(),
                                            user_stacks[us_idx].bottom_of_stack(),
-                                           mem_create_address_space());
+                                           adrspc);
   process_control_block &pcb = processes[pid];
   pcb.kernel_stack_idx = ks_idx;
   pcb.user_stack_idx = us_idx;
   pcb.argument = argument;
 
+  // TODO: support non-user space processes
+
   // Push user space stack things first: the kernel stack references
   // the user ESP.
+  uint32_t *initial_user_esp = pcb.user_esp;
   pcb.upush((uint32_t)pcb.argv);         // argv
   pcb.upush(1);                          // argc
   pcb.upush((uint32_t)_user_proc_cleanup);
+
+  size_t initial_stack_size = (uintptr_t)initial_user_esp - (uintptr_t)pcb.user_esp;
+  uintptr_t user_space_stack_base = 0xB0000000;
 
   // We need a stack that can invoke iret as soon as possible, without
   // invoking any gcc function epilogues or prologues.  First, we need
   // a stack good for `switch_task`. As we set the return address to
   // be `switch_task_iret`, we also need to push values for IRET.
-  pcb.kpush(USER_DATA_SEL);              // SS
-  pcb.kpush((uint32_t)pcb.user_esp);     // ESP
-  pcb.kpush(0x202);                      // EFLAGS, IF
-  pcb.kpush(USER_CODE_SEL);              // CS
-  pcb.kpush((uint32_t)eip);              // Return EIP from switch_task_iret
-  pcb.kpush((uint32_t)switch_task_iret); // Return EIP from switch_task
-  pcb.kpush(0);                          // EBX
-  pcb.kpush(0);                          // ESI
-  pcb.kpush(0);                          // EDI
-  pcb.kpush(0);                          // EBP
+  pcb.kpush(USER_DATA_SEL);                               // SS
+  pcb.kpush(user_space_stack_base - initial_stack_size);  // ESP
+  pcb.kpush(0x202);                                       // EFLAGS, IF
+  pcb.kpush(USER_CODE_SEL);                               // CS
+  pcb.kpush((uint32_t)eip);                               // Return EIP from switch_task_iret
+  pcb.kpush((uint32_t)switch_task_iret);                  // Return EIP from switch_task
+  pcb.kpush(0);                                           // EBX
+  pcb.kpush(0);                                           // ESI
+  pcb.kpush(0);                                           // EDI
+  pcb.kpush(0);                                           // EBP
 
+  // Map one page of stack
+  mem_map_page(adrspc, user_space_stack_base - 0x1000, KERVIRT2PHYS((uintptr_t)user_stacks[us_idx].data), MEM_PE_P|MEM_PE_RW|MEM_PE_U);
   return pid;
 }
 

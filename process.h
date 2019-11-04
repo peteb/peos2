@@ -10,6 +10,9 @@
 #include <stdint.h>
 #include "memory.h"
 
+#define PROC_USER_SPACE          0x01
+#define PROC_KERNEL_ACCESSIBLE   0x02
+
 typedef uint16_t proc_handle;
 
 struct proc_fd {
@@ -18,7 +21,7 @@ struct proc_fd {
 };
 
 void        proc_init();
-proc_handle proc_create(void *eip, const char *argument);
+proc_handle proc_create(void *eip, uint32_t flags, const char *argument);
 void        proc_switch(proc_handle pid);
 void        proc_suspend(proc_handle pid);
 void        proc_resume(proc_handle pid);
