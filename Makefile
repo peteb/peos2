@@ -6,7 +6,7 @@ CXX=i686-elf-g++
 AS=i686-elf-as
 CFLAGS=-std=gnu99 -masm=intel -ffreestanding $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -DNDEBUG
 CXXFLAGS=-std=c++17 -masm=intel -ffreestanding $(OPT_LEVEL) -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fno-threadsafe-statics -mno-red-zone -mgeneral-regs-only -I. -DNDEBUG
-OBJDIR=target
+OBJDIR=.target
 
 # Code
 CRTBEGIN_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)

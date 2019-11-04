@@ -5,7 +5,7 @@ CXX=g++
 AS=as
 CFLAGS=-std=gnu99 -masm=intel $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -DNDEBUG
 CXXFLAGS=-std=c++17 -masm=intel $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -I. -DNDEBUG
-OBJDIR=hosted
+OBJDIR=.host
 BINARIES=unittest
 
 all : unittest
