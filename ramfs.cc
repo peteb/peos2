@@ -46,7 +46,7 @@ static int read(int handle, char *data, int length) {
   return bytes_to_copy;
 }
 
-static int open(vfs_device *, const char *path, uint32_t) {
+static int open(vfs_device *, const char *path, uint32_t flags) {
   assert(path[0] == '/');
   path++;  // Step up past /
 
@@ -61,8 +61,8 @@ static int open(vfs_device *, const char *path, uint32_t) {
   }
 
   if (file_idx == files.end()) {
-    // TODO: check if flags has CREATE
-    // TODO: where should we put flag #defines?
+    assert(flags & FLAG_OPEN_CREATE);
+    // TODO: be nicer when we can't find the file
     file_idx = files.emplace_back(p, 0, 0);
     puts(p2::format<64>("ramfs: created \"%s\"", path));
   }

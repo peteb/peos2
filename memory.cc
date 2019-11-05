@@ -4,6 +4,7 @@
 #include "x86.h"
 #include "protected_mode.h"
 #include "memareas.h"
+#include "multiboot.h"
 
 #include "support/page_alloc.h"
 #include "support/pool.h"
@@ -117,8 +118,12 @@ mem_adrspc mem_create_address_space() {
 }
 
 void mem_map_kernel(mem_adrspc adrspc, uint32_t flags) {
+  // TODO: we don't really want to know about multiboot everywhere
+  uintptr_t end = multiboot_last_address();
+  end = p2::max(end, (uintptr_t)&kernel_end);
+
   for (uintptr_t address = KERNEL_VIRTUAL_BASE;
-       address < ALIGN_UP((uintptr_t)&kernel_end, 0x1000);
+       address < ALIGN_UP(end, 0x1000);
        address += 0x1000) {
     mem_map_page(adrspc, address, KERVIRT2PHYS(address), flags);
   }

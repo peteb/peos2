@@ -41,6 +41,17 @@ struct multiboot_mmap_entry {
   uint32_t type;
 } __attribute__((packed));
 
+struct multiboot_mod {
+  uint32_t mod_start;
+  uint32_t mod_end;
+  uint32_t string_addr;
+  uint32_t reserved;
+};
+
+// Linear address but members are physical
+extern multiboot_info *multiboot_header;
+
 const char *multiboot_memory_type(uint32_t type);
+uintptr_t   multiboot_last_address();
 
 #endif // !PEOS2_MULTIBOOT_H
