@@ -134,6 +134,19 @@ void mem_destroy_address_space(mem_adrspc adrspc) {
   }
 
   address_space *space = &address_spaces[adrspc];
+
+  for (int i = 0; i < 1024; ++i) {
+    if (!(space->page_dir[i].flags & MEM_PE_P)) {
+      continue;
+    }
+
+    puts(p2::format<64>("mem: deleting page table %x", PHYS2KERVIRT(space->page_dir[i].table_11_31 << 12)));
+    page_table_allocator.free_page((void *)PHYS2KERVIRT(space->page_dir[i].table_11_31 << 12));
+    space->page_dir[i].table_11_31 = 0;
+    space->page_dir[i].flags = 0;
+  }
+
+  puts(p2::format<64>("mem: deleting page dir %x", (uintptr_t)space->page_dir));
   page_dir_allocator.free_page(space->page_dir);
   space->page_dir = nullptr;
   address_spaces.erase(adrspc);

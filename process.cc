@@ -19,6 +19,7 @@ SYSCALL_DEF1(exit, SYSCALL_NUM_EXIT, uint32_t);
 extern "C" void switch_task(uint32_t *old_esp, uint32_t new_esp);
 extern "C" void switch_task_iret();
 extern "C" void isr_timer(isr_registers);
+extern "C" void _user_proc_cleanup();
 
 // Statics
 static uint32_t    syscall_yield();
@@ -33,7 +34,6 @@ static void        enqueue_front(proc_handle pid, proc_handle *head);
 static void        dequeue(proc_handle pid, proc_handle *head);
 
 static void        idle_main();
-static void        _user_proc_cleanup();
 
 // Global state
 static p2::pool<process_control_block, 16, proc_handle> processes;
@@ -242,9 +242,9 @@ static proc_handle create_process(void *eip, uint32_t flags, const char *argumen
   // Push user space stack things first: the kernel stack references
   // the user ESP.
   uint32_t *initial_user_esp = pcb.user_esp;
-  pcb.upush((uint32_t)pcb.argv);         // argv
+  pcb.upush((uintptr_t)pcb.argv);        // argv
   pcb.upush(1);                          // argc
-  pcb.upush((uint32_t)_user_proc_cleanup);
+  pcb.upush((uintptr_t)_user_proc_cleanup);
 
   size_t initial_stack_size = (uintptr_t)initial_user_esp - (uintptr_t)pcb.user_esp;
   uintptr_t user_space_stack_base = 0xB0000000;
@@ -265,7 +265,7 @@ static proc_handle create_process(void *eip, uint32_t flags, const char *argumen
   pcb.kpush(0);                                           // EBP
 
   // Map one page of stack
-  mem_map_page(adrspc, user_space_stack_base - 0x1000, KERVIRT2PHYS((uintptr_t)user_stacks[us_idx].data), MEM_PE_P|MEM_PE_RW|MEM_PE_U);
+  mem_map_page(adrspc, user_space_stack_base - 0x1000, KERVIRT2PHYS((uintptr_t)user_stacks[us_idx].bottom_of_stack()) - 0x1000, MEM_PE_P|MEM_PE_RW|MEM_PE_U);
   return pid;
 }
 
@@ -332,7 +332,7 @@ static void idle_main() {
 // the future, but we don't have any memory protection now so a
 // runaway process will crash the whole system.
 //
-static void _user_proc_cleanup() {
+extern "C" void _user_proc_cleanup() {
   uint32_t retval;
   asm volatile("" : "=a"(retval));
   SYSCALL1(exit, retval);

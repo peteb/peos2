@@ -58,7 +58,7 @@ struct stack {
   uint32_t *bottom_of_stack() {
     size_t length = sizeof(data) / sizeof(data[0]);
     assert(length > 0);
-    return &data[length - 1];
+    return &data[length];
     // You can argue that &data[length] would be correct, ie, one
     // above the end of the array: it's explicitly a legal pointer in
     // C/C++, and x86 PUSH first decrements ESP before writing to

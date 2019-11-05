@@ -43,15 +43,13 @@ extern "C" int init_main() {
   // Start I/O
   SYSCALL3(write, stdout, "Hellote!\n", 9);
 
-  while (true) {
-    char input[240];
-    int read = SYSCALL3(read, stdin, input, sizeof(input) - 1);
-    input[read] = '\0';
+  char input[240];
+  int read = SYSCALL3(read, stdin, input, sizeof(input) - 1);
+  input[read] = '\0';
 
-    p2::format<sizeof(input) + 50> output("Read %d bytes: %s");
-    output % read % input;
-    SYSCALL3(write, stdout, output.str().c_str(), output.str().size());
-  }
+  p2::format<sizeof(input) + 50> output("Read %d bytes: %s");
+  output % read % input;
+  SYSCALL3(write, stdout, output.str().c_str(), output.str().size());
 
   return 0;
 }
