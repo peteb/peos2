@@ -19,12 +19,8 @@
 extern int kernel_start, kernel_end;
 extern char stack_top;
 extern "C" int init_main();
-static void setup_init();
 
 static uint32_t interrupt_stack[1024] alignas(16);
-
-extern int __start_TEXT_INIT;
-extern int __stop_TEXT_INIT;
 
 extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   screen_init();
@@ -112,31 +108,11 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   mem_map_kernel(addr, MEM_PE_P|MEM_PE_RW);
   mem_activate_address_space(addr);
 
-  setup_init();
+  proc_create((void *)init_main, PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, "");
 
   // Let the mayhem begin
   asm volatile("sti");
   proc_yield();
 
   while (true) {}
-}
-
-static void setup_init() {
-  size_t init_size = (uintptr_t)&__stop_TEXT_INIT - (uintptr_t)&__start_TEXT_INIT;
-
-  puts(p2::format<64>("Init size: %d bytes (%x - %x), fun at %x",
-                      init_size,
-                      (uintptr_t)&__start_TEXT_INIT,
-                      (uintptr_t)&__stop_TEXT_INIT,
-                      (uintptr_t)&init_main));
-
-  proc_handle pid = proc_create((void *)init_main, PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, "");
-  mem_adrspc adrspc = proc_get_address_space(pid);
-
-  // Map the binary into virtual address space
-  for (uintptr_t base = ALIGN_UP((uintptr_t)&__start_TEXT_INIT, 0x1000);
-       base < ALIGN_UP((uintptr_t)&__stop_TEXT_INIT, 0x1000);
-       base += 0x1000) {
-    mem_map_page(adrspc, base, base, MEM_PE_P|MEM_PE_RW|MEM_PE_U);
-  }
 }

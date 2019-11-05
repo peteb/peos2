@@ -6,15 +6,10 @@
 // possible", which is after the kernel and all the drivers have been
 // initialized.
 //
-// The function is run at 0x00101000, the page after the multiboot
-// header, and that's the reason why we put the code in the .text.init
-// section.
-//
 // The init process has full access to the kernel's memory so that it
 // can execute support functions.
-// TODO: there's no use putting this in a separate section. Remove that.
 //
-extern "C" __attribute__((section(".text.init"))) int init_main() {
+extern "C" int init_main() {
   // Setup
   int stdout = SYSCALL2(open, "/dev/term0", 0);
   int stdin = SYSCALL2(open, "/dev/term0", 0);

@@ -9,27 +9,6 @@ SECTIONS {
   /* Multiboot header, needs to be early */
   .text.mbhdr : { *(.text.mbhdr) }
 
-  /* Init process is a user space process and thus loaded at a lower half virtual address */
-  .text.init ALIGN(4K) : {
-    __start_TEXT_INIT = .;
-    .target/init.o (.text)
-  }
-
-  .bss.init : {
-    .target/init.o (.bss)
-  }
-
-  .rodata.init : {
-    .target/init.o (.rodata)
-  }
-
-  .data.init : {
-    .target/init.o (.data)
-  }
-
-  . = ALIGN(4K);
-  __stop_TEXT_INIT = .;
-
   /* Enter upper half virtual memory */
   . += 0xC0000000;
 
