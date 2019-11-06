@@ -15,6 +15,7 @@
 #define SYSCALL_NUM_CONTROL      4
 #define SYSCALL_NUM_CLOSE        5
 #define SYSCALL_NUM_SEEK         6
+#define SYSCALL_NUM_TELL         7
 
 #define SYSCALL_NUM_YIELD       10
 #define SYSCALL_NUM_EXIT        11
@@ -29,6 +30,7 @@
 
 // Control numbers
 #define CTRL_RAMFS_SET_FILE_RANGE 0x0100      // (start_addr, size)
+#define CTRL_RAMFS_GET_FILE_RANGE 0x0200      // (*start_addr, *size)
 
 // Filesystem definitions
 SYSCALL_DEF3(write,   SYSCALL_NUM_WRITE, int, const char *, int);
@@ -37,5 +39,6 @@ SYSCALL_DEF2(open,    SYSCALL_NUM_OPEN, const char *, uint32_t);
 SYSCALL_DEF1(close,   SYSCALL_NUM_CLOSE, int);
 SYSCALL_DEF4(control, SYSCALL_NUM_CONTROL, int, uint32_t, uint32_t, uint32_t);
 SYSCALL_DEF3(seek,    SYSCALL_NUM_SEEK, int, int, int);
+SYSCALL_DEF2(tell,    SYSCALL_NUM_TELL, int, int *);
 
 #endif // !PEOS2_SYSCALL_DECLS_H

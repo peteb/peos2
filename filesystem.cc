@@ -17,6 +17,7 @@ static int syscall_open(const char *filename, uint32_t flags);
 static int syscall_close(int fd);
 static int syscall_control(int fd, uint32_t function, uint32_t param1, uint32_t param2);
 static int syscall_seek(int fd, int offset, int relative);
+static int syscall_tell(int fd, int *position);
 
 // Global state
 static p2::pool<vfs_node, 256, vfs_node_handle> nodes;
@@ -53,6 +54,7 @@ void vfs_init()
   syscall_register(SYSCALL_NUM_CONTROL, (syscall_fun)syscall_control);
   syscall_register(SYSCALL_NUM_CLOSE, (syscall_fun)syscall_close);
   syscall_register(SYSCALL_NUM_SEEK, (syscall_fun)syscall_seek);
+  syscall_register(SYSCALL_NUM_TELL, (syscall_fun)syscall_tell);
 }
 
 static vfs_dirent *find_dirent(vfs_node_handle dir_node, const p2::string<32> &name)
@@ -230,6 +232,16 @@ static int syscall_seek(int fd, int offset, int relative)
   vfs_device *device_node = (vfs_device *)pfd->opaque;
   assert(device_node && device_node->driver && device_node->driver->seek);
   return device_node->driver->seek(pfd->value, offset, relative);
+}
+
+static int syscall_tell(int fd, int *position)
+{
+  proc_fd *pfd = proc_get_fd(proc_current_pid(), fd);
+  assert(pfd);
+  assert(position);
+  vfs_device *device_node = (vfs_device *)pfd->opaque;
+  assert(device_node && device_node->driver && device_node->driver->tell);
+  return device_node->driver->tell(pfd->value, position);
 }
 
 static int syscall_control(int fd, uint32_t function, uint32_t param1, uint32_t param2)

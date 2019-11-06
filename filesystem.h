@@ -80,6 +80,8 @@ struct vfs_device_driver {
   // @relative: what the base is. SEEK_CUR or SEEK_BEG
   //
   int (*seek)(int handle, int offset, int relative);
+
+  int (*tell)(int handle, int *position);
 };
 
 // Kernel/driver functions

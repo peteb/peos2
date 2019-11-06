@@ -37,6 +37,8 @@ namespace p2 {
   }
 }
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 const char *strchr(const char *str, char c);
 size_t strlen(const char *str);
 

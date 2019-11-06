@@ -27,7 +27,8 @@ void term_init(const char *name, screen_buffer buffer) {
     .open = open,
     .close = nullptr,
     .control = nullptr,
-    .seek = nullptr
+    .seek = nullptr,
+    .tell = nullptr
   };
 
   uintptr_t term_id = terminals.emplace_back(buffer);

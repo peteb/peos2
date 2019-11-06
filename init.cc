@@ -38,19 +38,18 @@ extern "C" int init_main()
   // ending with .tar
   extract_tar("/ramfs/modules/test.tar");
 
-  while (true) {}
   {
     // Try to read a file
-    int read_fd = SYSCALL2(open, "/ramfs/modules/test.tar", 0);
-    char buf[1000];
-
+    int read_fd = SYSCALL2(open, "/ramfs/x86.h", 0);
+    char buf[2];
     int bytes_read;
-    while ((bytes_read = SYSCALL3(read, read_fd, buf, sizeof(buf) - 1)) > 0) {
-      buf[p2::min(bytes_read, 10)] = '\0';
 
-      puts_sys(stdout, p2::format<1010>("Read %d bytes: '%s'\n", bytes_read, buf));
+    while ((bytes_read = SYSCALL3(read, read_fd, buf, sizeof(buf))) > 0) {
+      SYSCALL3(write, 0, buf, bytes_read);
     }
   }
+
+  while (true) {}
 
   // Start I/O
   int stdin = SYSCALL2(open, "/dev/term0", 0);
@@ -90,12 +89,15 @@ void extract_tar(const char *filename)
   const p2::string<7> expected_magic("ustar");
   int fd = SYSCALL2(open, filename, 0);
   tar_entry hdr;
-
   assert(sizeof(hdr) == 512);
+
+  uint32_t file_mem_start = 0, file_mem_size = 0;
+  SYSCALL4(control, fd, CTRL_RAMFS_GET_FILE_RANGE, (uintptr_t)&file_mem_start, (uintptr_t)&file_mem_size);
+  // TODO: verify return value
 
   // TODO: looping read
   while (SYSCALL3(read, fd, (char *)&hdr, sizeof(hdr)) == sizeof(hdr)) {
-    if (hdr.name[1] == '\0') {
+    if (hdr.name[0] == '\0') {
       // NUL block, two of these symbolize end of archive
       continue;
     }
@@ -109,13 +111,18 @@ void extract_tar(const char *filename)
       panic("not null-terminated name");
     }
 
-    p2::string<101> s(hdr.name, 100);
+    p2::string<101> entry_name(hdr.name, 100);
     uint32_t size = tar_parse_octal(hdr.size, sizeof(hdr.size));
 
     // Create file
+    int cur_pos = 0;
+    SYSCALL2(tell, fd, &cur_pos);
+    // TODO: assert return value
 
+    // If we can't rely on contiguous memory anymore, change this into a write
+    write_info("/", entry_name.c_str(), file_mem_start + cur_pos, size);
     SYSCALL3(seek, fd, ALIGN_UP(size, 512), SEEK_CUR);
-    puts_sys(stdout, p2::format<128>("got entry '%s' size: %d\n", s.c_str(), size));
+    puts_sys(stdout, p2::format<128>("got entry '%s' size: %d address: %x\n", entry_name.c_str(), size, file_mem_start + cur_pos));
   }
 
   SYSCALL1(close, fd);

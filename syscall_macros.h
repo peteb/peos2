@@ -8,13 +8,15 @@
 #ifndef PEOS2_SYSCALL_MACROS_H
 #define PEOS2_SYSCALL_MACROS_H
 
+// TODO: why do we have to clobber ESI? The ISR is using PUSHAD!
+
 #define SYSCALL_DEF0(name, num)                                  \
 inline static int _syscall_##name() {                            \
   int ret;                                                       \
   asm volatile("int 0x90"                                        \
                : "=a"(ret)                                       \
                : "a"(num)                                        \
-               : "memory");                                      \
+               : "memory", "esi");                               \
   return ret;                                                    \
 }
 
@@ -25,7 +27,7 @@ inline static int _syscall_##name(P1 p1) {                       \
                : "=a"(ret)                                       \
                : "a"(num),                                       \
                  "b"(p1)                                         \
-               : "memory");                                      \
+               : "memory", "esi");                               \
   return ret;                                                    \
 }
 
@@ -37,7 +39,7 @@ inline static int _syscall_##name(P1 p1, P2 p2) {                \
                : "a"(num),                                       \
                  "b"(p1),                                        \
                  "c"(p2)                                         \
-               : "memory");                                      \
+               : "memory", "esi");                               \
   return ret;                                                    \
 }
 
@@ -50,7 +52,7 @@ inline static int _syscall_##name(P1 p1, P2 p2, P3 p3) {         \
                  "b"(p1),                                        \
                  "c"(p2),                                        \
                  "d"(p3)                                         \
-               : "memory");                                      \
+               : "memory", "esi");                               \
   return ret;                                                    \
 }
 

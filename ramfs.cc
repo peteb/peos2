@@ -2,6 +2,7 @@
 #include "filesystem.h"
 #include "process.h"
 #include "syscalls.h"
+#include "screen.h"
 
 #include "support/format.h"
 #include "support/pool.h"
@@ -14,6 +15,7 @@ static int open(vfs_device *device, const char *path, uint32_t flags);
 static int control(int handle, uint32_t function, uint32_t param1, uint32_t param2);
 static int close(int handle);
 static int seek(int handle, int offset, int relative);
+static int tell(int handle, int *position);
 
 // A flat list of all files and their contents
 static p2::pool<file, 128, file_handle> files;
@@ -29,7 +31,8 @@ void ramfs_init()
     .open = open,
     .close = close,
     .control = control,
-    .seek = seek
+    .seek = seek,
+    .tell = tell
   };
 
   vfs_node_handle mountpoint = vfs_create_node(VFS_FILESYSTEM);
@@ -68,6 +71,7 @@ static int open(vfs_device *, const char *path, uint32_t flags)
   if (file_idx == files.end()) {
     assert(flags & FLAG_OPEN_CREATE);
     // TODO: be nicer when we can't find the file
+    puts(p2::format<64>("ramfs: creating file '%s'", path));
     file_idx = files.emplace_back(p, 0, 0);
   }
 
@@ -81,6 +85,18 @@ static int control(int handle, uint32_t function, uint32_t param1, uint32_t para
     assert(f.size == 0);
     f.start = param1;
     f.size = param2;
+    return 0;
+  }
+  else if (function == CTRL_RAMFS_GET_FILE_RANGE) {
+    file &f = files[opened_files[handle].file];
+    // TODO: check that it's a RAM contiguous file
+    uint32_t *start_ptr = (uint32_t *)param1;
+    uint32_t *size_ptr = (uint32_t *)param2;
+
+    if (start_ptr)
+      *start_ptr = f.start;
+    if (size_ptr)
+      *size_ptr = f.size;
     return 0;
   }
 
@@ -111,5 +127,12 @@ static int seek(int handle, int offset, int relative)
 
   of.position = p2::clamp<uint32_t>(of.position, 0u, f.size);
   // TODO: clean up overflow issues
+  return 0;
+}
+
+static int tell(int handle, int *position)
+{
+  assert(position);
+  *position = opened_files[handle].position;
   return 0;
 }
