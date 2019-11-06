@@ -5,6 +5,7 @@
 #include "protected_mode.h"
 #include "memareas.h"
 #include "multiboot.h"
+#include "debug.h"
 
 #include "support/page_alloc.h"
 #include "support/pool.h"
@@ -88,32 +89,26 @@ void *mem_create_page_dir() {
 void *mem_alloc_page() {
   assert(pmem);
   void *mem = pmem->alloc_page();
-  puts(p2::format<64>("mem: allocated 4k page at %x, space left: %d")
-       % (uintptr_t)mem
-       % pmem->free_space());
+  dbg_puts(mem, "allocated 4k page at %x, space left: %d", (uintptr_t)mem, pmem->free_space());
   return mem;
 }
 
 void *mem_alloc_page_zero() {
   assert(pmem);
   void *mem = pmem->alloc_page_zero();
-  puts(p2::format<64>("mem: allocated 4k page at %x, space left: %d")
-       % (uintptr_t)mem
-       % pmem->free_space());
+  dbg_puts(mem, "allocated 4k page at %x, space left: %d", (uintptr_t)mem, pmem->free_space());
   return mem;
 }
 
 void mem_free_page(void *page) {
   assert(pmem);
   pmem->free_page(page);
-  puts(p2::format<64>("mem: freed 4k page at %x, space left: %d")
-       % (uintptr_t)page
-       % pmem->free_space());
+  dbg_puts(mem, "freed 4k page at %x, space left: %d", (uintptr_t)page, pmem->free_space());
 }
 
 mem_adrspc mem_create_address_space() {
   page_dir_entry *page_dir = (page_dir_entry *)page_dir_allocator.alloc_page_zero();
-  puts(p2::format<64>("mem: created page dir %x", (uintptr_t)page_dir));
+  dbg_puts(mem, "created page dir %x", (uintptr_t)page_dir);
   return address_spaces.push_back({page_dir});
 }
 
@@ -145,13 +140,13 @@ void mem_destroy_address_space(mem_adrspc adrspc) {
       continue;
     }
 
-    puts(p2::format<64>("mem: deleting page table %x", PHYS2KERNVIRT(space->page_dir[i].table_11_31 << 12)));
+    dbg_puts(mem, "deleting page table %x", PHYS2KERNVIRT(space->page_dir[i].table_11_31 << 12));
     page_table_allocator.free_page((void *)PHYS2KERNVIRT(space->page_dir[i].table_11_31 << 12));
     space->page_dir[i].table_11_31 = 0;
     space->page_dir[i].flags = 0;
   }
 
-  puts(p2::format<64>("mem: deleting page dir %x", (uintptr_t)space->page_dir));
+  dbg_puts(mem, "deleting page dir %x", (uintptr_t)space->page_dir);
   page_dir_allocator.free_page(space->page_dir);
   space->page_dir = nullptr;
   address_spaces.erase(adrspc);
@@ -183,7 +178,7 @@ void mem_map_page(mem_adrspc adrspc, uint32_t virt, uint32_t phys, uint16_t flag
     page_table = (page_table_entry *)page_table_allocator.alloc_page_zero();
     page_dir[directory_idx].table_11_31 = KERNVIRT2PHYS((uintptr_t)page_table) >> 12;
     page_dir[directory_idx].flags = pde_flags;
-    puts(p2::format<64>("mem: created page table %x", (uintptr_t)page_table));
+    dbg_puts(mem, "created page table %x", (uintptr_t)page_table);
   }
   else {
     //assert(page_dir[directory_idx].flags == pde_flags && "conflicting flags for pde");

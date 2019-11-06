@@ -3,6 +3,7 @@
 #include "assert.h"
 #include "syscalls.h"
 #include "process.h"
+#include "debug.h"
 
 #include "support/pool.h"
 #include "support/string.h"
@@ -183,7 +184,7 @@ int vfs_close_handle(proc_handle pid, int local_fd)
   assert(device_node && device_node->driver);
   proc_remove_fd(pid, local_fd);
 
-  puts(p2::format<64>("vfs: closing %d.%d (fs local handle: %d)", pid, local_fd, pfd->value));
+  dbg_puts(vfs, "closing %d.%d (fs local handle: %d)", pid, local_fd, pfd->value);
 
   if (!device_node->driver->close) {
     return EINVOP;
@@ -242,7 +243,7 @@ static int syscall_open(const char *filename, uint32_t flags)
   int local_fd = device_node.driver->open(&device_node, driver.rest_path, flags);
   // TODO: check that it returned OK
   int proc_fd = proc_create_fd(proc_current_pid(), {(void *)&device_node, local_fd});
-  puts(p2::format<64>("vfs: opened %s as %d.%d", filename, proc_current_pid(), proc_fd));
+  dbg_puts(vfs, "opened %s at %d.%d", filename, proc_current_pid(), proc_fd);
   return proc_fd;
 }
 

@@ -3,6 +3,7 @@
 #include "process.h"
 #include "syscalls.h"
 #include "screen.h"
+#include "debug.h"
 
 #include "support/format.h"
 #include "support/pool.h"
@@ -71,7 +72,7 @@ static int open(vfs_device *, const char *path, uint32_t flags)
   if (file_idx == files.end()) {
     assert(flags & FLAG_OPEN_CREATE);
     // TODO: be nicer when we can't find the file
-    puts(p2::format<64>("ramfs: creating file '%s'", path));
+    dbg_puts(ramfs, "creating file '%s'", path);
     file_idx = files.emplace_back(p, 0, 0);
   }
 

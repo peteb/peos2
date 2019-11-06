@@ -7,6 +7,7 @@
 #include "memareas.h"
 #include "memory.h"
 #include "filesystem.h"
+#include "debug.h"
 
 #include "support/pool.h"
 #include "support/format.h"
@@ -79,7 +80,7 @@ static void destroy_process(proc_handle pid) {
       continue;
     }
 
-    puts(p2::format<32>("proc: forcefully closing fd %d", i));
+    dbg_puts(proc, "forcefully closing fd %d", i);
     vfs_close_handle(pid, i);
   }
 
@@ -115,7 +116,7 @@ void proc_switch(proc_handle pid) {
   assert(!pcb.suspended && "please resume the process before switching to it");
 
   if (pcb.terminating) {
-    puts("proc: trying to switch to terminating process");
+    dbg_puts(proc, "trying to switch to terminating process %d", pid);
     // The process has been terminated, so we cannot run it. This can
     // happen if the process was in a blocking syscall when someone
     // else asked to kill it.
@@ -293,12 +294,12 @@ void proc_kill(proc_handle pid, uint32_t exit_status) {
 
   if (pcb.suspended) {
     // If the process is suspended we need to wait for the driver
-    puts(p2::format<64>("pid %d exiting with status %d") % pid % exit_status);
+    dbg_puts(proc, "pid %d exiting with status %d", pid, exit_status);
     pcb.terminating = true;
     return;
   }
 
-  puts(p2::format<64>("pid %d exited with status %d") % pid % exit_status);
+  dbg_puts(proc, "pid %d exited with status %d", pid, exit_status);
   destroy_process(pid);
 }
 
