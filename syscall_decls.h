@@ -28,6 +28,9 @@
 #define SEEK_CUR              1
 #define SEEK_BEG              2
 
+// Errors
+#define EINVOP       -100  // Invalid operation
+
 // Control numbers
 #define CTRL_RAMFS_SET_FILE_RANGE 0x0100      // (start_addr, size)
 #define CTRL_RAMFS_GET_FILE_RANGE 0x0200      // (*start_addr, *size)

@@ -4,6 +4,7 @@
 #define PEOS2_FILESYSTEM_H
 
 #include <stdint.h>
+#include "process.h"
 
 #define VFS_DIRECTORY    0x01
 #define VFS_DRIVER       0x02
@@ -92,5 +93,6 @@ void            vfs_add_dirent(vfs_node_handle dir_node, const char *name, vfs_n
 void            vfs_set_driver(vfs_node_handle dev_node, vfs_device_driver *driver, void *opaque);
 vfs_node_handle vfs_lookup(const char *path);
 void            *vfs_get_opaque(vfs_device *device);
+int             vfs_close_handle(proc_handle pid, int handle);
 
 #endif // !PEOS2_FILESYSTEM_H

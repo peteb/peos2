@@ -11,8 +11,8 @@
 #include "filesystem_private.h"
 
 // Statics
-static uint32_t syscall_write(int fd, const char *data, int length);
-static uint32_t syscall_read(int fd, char *data, int length);
+static int syscall_write(int fd, const char *data, int length);
+static int syscall_read(int fd, char *data, int length);
 static int syscall_open(const char *filename, uint32_t flags);
 static int syscall_close(int fd);
 static int syscall_control(int fd, uint32_t function, uint32_t param1, uint32_t param2);
@@ -175,24 +175,49 @@ void *vfs_get_opaque(vfs_device *device)
   return device->opaque;
 }
 
-static uint32_t syscall_write(int fd, const char *data, int length)
+int vfs_close_handle(proc_handle pid, int local_fd)
+{
+  proc_fd *pfd = proc_get_fd(pid, local_fd);
+  assert(pfd);
+  vfs_device *device_node = (vfs_device *)pfd->opaque;
+  assert(device_node && device_node->driver);
+  proc_remove_fd(pid, local_fd);
+
+  puts(p2::format<64>("vfs: closing %d.%d (fs local handle: %d)", pid, local_fd, pfd->value));
+
+  if (!device_node->driver->close) {
+    return EINVOP;
+  }
+
+  // TODO: what do we do if the driver fails to close the file? But
+  // we've already removed our local mapping?
+  return device_node->driver->close(pfd->value);
+}
+
+static int syscall_write(int fd, const char *data, int length)
 {
   // TODO: verify that pointers are OK
   proc_fd *pfd = proc_get_fd(proc_current_pid(), fd);
   assert(pfd);
 
   vfs_device *device_node = (vfs_device *)pfd->opaque;
-  assert(device_node && device_node->driver && device_node->driver->write);
+  assert(device_node && device_node->driver);
+
+  if (!device_node->driver->write)
+    return EINVOP;
 
   return device_node->driver->write(pfd->value, data, length);
 }
 
-static uint32_t syscall_read(int fd, char *data, int length)
+static int syscall_read(int fd, char *data, int length)
 {
   proc_fd *pfd = proc_get_fd(proc_current_pid(), fd);
   assert(pfd);
   vfs_device *device_node = (vfs_device *)pfd->opaque;
-  assert(device_node && device_node->driver && device_node->driver->read);
+  assert(device_node && device_node->driver);
+
+  if (!device_node->driver->read)
+    return EINVOP;
 
   return device_node->driver->read(pfd->value, data, length);
 }
@@ -208,21 +233,22 @@ static int syscall_open(const char *filename, uint32_t flags)
 
   vfs_device &device_node = drivers[driver_node.info_node];
   assert(device_node.driver);
-  assert(device_node.driver->open);
+
+  if (!device_node.driver->open)
+    return EINVOP;
+
   // TODO: handle the error cases better than asserts
 
-  int retval = device_node.driver->open(&device_node, driver.rest_path, flags);
+  int local_fd = device_node.driver->open(&device_node, driver.rest_path, flags);
   // TODO: check that it returned OK
-  return proc_create_fd(proc_current_pid(), {(void *)&device_node, retval});
+  int proc_fd = proc_create_fd(proc_current_pid(), {(void *)&device_node, local_fd});
+  puts(p2::format<64>("vfs: opened %s as %d.%d", filename, proc_current_pid(), proc_fd));
+  return proc_fd;
 }
 
 static int syscall_close(int fd)
 {
-  proc_fd *pfd = proc_get_fd(proc_current_pid(), fd);
-  assert(pfd);
-  vfs_device *device_node = (vfs_device *)pfd->opaque;
-  assert(device_node && device_node->driver && device_node->driver->close);
-  return device_node->driver->close(pfd->value);
+  return vfs_close_handle(proc_current_pid(), fd);
 }
 
 static int syscall_seek(int fd, int offset, int relative)
@@ -230,7 +256,11 @@ static int syscall_seek(int fd, int offset, int relative)
   proc_fd *pfd = proc_get_fd(proc_current_pid(), fd);
   assert(pfd);
   vfs_device *device_node = (vfs_device *)pfd->opaque;
-  assert(device_node && device_node->driver && device_node->driver->seek);
+  assert(device_node && device_node->driver);
+
+  if (!device_node->driver->seek)
+    return EINVOP;
+
   return device_node->driver->seek(pfd->value, offset, relative);
 }
 
@@ -240,7 +270,11 @@ static int syscall_tell(int fd, int *position)
   assert(pfd);
   assert(position);
   vfs_device *device_node = (vfs_device *)pfd->opaque;
-  assert(device_node && device_node->driver && device_node->driver->tell);
+  assert(device_node && device_node->driver);
+
+  if (!device_node->driver->tell)
+    return EINVOP;
+
   return device_node->driver->tell(pfd->value, position);
 }
 
@@ -249,6 +283,10 @@ static int syscall_control(int fd, uint32_t function, uint32_t param1, uint32_t 
   proc_fd *pfd = proc_get_fd(proc_current_pid(), fd);
   assert(pfd);
   vfs_device *device_node = (vfs_device *)pfd->opaque;
-  assert(device_node && device_node->driver && device_node->driver->control);
+  assert(device_node && device_node->driver);
+
+  if (!device_node->driver->control)
+    return EINVOP;
+
   return device_node->driver->control(pfd->value, function, param1, param2);
 }

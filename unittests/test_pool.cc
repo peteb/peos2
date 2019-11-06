@@ -151,4 +151,71 @@ TESTSUITE(p2::pool) {
     ASSERT_EQ(items[idx].value, 123);
     ASSERT_EQ(ctor_count, 1);
   }
+
+  TESTCASE("valid: all items are invalid at the beginning") {
+    p2::pool<int, 5> items;
+
+    for (int i = 0; i < 5; ++i) {
+      ASSERT_EQ(items.valid(i), false);
+    }
+  }
+
+  TESTCASE("valid: only a pushed item is valid") {
+    p2::pool<int, 5> items;
+    uint16_t idx = items.push_back(123);
+
+    ASSERT_EQ(items.valid(idx), true);
+    ASSERT_EQ(items.valid(idx + 1), false);
+  }
+
+  TESTCASE("valid: erasing an item makes it invalid") {
+    p2::pool<int, 5> items;
+    uint16_t idx = items.push_back(123);
+    items.erase(idx);
+
+    ASSERT_EQ(items.valid(idx), false);
+    ASSERT_EQ(items.valid(idx + 1), false);
+  }
+
+  TESTCASE("valid: erasing earlier items make them invalid") {
+    p2::pool<int, 5> items;
+    uint16_t idx = items.push_back(123);
+    uint16_t idx2 = items.push_back(532);
+    items.push_back(5511);
+    items.erase(idx);
+    items.erase(idx2);
+
+    ASSERT_EQ(items.valid(idx), false);
+    ASSERT_EQ(items.valid(idx2), false);
+    ASSERT_EQ(items.valid(idx2 + 1), true);
+  }
+
+  TESTCASE("valid: erasing all elements make them all invalid") {
+    p2::pool<int, 5> items;
+
+    for (int i = 0; i < 5; ++i)
+      items.push_back(i);
+
+    for (int i = 0; i < 5; ++i)
+      items.erase(i);
+
+    for (int i = 0; i < 5; ++i)
+      ASSERT_EQ(items.valid(i), false);
+  }
+
+  TESTCASE("valid: removing last element makes it invalid") {
+    p2::pool<int, 5> items;
+    items.push_back(0);
+    items.push_back(1);
+    items.push_back(2);
+
+    items.erase(2);
+    ASSERT_EQ(items.valid(2), false);
+
+    items.erase(1);
+    ASSERT_EQ(items.valid(1), false);
+
+    items.erase(0);
+    ASSERT_EQ(items.valid(0), false);
+  }
 }

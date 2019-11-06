@@ -47,9 +47,9 @@ extern "C" int init_main()
     while ((bytes_read = SYSCALL3(read, read_fd, buf, sizeof(buf))) > 0) {
       SYSCALL3(write, 0, buf, bytes_read);
     }
-  }
 
-  while (true) {}
+    SYSCALL1(close, read_fd);
+  }
 
   // Start I/O
   int stdin = SYSCALL2(open, "/dev/term0", 0);
@@ -67,9 +67,10 @@ extern "C" int init_main()
 static int write_info(const char *path, const char *filename, uintptr_t start_addr, uintptr_t size)
 {
   int mod_fd = SYSCALL2(open, p2::format<64>("/ramfs%s%s", path, filename).str().c_str(), FLAG_OPEN_CREATE);
-  assert(mod_fd);
+  assert(mod_fd >= 0);
   SYSCALL4(control, mod_fd, CTRL_RAMFS_SET_FILE_RANGE, start_addr, size);
   SYSCALL1(close, mod_fd);
+
   // TODO: check return status
   return 0;
 }
@@ -88,6 +89,7 @@ void extract_tar(const char *filename)
 {
   const p2::string<7> expected_magic("ustar");
   int fd = SYSCALL2(open, filename, 0);
+
   tar_entry hdr;
   assert(sizeof(hdr) == 512);
 
@@ -124,6 +126,7 @@ void extract_tar(const char *filename)
     SYSCALL3(seek, fd, ALIGN_UP(size, 512), SEEK_CUR);
     puts_sys(stdout, p2::format<128>("got entry '%s' size: %d address: %x\n", entry_name.c_str(), size, file_mem_start + cur_pos));
   }
+
 
   SYSCALL1(close, fd);
 }

@@ -31,6 +31,7 @@ void        proc_kill(proc_handle pid, uint32_t exit_status);
 
 int         proc_create_fd(proc_handle pid, proc_fd fd);
 proc_fd    *proc_get_fd(proc_handle pid, int fd);
+void        proc_remove_fd(proc_handle pid, int fd);
 
 mem_adrspc  proc_get_address_space(proc_handle pid);
 

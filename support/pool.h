@@ -68,6 +68,9 @@ namespace p2 {
         // We've got items on the freelist which we can use
         idx = _freelist_head;
         _freelist_head = element(idx)->next_free;
+        if (_freelist_head == END_SENTINEL)
+          _freelist_tail = END_SENTINEL;
+
         element(idx)->next_free = END_SENTINEL;
       }
       else {
@@ -82,8 +85,7 @@ namespace p2 {
 
     void erase(_IndexT idx)
     {
-      assert(_watermark > 0);
-      assert(idx < _watermark);
+      assert(valid(idx));
 
       // If it's the final item we can just simplify things and
       // decrease the watermark
@@ -96,7 +98,28 @@ namespace p2 {
       // Add the item to the freelist
       element(idx)->next_free = _freelist_head;
       _freelist_head = idx;
+
+      if (_freelist_tail == END_SENTINEL)
+        _freelist_tail = idx;
+
       --_count;
+    }
+
+    bool valid(_IndexT idx)
+    {
+      if (idx >= _watermark)
+        return false;
+
+      if (element(idx)->next_free != END_SENTINEL)
+        return false;
+
+      if (idx == _freelist_head)
+        return false;
+
+      if (idx == _freelist_tail)
+        return false;
+
+      return true;
     }
 
     T &operator [](_IndexT idx)
@@ -116,6 +139,11 @@ namespace p2 {
       return _count;
     }
 
+    _IndexT watermark()
+    {
+      return _watermark;
+    }
+
     _IndexT end() const
     {
       return END_SENTINEL;
@@ -129,6 +157,7 @@ namespace p2 {
 
     _IndexT _watermark = 0,
       _freelist_head = END_SENTINEL,
+      _freelist_tail = END_SENTINEL,
       _count = 0;
 
     char _element_data[_MaxLen * sizeof(node)] alignas(node);

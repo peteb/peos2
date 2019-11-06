@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "memareas.h"
 #include "memory.h"
+#include "filesystem.h"
 
 #include "support/pool.h"
 #include "support/format.h"
@@ -71,14 +72,27 @@ proc_handle proc_create(void *eip, uint32_t flags, const char *argument) {
 static void destroy_process(proc_handle pid) {
   process_control_block &pcb = processes[pid];
 
-  // Free up memory used by the process
-  user_stacks.erase(pcb.user_stack_idx);
-  kernel_stacks.erase(pcb.kernel_stack_idx);
-  pcb.kernel_esp = pcb.kernel_stack = pcb.user_esp = nullptr;
+  // TODO: performance: we're wasting time iterating over non-valid
+  // elements
+  for (size_t i = 0; i < pcb.file_descriptors.watermark(); ++i) {
+    if (!pcb.file_descriptors.valid(i)) {
+      continue;
+    }
+
+    puts(p2::format<32>("proc: forcefully closing fd %d", i));
+    vfs_close_handle(pid, i);
+  }
+
+
   mem_destroy_address_space(pcb.address_space);
 
   // Remove the process so it won't get picked for execution
   dequeue(pid, pcb.suspended ? &suspended_head : &running_head);
+
+  // Free up memory used by the process
+  user_stacks.erase(pcb.user_stack_idx);
+  kernel_stacks.erase(pcb.kernel_stack_idx);
+  pcb.kernel_esp = pcb.kernel_stack = pcb.user_esp = nullptr;
 
   // TODO: we might want to keep the PCB around for a while so we can
   // read the exit status, detect dangling PIDs, etc...
@@ -295,6 +309,10 @@ int proc_create_fd(proc_handle pid, proc_fd fd) {
 
 proc_fd *proc_get_fd(proc_handle pid, int fd) {
   return &processes[pid].file_descriptors[fd];
+}
+
+void proc_remove_fd(proc_handle pid, int fd) {
+  processes[pid].file_descriptors.erase(fd);
 }
 
 mem_adrspc proc_get_address_space(proc_handle pid) {
