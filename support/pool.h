@@ -13,20 +13,21 @@ namespace p2 {
   //
   // Pool allocator with a linked list freelist. A benefit of the
   // linked list is that the next pointers are next to the element
-  // data, leading to fewer cache misses. This solution been measured
-  // to be faster than a stack based allocator but more tests need to
-  // be done to conclusively say so.
+  // data, leading to fewer cache misses. This solution has been
+  // measured to be faster than a stack based allocator but more tests
+  // need to be done to conclusively say so.
   //
   // Time complexity:
   // push_back: O(1)
-  // erase: O(1)
+  // erase:     O(1)
   //
   template<typename T, size_t _MaxLen, typename _IndexT = uint16_t>
   class pool {
     struct node {
       template<typename... _Args>
       node(_Args&&... args)
-        : next_free(END_SENTINEL) {
+        : next_free(END_SENTINEL)
+      {
         new (value()) T(forward<_Args>(args)...);
       }
 
@@ -36,7 +37,8 @@ namespace p2 {
         new (value()) T(o);
       }
 
-      T *value() {
+      T *value()
+      {
         return (T *)_value;
       }
 
@@ -45,18 +47,21 @@ namespace p2 {
     };
 
   public:
-    pool() {
+    pool()
+    {
       // TODO: make these checks compile-time
       assert(_MaxLen <= p2::numeric_limits<_IndexT>::max() && "max value of _IndexT is reserved as a sentinel");
       assert(_MaxLen > 0);
     }
 
-    _IndexT push_back(const T &value) {
+    _IndexT push_back(const T &value)
+    {
       return emplace_back(value);
     }
 
     template<typename... _Args>
-    _IndexT emplace_back(_Args&&... args) {
+    _IndexT emplace_back(_Args&&... args)
+    {
       _IndexT idx;
 
       if (_freelist_head != END_SENTINEL) {
@@ -75,7 +80,8 @@ namespace p2 {
       return idx;
     }
 
-    void erase(_IndexT idx) {
+    void erase(_IndexT idx)
+    {
       assert(_watermark > 0);
       assert(idx < _watermark);
 
@@ -93,26 +99,31 @@ namespace p2 {
       --_count;
     }
 
-    T &operator [](_IndexT idx) {
+    T &operator [](_IndexT idx)
+    {
       assert(idx < _MaxLen && "buffer overrun");
       return *element(idx)->value();
     }
 
-    const T &operator [](_IndexT idx) const {
+    const T &operator [](_IndexT idx) const
+    {
       assert(idx < _MaxLen && "buffer overrun");
       return *element(idx)->value();
     }
 
-    size_t size() const {
+    size_t size() const
+    {
       return _count;
     }
 
-    _IndexT end() const {
+    _IndexT end() const
+    {
       return END_SENTINEL;
     }
 
   private:
-    node *element(_IndexT idx) {
+    node *element(_IndexT idx)
+    {
       return (node *)_element_data + idx;
     }
 

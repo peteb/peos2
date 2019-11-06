@@ -1,6 +1,5 @@
 #include "ramfs.h"
 #include "filesystem.h"
-#include "screen.h"
 #include "process.h"
 #include "syscalls.h"
 
@@ -13,19 +12,24 @@
 static int read(int handle, char *data, int length);
 static int open(vfs_device *device, const char *path, uint32_t flags);
 static int control(int handle, uint32_t function, uint32_t param1, uint32_t param2);
+static int close(int handle);
+static int seek(int handle, int offset, int relative);
 
-// Global state
+// A flat list of all files and their contents
 static p2::pool<file, 128, file_handle> files;
+
+// To remember file descriptor states (position etc)
 static p2::pool<opened_file, 32, file_handle> opened_files;
 
-// Definitions
-void ramfs_init() {
-  static vfs_device_driver interface =
-  {
+void ramfs_init()
+{
+  static vfs_device_driver interface = {
     .write = nullptr,
     .read = read,
     .open = open,
-    .control = control
+    .close = close,
+    .control = control,
+    .seek = seek
   };
 
   vfs_node_handle mountpoint = vfs_create_node(VFS_FILESYSTEM);
@@ -33,7 +37,8 @@ void ramfs_init() {
   vfs_add_dirent(vfs_lookup("/"), "ramfs", mountpoint);
 }
 
-static int read(int handle, char *data, int length) {
+static int read(int handle, char *data, int length)
+{
   opened_file &fd = opened_files[handle];
   const file &f = files[fd.file];
 
@@ -42,11 +47,11 @@ static int read(int handle, char *data, int length) {
 
   memcpy(data, src, bytes_to_copy);
   fd.position += bytes_to_copy;
-
   return bytes_to_copy;
 }
 
-static int open(vfs_device *, const char *path, uint32_t flags) {
+static int open(vfs_device *, const char *path, uint32_t flags)
+{
   assert(path[0] == '/');
   path++;  // Step up past /
 
@@ -64,13 +69,13 @@ static int open(vfs_device *, const char *path, uint32_t flags) {
     assert(flags & FLAG_OPEN_CREATE);
     // TODO: be nicer when we can't find the file
     file_idx = files.emplace_back(p, 0, 0);
-    puts(p2::format<64>("ramfs: created \"%s\"", path));
   }
 
   return opened_files.emplace_back(file_idx, 0);
 }
 
-static int control(int handle, uint32_t function, uint32_t param1, uint32_t param2) {
+static int control(int handle, uint32_t function, uint32_t param1, uint32_t param2)
+{
   if (function == CTRL_RAMFS_SET_FILE_RANGE) {
     file &f = files[opened_files[handle].file];
     assert(f.size == 0);
@@ -82,12 +87,29 @@ static int control(int handle, uint32_t function, uint32_t param1, uint32_t para
   return 1;
 }
 
-void ramfs_set_file_range(int fd, uintptr_t start, size_t size) {
-  // TODO: check that the file has been opened with create
-  proc_fd *pfd = proc_get_fd(proc_current_pid(), fd);
-  assert(pfd);
-  file &f = files[opened_files[pfd->value].file];
-  assert(f.size == 0);
-  f.start = start;
-  f.size = size;
+static int close(int handle)
+{
+  // TODO: verify handle
+  opened_files.erase(handle);
+  return 0;
+}
+
+static int seek(int handle, int offset, int relative)
+{
+  opened_file &of = opened_files[handle];
+  file &f = files[of.file];
+
+  if (relative == SEEK_CUR) {
+    of.position += offset;
+  }
+  else if (relative == SEEK_BEG) {
+    of.position = (size_t)p2::max(offset, 0);
+  }
+  else {
+    assert(!"invalid relative value");
+  }
+
+  of.position = p2::clamp<uint32_t>(of.position, 0u, f.size);
+  // TODO: clean up overflow issues
+  return 0;
 }

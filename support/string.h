@@ -25,7 +25,8 @@ namespace p2 {
   template<int _MaxLen>
   class string {
   public:
-    string() {
+    string()
+    {
       assert(_MaxLen > 0);
       _storage_ref = _storage;
       _storage_ref[0] = '\0';
@@ -34,7 +35,8 @@ namespace p2 {
     // A nice helper for deducing _MaxLen from array length
     template<typename T>
     string(T (&data)[_MaxLen])
-      : _storage_ref(data) {
+      : _storage_ref(data)
+    {
       assert(_MaxLen > 0);
       _storage_ref[0] = '\0';
     }
@@ -46,7 +48,8 @@ namespace p2 {
       }*/
 
     string(const char *other, int max_length = _MaxLen - 1)
-      : _storage_ref(_storage) {
+      : _storage_ref(_storage)
+    {
       int count = 0;
       max_length = p2::min(max_length, _MaxLen - 1);
 
@@ -59,13 +62,15 @@ namespace p2 {
     }
 
     string(const p2::string<_MaxLen> &other)
-      : _storage_ref(_storage) {
+      : _storage_ref(_storage)
+    {
       for (int i = 0; i < other.size(); ++i) {
         append(other._storage_ref[i]);
       }
     }
 
-    string<_MaxLen> &operator =(const string<_MaxLen> &other) {
+    string<_MaxLen> &operator =(const string<_MaxLen> &other)
+    {
       _position = 0;
 
       for (int i = 0; i < other.size(); ++i) {
@@ -75,7 +80,8 @@ namespace p2 {
       return *this;
     }
 
-    string<_MaxLen> &append(char c) {
+    string<_MaxLen> &append(char c)
+    {
       assert(_position + 1 < _MaxLen && "buffer overrun");
       _storage_ref[_position++] = c;
       _storage_ref[_position] = '\0';
@@ -83,7 +89,8 @@ namespace p2 {
       return *this;
     }
 
-    string<_MaxLen> &append(const char *str) {
+    string<_MaxLen> &append(const char *str)
+    {
       while (*str) {
         append(*str++);
       }
@@ -91,7 +98,8 @@ namespace p2 {
       return *this;
     }
 
-    string<_MaxLen> &append(uint64_t value, int width = -1, int radix = 10, char padding = ' ') {
+    string<_MaxLen> &append(uint64_t value, int width = -1, int radix = 10, char padding = ' ')
+    {
       char *start_pos = &_storage_ref[_position];
 
       if (width == -1) {
@@ -123,39 +131,47 @@ namespace p2 {
       return *this;
     }
 
-    const char *str() const {
+    const char *str() const
+    {
       return _storage_ref;
     }
 
-    const char *c_str() const {
+    const char *c_str() const
+    {
       return _storage_ref;
     }
 
-    int size() const {
+    int size() const
+    {
       return _position;
     }
 
-    int capacity() const {
+    int capacity() const
+    {
       return _MaxLen;
     }
 
-    void clear() {
+    void clear()
+    {
       _position = 0;
       _storage_ref[_position] = '\0';
     }
 
-    const char &operator [](int idx) const {
+    const char &operator [](int idx) const
+    {
       return _storage_ref[idx];
     }
 
-    void backspace() {
+    void backspace()
+    {
       if (_position > 0) {
         _storage_ref[--_position] = '\0';
       }
     }
 
     template<int _Size>
-    bool operator ==(const p2::string<_Size> &rhs) const {
+    bool operator ==(const p2::string<_Size> &rhs) const
+    {
       if (rhs.size() != size()) {
         return false;
       }
@@ -168,8 +184,15 @@ namespace p2 {
       return true;
     }
 
+    template<int _Size>
+    bool operator !=(const p2::string<_Size> &rhs) const
+    {
+      return !(*this == rhs);
+    }
+
 #if __STDC_HOSTED__ == 1
-    friend std::ostream &operator <<(std::ostream &out, const p2::string<_MaxLen> &rhs) {
+    friend std::ostream &operator <<(std::ostream &out, const p2::string<_MaxLen> &rhs)
+    {
       out << rhs.c_str();
       return out;
     }

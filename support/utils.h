@@ -17,6 +17,11 @@ namespace p2 {
     return (lhs > rhs ? lhs : rhs);
   }
 
+  template<typename T>
+  inline T clamp(const T &val, const T &low, const T &high) {
+    return max(min(val, high), low);
+  }
+
   template<typename T> struct remove_reference      {typedef T type; };
   template<typename T> struct remove_reference<T&>  {typedef T type; };
   template<typename T> struct remove_reference<T&&> {typedef T type; };
@@ -41,10 +46,10 @@ extern "C" void *memcpy(void *dest, const void *src, size_t length);
 
 #if __STDC_HOSTED__ == 0
 // Placement new operator overloads
-inline void *operator new(size_t, void *p)     throw() {return p;}
-inline void *operator new[](size_t, void *p)   throw() {return p;}
-inline void  operator delete  (void *, void *) throw() {};
-inline void  operator delete[](void *, void *) throw() {};
+inline void *operator new(size_t, void *p)     noexcept {return p;}
+inline void *operator new[](size_t, void *p)   noexcept {return p;}
+inline void  operator delete  (void *, void *) noexcept {};
+inline void  operator delete[](void *, void *) noexcept {};
 #endif
 
 #endif // !PEOS2_UTILS_H

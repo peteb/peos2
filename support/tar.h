@@ -3,25 +3,23 @@
 #ifndef PEOS2_SUPPORT_TAR_H
 #define PEOS2_SUPPORT_TAR_H
 
+#include <stddef.h>
 #include <stdint.h>
-#include "support/string.h"
-#include "support/pool.h"
 
 struct tar_entry {
-  p2::string<201> filename;
-  uint16_t mode;
-  uint16_t uid;
-  uint16_t gid;
-  uint32_t size;
-  uint32_t mktime;
-  uint16_t checksum;
-  uint8_t type;
-  const void *data;
+  char name[100];
+  char mode[8];
+  char uid[8];
+  char gid[8];
+  char size[12];
+  char mtime[12];
+  char chksum[8];
+  char type;
+  char linkname[100];
+  char magic[6];
+  char tail[249];
 };
 
-typedef bool (*tar_parse_callback)(tar_entry &entry, void *opaque);
-
-// TODO: clean up using lambdas
-void tar_parse(const void *data, size_t size, tar_parse_callback callback_fun, void *opaque);
+uint32_t tar_parse_octal(const char *str, size_t length);
 
 #endif // !PEOS2_SUPPORT_TAR_H
