@@ -10,7 +10,8 @@ static void setup_gdt();
 
 extern "C" void load_gdt(const gdtr *gdt, uint32_t data_segsel);
 
-void enter_protected_mode() {
+void enter_protected_mode()
+{
   outb(0x70, inb(0x70) | 0x80);  // Disable NMIs
   asm volatile("cli");
 
@@ -21,7 +22,8 @@ void enter_protected_mode() {
   setup_gdt();
 }
 
-void setup_gdt() {
+void setup_gdt()
+{
   static const gdt_descriptor descriptors[] alignas(16) = {
     {0x0, 0x0, 0x0, 0x0},
     {0x0, 0x000FFFFF, GDT_FLAGS_G|GDT_FLAGS_DB, GDT_TYPE_CODE|GDT_TYPE_P|GDT_TYPE_R},
@@ -47,11 +49,13 @@ void setup_gdt() {
   tss.ss = tss.ds = tss.es = tss.fs = tss.gs = GDT_SEGSEL(3, 2);
 }
 
-void tss_set_kernel_stack(uint32_t esp) {
+void tss_set_kernel_stack(uint32_t esp)
+{
   tss.esp0 = esp;
 }
 
-bool a20_enabled() {
+bool a20_enabled()
+{
   uint32_t cr0 = 0;
   asm("mov %0, cr0" : "=r"(cr0));
 
@@ -68,7 +72,8 @@ bool a20_enabled() {
   }
 }
 
-void enable_a20() {
+void enable_a20()
+{
   // Fast A20
   outb(0x92, inb(0x92) | 0x2);
 

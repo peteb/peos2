@@ -125,7 +125,7 @@ void mem_map_kernel(mem_adrspc adrspc, uint32_t flags) {
   for (uintptr_t address = KERNEL_VIRTUAL_BASE;
        address < ALIGN_UP(end, 0x1000);
        address += 0x1000) {
-    mem_map_page(adrspc, address, KERVIRT2PHYS(address), flags);
+    mem_map_page(adrspc, address, KERNVIRT2PHYS(address), flags);
   }
 }
 
@@ -145,8 +145,8 @@ void mem_destroy_address_space(mem_adrspc adrspc) {
       continue;
     }
 
-    puts(p2::format<64>("mem: deleting page table %x", PHYS2KERVIRT(space->page_dir[i].table_11_31 << 12)));
-    page_table_allocator.free_page((void *)PHYS2KERVIRT(space->page_dir[i].table_11_31 << 12));
+    puts(p2::format<64>("mem: deleting page table %x", PHYS2KERNVIRT(space->page_dir[i].table_11_31 << 12)));
+    page_table_allocator.free_page((void *)PHYS2KERNVIRT(space->page_dir[i].table_11_31 << 12));
     space->page_dir[i].table_11_31 = 0;
     space->page_dir[i].flags = 0;
   }
@@ -164,7 +164,7 @@ void mem_activate_address_space(mem_adrspc adrspc) {
 
   current_address_space = adrspc;
   address_space *space = &address_spaces[adrspc];
-  uintptr_t page_dir_phys = KERVIRT2PHYS((uintptr_t)space->page_dir);
+  uintptr_t page_dir_phys = KERNVIRT2PHYS((uintptr_t)space->page_dir);
 
   asm volatile("mov cr3, %0" : : "a"(page_dir_phys) : "memory");
   // TODO: fix all inline asm to have the same syntax (AT&T vs Intel) as *.s files
@@ -181,14 +181,14 @@ void mem_map_page(mem_adrspc adrspc, uint32_t virt, uint32_t phys, uint16_t flag
 
   if (!(page_dir[directory_idx].flags & MEM_PE_P)) {
     page_table = (page_table_entry *)page_table_allocator.alloc_page_zero();
-    page_dir[directory_idx].table_11_31 = KERVIRT2PHYS((uintptr_t)page_table) >> 12;
+    page_dir[directory_idx].table_11_31 = KERNVIRT2PHYS((uintptr_t)page_table) >> 12;
     page_dir[directory_idx].flags = pde_flags;
     puts(p2::format<64>("mem: created page table %x", (uintptr_t)page_table));
   }
   else {
     //assert(page_dir[directory_idx].flags == pde_flags && "conflicting flags for pde");
     page_dir[directory_idx].flags |= pde_flags;
-    page_table = (page_table_entry *)PHYS2KERVIRT(page_dir[directory_idx].table_11_31 << 12);
+    page_table = (page_table_entry *)PHYS2KERNVIRT(page_dir[directory_idx].table_11_31 << 12);
   }
 
   int table_idx = (virt >> 12) & 0x3FF;

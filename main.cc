@@ -23,7 +23,7 @@ extern "C" int init_main();
 static uint32_t interrupt_stack[1024] alignas(16);
 
 extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
-  multiboot_header = (multiboot_info *)PHYS2KERVIRT((uintptr_t)multiboot_hdr);
+  multiboot_header = (multiboot_info *)PHYS2KERNVIRT((uintptr_t)multiboot_hdr);
   screen_init();
 
   if (multiboot_magic != MULTIBOOT_MAGIC) {
@@ -98,8 +98,8 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   tss_set_kernel_stack((uint32_t)&interrupt_stack[interrupt_stack_length - 1]);
 
   // Adjust the memory region from which we'll allocate pages
-  largest_region.start = p2::max(largest_region.start, KERVIRT2PHYS((uintptr_t)&kernel_end));
-  largest_region.start = p2::max(largest_region.start, KERVIRT2PHYS(multiboot_last_address()));
+  largest_region.start = p2::max(largest_region.start, KERNVIRT2PHYS((uintptr_t)&kernel_end));
+  largest_region.start = p2::max(largest_region.start, KERNVIRT2PHYS(multiboot_last_address()));
   largest_region.start = ALIGN_UP(largest_region.start, 0x1000);
   largest_region.end = ALIGN_DOWN(largest_region.end, 0x1000);
   mem_init(&largest_region, 1);

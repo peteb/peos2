@@ -31,12 +31,12 @@ uintptr_t multiboot_last_address() {
   uintptr_t last = 0;
 
   // Space for module metadata
-  last = p2::max(last, PHYS2KERVIRT(mbhdr->mods_addr + sizeof(multiboot_mod) * mbhdr->mods_count));
+  last = p2::max(last, PHYS2KERNVIRT(mbhdr->mods_addr + sizeof(multiboot_mod) * mbhdr->mods_count));
 
-  multiboot_mod *mods = (multiboot_mod *)PHYS2KERVIRT(mbhdr->mods_addr);
+  multiboot_mod *mods = (multiboot_mod *)PHYS2KERNVIRT(mbhdr->mods_addr);
   for (size_t i = 0; i < mbhdr->mods_count; ++i) {
     // Make room for the module binary
-    last = p2::max(last, PHYS2KERVIRT(mods[i].mod_end));
+    last = p2::max(last, PHYS2KERNVIRT(mods[i].mod_end));
   }
 
   return last;

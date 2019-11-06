@@ -11,7 +11,8 @@
 // TODO: why do we have to clobber ESI? The ISR is using PUSHAD!
 
 #define SYSCALL_DEF0(name, num)                                  \
-inline static int _syscall_##name() {                            \
+inline static int _syscall_##name()                              \
+{                                                                \
   int ret;                                                       \
   asm volatile("int 0x90"                                        \
                : "=a"(ret)                                       \
@@ -21,7 +22,8 @@ inline static int _syscall_##name() {                            \
 }
 
 #define SYSCALL_DEF1(name, num, P1)                              \
-inline static int _syscall_##name(P1 p1) {                       \
+inline static int _syscall_##name(P1 p1)                         \
+{                                                                \
   int ret;                                                       \
   asm volatile("int 0x90"                                        \
                : "=a"(ret)                                       \
@@ -32,7 +34,8 @@ inline static int _syscall_##name(P1 p1) {                       \
 }
 
 #define SYSCALL_DEF2(name, num, P1, P2)                          \
-inline static int _syscall_##name(P1 p1, P2 p2) {                \
+inline static int _syscall_##name(P1 p1, P2 p2)                  \
+{                                                                \
   int ret;                                                       \
   asm volatile("int 0x90"                                        \
                : "=a"(ret)                                       \
@@ -44,7 +47,8 @@ inline static int _syscall_##name(P1 p1, P2 p2) {                \
 }
 
 #define SYSCALL_DEF3(name, num, P1, P2, P3)                      \
-inline static int _syscall_##name(P1 p1, P2 p2, P3 p3) {         \
+inline static int _syscall_##name(P1 p1, P2 p2, P3 p3)           \
+{                                                                \
   int ret;                                                       \
   asm volatile("int 0x90"                                        \
                : "=a"(ret)                                       \
@@ -57,7 +61,8 @@ inline static int _syscall_##name(P1 p1, P2 p2, P3 p3) {         \
 }
 
 #define SYSCALL_DEF4(name, num, P1, P2, P3, P4)                  \
-inline static int _syscall_##name(P1 p1, P2 p2, P3 p3, P4 p4) {  \
+inline static int _syscall_##name(P1 p1, P2 p2, P3 p3, P4 p4)    \
+{                                                                \
   int ret;                                                       \
   asm volatile("int 0x90"                                        \
                : "=a"(ret)                                       \

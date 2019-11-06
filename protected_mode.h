@@ -12,8 +12,9 @@
 #define USER_DATA_SEL   GDT_SEGSEL(3, 4)
 #define TSS_SEL         GDT_SEGSEL(3, 5)
 
+extern "C" void enter_user_mode(uint16_t data_selector, uint16_t code_selector);
+
 void enter_protected_mode();
 void tss_set_kernel_stack(uint32_t esp);
-extern "C" void enter_user_mode(uint16_t data_selector, uint16_t code_selector);
 
 #endif // !PEOS2_PROTECTED_MODE_H

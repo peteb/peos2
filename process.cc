@@ -265,7 +265,7 @@ static proc_handle create_process(void *eip, uint32_t flags, const char *argumen
   pcb.kpush(0);                                           // EBP
 
   // Map one page of stack
-  mem_map_page(adrspc, user_space_stack_base - 0x1000, KERVIRT2PHYS((uintptr_t)user_stacks[us_idx].bottom_of_stack()) - 0x1000, MEM_PE_P|MEM_PE_RW|MEM_PE_U);
+  mem_map_page(adrspc, user_space_stack_base - 0x1000, KERNVIRT2PHYS((uintptr_t)user_stacks[us_idx].bottom_of_stack()) - 0x1000, MEM_PE_P|MEM_PE_RW|MEM_PE_U);
   return pid;
 }
 
@@ -320,7 +320,7 @@ static uint32_t syscall_kill(uint32_t pid) {
 static void idle_main() {
   static int count = 0;
   while (true) {
-    *(volatile char *)PHYS2KERVIRT(0xB8000) = 'A' + count;
+    *(volatile char *)PHYS2KERNVIRT(0xB8000) = 'A' + count;
     count = (count + 1) % 26;
     __builtin_ia32_pause();
   }

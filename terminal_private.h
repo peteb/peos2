@@ -11,7 +11,8 @@ class terminal {
 public:
   terminal(screen_buffer buffer) : _screen_buf(buffer) {}
 
-  void on_key(uint16_t keycode) {
+  void on_key(uint16_t keycode)
+  {
     if (keycode >= 0x7F) {
       // Special key
       return;
@@ -51,16 +52,19 @@ public:
     }
   }
 
-  void focus() {
+  void focus()
+  {
     screen_switch_buffer(_screen_buf);
   }
 
-  int syscall_write(const char *data, int length) {
+  int syscall_write(const char *data, int length)
+  {
     screen_print(_screen_buf, data, length);
     return length;
   }
 
-  int syscall_read(char *data, int length) {
+  int syscall_read(char *data, int length)
+  {
     return _input_queue.pop_front(data, length);
   }
 

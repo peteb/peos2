@@ -19,7 +19,8 @@ static p2::pool<terminal, 16> terminals;
 static uint16_t current_terminal = terminals.end();
 
 // Definitions
-void term_init(const char *name, screen_buffer buffer) {
+void term_init(const char *name, screen_buffer buffer)
+{
   static vfs_device_driver interface =
   {
     .write = write,
@@ -42,7 +43,8 @@ void term_init(const char *name, screen_buffer buffer) {
   }
 }
 
-void term_keypress(uint16_t keycode) {
+void term_keypress(uint16_t keycode)
+{
   // TODO: all this code happens in the interrupt handler for the
   // keyboard. We probably don't want to do this much in there. It
   // might for example copy the whole screen!
@@ -56,22 +58,26 @@ void term_keypress(uint16_t keycode) {
   terminals[current_terminal].on_key(keycode);
 }
 
-static int write(int handle, const char *data, int length) {
+static int write(int handle, const char *data, int length)
+{
   return terminals[handle].syscall_write(data, length);
 }
 
-static int read(int handle, char *data, int length) {
+static int read(int handle, char *data, int length)
+{
   return terminals[handle].syscall_read(data, length);
 }
 
-static int open(vfs_device *device, const char *path, uint32_t flags) {
+static int open(vfs_device *device, const char *path, uint32_t flags)
+{
   (void)flags;
   // TODO: handle flags
   assert(path[0] == '\0');
   return (int)vfs_get_opaque(device);
 }
 
-static void focus_terminal(uint16_t term_id) {
+static void focus_terminal(uint16_t term_id)
+{
   terminals[term_id].focus();
   current_terminal = term_id;
 }

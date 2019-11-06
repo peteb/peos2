@@ -13,7 +13,7 @@ static void set_cursor(uint16_t position);
 #include "screen_private.h"
 
 // Global state
-static buffer front_buffer(PHYS2KERVIRT(0xB8000), PHYS2KERVIRT(0xB8000 + 2 * NUM_COLUMNS * NUM_ROWS));
+static buffer front_buffer(PHYS2KERNVIRT(0xB8000), PHYS2KERNVIRT(0xB8000 + 2 * NUM_COLUMNS * NUM_ROWS));
 static p2::pool<buffer, 16, screen_buffer> buffers;
 static screen_buffer current_buffer = buffers.end(), target_buffer = buffers.end();
 

@@ -77,10 +77,10 @@ static int write_info(const char *path, const char *filename, uintptr_t start_ad
 void load_multiboot_modules()
 {
   multiboot_info *mbhdr = multiboot_header;
-  multiboot_mod *modules = (multiboot_mod *)PHYS2KERVIRT(mbhdr->mods_addr);
+  multiboot_mod *modules = (multiboot_mod *)PHYS2KERNVIRT(mbhdr->mods_addr);
 
   for (uint32_t i = 0; i < mbhdr->mods_count; ++i) {
-    write_info("/modules/", (const char *)PHYS2KERVIRT(modules[i].string_addr), PHYS2KERVIRT(modules[i].mod_start), modules[i].mod_end - modules[i].mod_start);
+    write_info("/modules/", (const char *)PHYS2KERNVIRT(modules[i].string_addr), PHYS2KERNVIRT(modules[i].mod_start), modules[i].mod_end - modules[i].mod_start);
   }
 }
 
