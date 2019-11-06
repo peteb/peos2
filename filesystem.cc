@@ -117,7 +117,7 @@ static void vfs_print_aux(vfs_node_handle parent, int level)
 
   const vfs_node &node = nodes[parent];
   print("  ");
-  puts(p2::format<64>("(type: %x)") % node.type);
+  puts(p2::format<64>("(type: %x)", node.type));
 
   if (node.type == VFS_DIRECTORY) {
     uint16_t dirent_idx = node.info_node;

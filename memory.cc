@@ -58,10 +58,10 @@ void mem_init(const region *regions, size_t region_count) {
 
   assert(largest_region_size != 0);
 
-  puts(p2::format<64>("mem: using region %x-%x (%d MB) for page alloc")
-       % largest_region.start
-       % largest_region.end
-       % ((uintptr_t)(largest_region.end - largest_region.start) / 1024 / 1024));
+  puts(p2::format<64>("mem: using region %x-%x (%d MB) for page alloc",
+                      largest_region.start,
+                      largest_region.end,
+                      ((uintptr_t)(largest_region.end - largest_region.start) / 1024 / 1024)));
 
   static p2::page_allocator alloc{largest_region.start, largest_region.end};
   // TODO: fix this hackery

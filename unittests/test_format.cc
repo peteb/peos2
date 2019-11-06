@@ -9,7 +9,7 @@ TESTSUITE(p2::format) {
 
   TESTCASE("can write to external buffer") {
     char buf[64];
-    (p2::format(buf, "Hello%d!") % 123).str();
+    p2::format(buf, "Hello%d!", 123).str();
     ASSERT_EQ(buf[0], 'H');
     ASSERT_EQ(buf[4], 'o');
     ASSERT_EQ(buf[5], '1');
@@ -25,39 +25,17 @@ TESTSUITE(p2::format) {
   }
 
   TESTCASE("combined flags scenario") {
-    p2::format<32> fmt("abc %d def %dgh%dij");
-    fmt % 10;
-    fmt % 488;
-    fmt % 9111;
+    p2::format<32> fmt("abc %d def %dgh%dij", 10, 488, 9111);
     ASSERT_EQ(fmt.str(), p2::string<32>("abc 10 def 488gh9111ij"));
   }
 
   TESTCASE("can format numbers up until the end") {
-    p2::format<3> fmt("%d");
-    fmt % 12;
+    p2::format<3> fmt("%d", 12);
     ASSERT_EQ(fmt.str(), p2::string<3>("12"));
   }
 
   TESTCASE("panics when formatting over the end") {
-    p2::string<3> dat;
-    p2::format fmt(dat, "%d");
-
-    ASSERT_PANIC((fmt % 123).str());
-  }
-
-  TESTCASE("formatting can happen using operator()") {
-    p2::format<64> fmt("hello %s %d!");
-    fmt("peter", 123);
-    ASSERT_EQ(fmt.str(), p2::string<64>("hello peter 123!"));
-  }
-
-  TESTCASE("formatting using ctor variadic template") {
-    p2::format<64> fmt("Hello %s, %d", "peter", 123);
-    ASSERT_EQ(fmt.str(), p2::string<64>("Hello peter, 123"));
-  }
-
-  TESTCASE("inline formatting works") {
-    ASSERT_EQ(p2::format<64>("hello %s!", "pete").str(),
-              p2::string<64>("hello pete!"));
+    char dat[3];
+    ASSERT_PANIC(p2::format(dat, "%d", 123));
   }
 }

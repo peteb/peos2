@@ -20,20 +20,10 @@ namespace p2 {
       str();  // To output the rest of the format
     }
 
-    // The % operator is a bit messy to use due to associativity;
-    // sometimes it binds tighter to the arguments than wanted,
-    // causing a modulus operation instead (and a lot of wasted time
-    // debugging...), so prefer the `format(fmt, args...)` ctor.
-    format &operator %(const char *str) {
-      expect_string();
-      _storage_ref.append(str);
-      return *this;
-    }
-
-    format &operator %(uint64_t val) {
-      number_traits traits = expect_number();
-      _storage_ref.append(val, traits.width, traits.radix, '0');
-      return *this;
+    template<typename... _ArgsT>
+    format(char (&data)[_MaxLen], const char *fmt, _ArgsT... args) : format(data, fmt) {
+      (*this)(args...);
+      str();  // To output the rest of the format
     }
 
     template<typename T>
@@ -58,6 +48,23 @@ namespace p2 {
     }
 
   private:
+    // The % operator is a bit messy to use due to associativity;
+    // sometimes it binds tighter to the arguments than wanted,
+    // causing a modulus operation instead (and a lot of wasted time
+    // debugging...), so prefer the `format(fmt, args...)` ctor.
+    format &operator %(const char *str) {
+      expect_string();
+      _storage_ref.append(str);
+      return *this;
+    }
+
+    format &operator %(uint64_t val) {
+      number_traits traits = expect_number();
+      _storage_ref.append(val, traits.width, traits.radix, '0');
+      return *this;
+    }
+
+
     struct number_traits {
       int width, radix;
     };

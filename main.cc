@@ -21,13 +21,14 @@ extern char stack_top;
 extern "C" int init_main();
 
 static uint32_t interrupt_stack[1024] alignas(16);
+char debug_out_buffer[128];
 
 extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
   multiboot_header = (multiboot_info *)PHYS2KERNVIRT((uintptr_t)multiboot_hdr);
   screen_init();
 
   if (multiboot_magic != MULTIBOOT_MAGIC) {
-    panic((p2::format<32>("Incorrect mb magic: %x") % multiboot_magic).str().c_str());
+    panic(p2::format<32>("Incorrect mb magic: %x", multiboot_magic).str().c_str());
   }
 
   if (!(multiboot_hdr->flags & MULTIBOOT_INFO_MEM_MAP)) {
@@ -45,11 +46,11 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   while (mmap_ptr < mmap_ptr_end) {
     const multiboot_mmap_entry *const mmap_entry = reinterpret_cast<const multiboot_mmap_entry *>(mmap_ptr);
 
-    puts(p2::format<128>("%lx-%lx %s (%d bytes)")
-         % mmap_entry->addr
-         % (mmap_entry->addr + mmap_entry->len)
-         % multiboot_memory_type(mmap_entry->type)
-         % mmap_entry->len);
+    puts(p2::format<128>("%lx-%lx %s (%d bytes)",
+                         mmap_entry->addr,
+                         mmap_entry->addr + mmap_entry->len,
+                         multiboot_memory_type(mmap_entry->type),
+                         mmap_entry->len));
 
     if (mmap_entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
       memory_available += mmap_entry->len;
@@ -63,7 +64,7 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
     mmap_ptr += mmap_entry->size + sizeof(mmap_entry->size);
   }
 
-  puts(p2::format<32>("Total avail mem: %d MB") % (memory_available / 1024 / 1024));
+  puts(p2::format<32>("Total avail mem: %d MB", memory_available / 1024 / 1024));
 
   puts(p2::format<64>("Kernel size: %d KB (ends at %x)",
                       ((uintptr_t)&kernel_end - (uintptr_t)&kernel_start) / 1024,

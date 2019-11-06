@@ -57,8 +57,7 @@ extern "C" int init_main()
   int read = SYSCALL3(read, stdin, input, sizeof(input) - 1);
   input[read] = '\0';
 
-  p2::format<sizeof(input) + 50> output("Read %d bytes: %s");
-  output % read % input;
+  p2::format<sizeof(input) + 50> output("Read %d bytes: %s", read, input);
   SYSCALL3(write, stdout, output.str().c_str(), output.str().size());
 
   return 0;

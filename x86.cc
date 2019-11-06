@@ -44,7 +44,7 @@ extern "C" void int_gpf(isr_registers regs) {
   regs.to_string(buf);
   puts(buf);
   uint32_t eip_inst = *(char *)regs.eip & 0xFF;
-  panic((p2::format<128>("General protection fault: %x ([eip]: %x)") % regs.error_code % eip_inst).str().c_str());
+  panic(p2::format<128>("General protection fault: %x ([eip]: %x)", regs.error_code, eip_inst).str().c_str());
 }
 
 extern "C" void isr_debug(isr_registers);
@@ -57,7 +57,7 @@ void int_init() {
   int_register(INT_DEBUG, isr_debug,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
   int_register(INT_GPF,   isr_gpf,     KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 
-  puts(p2::format<64>("IDT at %x") % (uint32_t)idt_descriptors);
+  puts(p2::format<64>("IDT at %x", (uint32_t)idt_descriptors));
 }
 
 void int_register(int num, void (*handler)(isr_registers), uint16_t segment_selector, uint8_t type) {
@@ -89,15 +89,16 @@ void pic_remap(uint8_t master_offset, uint8_t slave_offset) {
 }
 
 void isr_registers::to_string(p2::string<256> &out) const volatile {
-  (p2::format<256>(out,
-                   "edi: %x esi: %x ebp: %x esp: %x\n"
-                   "ebx: %x edx: %x ecx: %x eax: %x\n"
-                   "eip: %x  cs: %x efl: %x ues: %x\n"
-                   " ss: %x")
-   % edi % esi % ebp    % esp
-   % ebx % edx % ecx    % eax
-   % eip % cs  % eflags % user_esp
-   % ss).str();
+  p2::format<256> form("edi: %x esi: %x ebp: %x esp: %x\n"
+                       "ebx: %x edx: %x ecx: %x eax: %x\n"
+                       "eip: %x  cs: %x efl: %x ues: %x\n"
+                       " ss: %x"
+                       , edi, esi, ebp   , esp
+                       , ebx, edx, ecx   , eax
+                       , eip, cs , eflags, user_esp
+                       , ss);
+
+  out = form.str();
 }
 
 void irq_disable(uint8_t irq_line) {
