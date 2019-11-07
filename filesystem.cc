@@ -19,6 +19,7 @@ static int syscall_close(int fd);
 static int syscall_control(int fd, uint32_t function, uint32_t param1, uint32_t param2);
 static int syscall_seek(int fd, int offset, int relative);
 static int syscall_tell(int fd, int *position);
+static int syscall_mkdir(const char *path);
 
 // Global state
 static p2::pool<vfs_node, 256, vfs_node_handle> nodes;
@@ -56,6 +57,7 @@ void vfs_init()
   syscall_register(SYSCALL_NUM_CLOSE, (syscall_fun)syscall_close);
   syscall_register(SYSCALL_NUM_SEEK, (syscall_fun)syscall_seek);
   syscall_register(SYSCALL_NUM_TELL, (syscall_fun)syscall_tell);
+  syscall_register(SYSCALL_NUM_MKDIR, (syscall_fun)syscall_mkdir);
 }
 
 static vfs_dirent *find_dirent(vfs_node_handle dir_node, const p2::string<32> &name)
@@ -245,6 +247,24 @@ static int syscall_open(const char *filename, uint32_t flags)
   int proc_fd = proc_create_fd(proc_current_pid(), {(void *)&device_node, local_fd});
   dbg_puts(vfs, "opened %s at %d.%d", filename, proc_current_pid(), proc_fd);
   return proc_fd;
+}
+
+static int syscall_mkdir(const char *path)
+{
+  auto driver = find_first_driver(root_dir, path);
+  assert(driver.node_idx != nodes.end());
+
+  const vfs_node &driver_node = nodes[driver.node_idx];
+  assert(driver_node.type & VFS_DRIVER);
+  assert(driver_node.info_node != drivers.end());
+
+  vfs_device &device_node = drivers[driver_node.info_node];
+  assert(device_node.driver);
+
+  if (!device_node.driver->mkdir)
+    return EINVOP;
+
+  return device_node.driver->mkdir(driver.rest_path);
 }
 
 static int syscall_close(int fd)

@@ -17,7 +17,7 @@ inline static int _syscall_##name()                              \
   asm volatile("int 0x90"                                        \
                : "=a"(ret)                                       \
                : "a"(num)                                        \
-               : "memory", "esi");                               \
+               : "memory", "esi", "edi");                              \
   return ret;                                                    \
 }
 
@@ -29,7 +29,7 @@ inline static int _syscall_##name(P1 p1)                         \
                : "=a"(ret)                                       \
                : "a"(num),                                       \
                  "b"(p1)                                         \
-               : "memory", "esi");                               \
+               : "memory", "esi", "edi");                              \
   return ret;                                                    \
 }
 
@@ -42,7 +42,7 @@ inline static int _syscall_##name(P1 p1, P2 p2)                  \
                : "a"(num),                                       \
                  "b"(p1),                                        \
                  "c"(p2)                                         \
-               : "memory", "esi");                               \
+               : "memory", "esi", "edi");                              \
   return ret;                                                    \
 }
 
@@ -56,7 +56,7 @@ inline static int _syscall_##name(P1 p1, P2 p2, P3 p3)           \
                  "b"(p1),                                        \
                  "c"(p2),                                        \
                  "d"(p3)                                         \
-               : "memory", "esi");                               \
+               : "memory", "esi", "edi");                              \
   return ret;                                                    \
 }
 
@@ -71,7 +71,7 @@ inline static int _syscall_##name(P1 p1, P2 p2, P3 p3, P4 p4)    \
                  "c"(p2),                                        \
                  "d"(p3),                                        \
                  "S"(p4)                                         \
-               : "memory");                                      \
+               : "memory", "edi");                                     \
   return ret;                                                    \
 }
 

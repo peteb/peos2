@@ -69,7 +69,6 @@ static int write_info(const char *path, const char *filename, uintptr_t start_ad
   assert(mod_fd >= 0);
   SYSCALL4(control, mod_fd, CTRL_RAMFS_SET_FILE_RANGE, start_addr, size);
   SYSCALL1(close, mod_fd);
-
   // TODO: check return status
   return 0;
 }
@@ -78,6 +77,7 @@ void load_multiboot_modules()
 {
   multiboot_info *mbhdr = multiboot_header;
   multiboot_mod *modules = (multiboot_mod *)PHYS2KERNVIRT(mbhdr->mods_addr);
+  SYSCALL1(mkdir, "/ramfs/modules");
 
   for (uint32_t i = 0; i < mbhdr->mods_count; ++i) {
     write_info("/modules/", (const char *)PHYS2KERNVIRT(modules[i].string_addr), PHYS2KERNVIRT(modules[i].mod_start), modules[i].mod_end - modules[i].mod_start);
@@ -95,7 +95,6 @@ void extract_tar(const char *filename)
   uint32_t file_mem_start = 0, file_mem_size = 0;
   SYSCALL4(control, fd, CTRL_RAMFS_GET_FILE_RANGE, (uintptr_t)&file_mem_start, (uintptr_t)&file_mem_size);
   // TODO: verify return value
-
   // TODO: looping read
   while (SYSCALL3(read, fd, (char *)&hdr, sizeof(hdr)) == sizeof(hdr)) {
     if (hdr.name[0] == '\0') {
@@ -119,13 +118,15 @@ void extract_tar(const char *filename)
     int cur_pos = 0;
     SYSCALL2(tell, fd, &cur_pos);
     // TODO: assert return value
+    puts_sys(stdout, p2::format<128>("got entry '%s' size: %d address: %x\n", entry_name.c_str(), size, file_mem_start + cur_pos));
 
     // If we can't rely on contiguous memory anymore, change this into a write
-    write_info("/", entry_name.c_str(), file_mem_start + cur_pos, size);
-    SYSCALL3(seek, fd, ALIGN_UP(size, 512), SEEK_CUR);
-    puts_sys(stdout, p2::format<128>("got entry '%s' size: %d address: %x\n", entry_name.c_str(), size, file_mem_start + cur_pos));
-  }
+    if (entry_name[0] != 'b') {
+      write_info("/", entry_name.c_str(), file_mem_start + cur_pos, size);
+    }
 
+    SYSCALL3(seek, fd, ALIGN_UP(size, 512), SEEK_CUR);
+  }
 
   SYSCALL1(close, fd);
 }

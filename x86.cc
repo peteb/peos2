@@ -47,15 +47,25 @@ extern "C" void int_gpf(isr_registers regs) {
   panic(p2::format<128>("General protection fault: %x ([eip]: %x)", regs.error_code, eip_inst).str().c_str());
 }
 
+extern "C" void int_doublefault(isr_registers regs) {
+  p2::string<256> buf;
+  regs.to_string(buf);
+  puts(buf);
+  uint32_t eip_inst = *(char *)regs.eip & 0xFF;
+  panic(p2::format<128>("DOUBLE FAULT: %x ([eip]: %x)", regs.error_code, eip_inst).str().c_str());
+}
+
 extern "C" void isr_debug(isr_registers);
 extern "C" void isr_gpf(isr_registers);
+extern "C" void isr_doublefault(isr_registers);
 
 void int_init() {
   static const gdtr idt_ptr = {sizeof(idt_descriptors) - 1, reinterpret_cast<uint32_t>(idt_descriptors)};
   asm volatile("lidt [%0]" : : "m"(idt_ptr));
 
-  int_register(INT_DEBUG, isr_debug,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
-  int_register(INT_GPF,   isr_gpf,     KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+  int_register(INT_DEBUG,       isr_debug,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_GPF,         isr_gpf,     KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+  int_register(INT_DOUBLEFAULT, isr_doublefault,     KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 
   puts(p2::format<64>("IDT at %x", (uint32_t)idt_descriptors));
 }

@@ -4,6 +4,7 @@
 #define PEOS2_DEBUG_H
 
 #include "screen.h"
+#include "support/string.h"
 
 #undef STRINGIFY
 #undef TOSTRING
@@ -16,6 +17,6 @@ extern char debug_out_buffer[128];
 // dbg_puts - writes a line to the console
 // Can only be used in interrupt handlers, etc.
 //
-#define dbg_puts(module, fmt, ...) {puts(p2::format(debug_out_buffer, TOSTRING(module) ": " fmt, __VA_ARGS__));}
+#define dbg_puts(module, fmt, ...) {p2::format<128>(debug_out_buffer, TOSTRING(module) ": " fmt, __VA_ARGS__); puts(debug_out_buffer);}
 
 #endif // !PEOS2_DEBUG_H

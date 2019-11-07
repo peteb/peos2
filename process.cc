@@ -290,6 +290,7 @@ static uint32_t syscall_yield() {
 }
 
 void proc_kill(proc_handle pid, uint32_t exit_status) {
+  (void)exit_status;
   process_control_block &pcb = processes[pid];
 
   if (pcb.suspended) {

@@ -18,7 +18,6 @@ void enter_protected_mode()
   if (!a20_enabled()) {
     enable_a20();
   }
-
   setup_gdt();
 }
 
@@ -60,12 +59,8 @@ bool a20_enabled()
   asm("mov %0, cr0" : "=r"(cr0));
 
   if (cr0 & CR0_PE) {
-    // Protected mode is enabled, so check whether the addresses below are aliases
-    unsigned volatile *ptr1 = reinterpret_cast<unsigned *>(0x112345);
-    unsigned volatile *ptr2 = reinterpret_cast<unsigned *>(0x012345);
-    *ptr1 = 0x1234;
-    *ptr2 = 0x4321;
-    return *ptr1 != *ptr2;
+    // TODO: more checks?
+    return true;
   }
   else {
     panic("implement real mode support");

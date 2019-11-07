@@ -28,6 +28,7 @@ struct address_space {
 // Externs
 extern "C" void isr_page_fault(isr_registers);
 extern int kernel_end;
+extern char __start_READONLY, __stop_READONLY;
 
 // Global state
 static char page_dir_area[sizeof(page_dir_entry) * 1024 * 100] alignas(0x1000);
@@ -56,8 +57,7 @@ void mem_init(const region *regions, size_t region_count) {
     }
   }
 
-  assert(largest_region_size != 0);
-
+  assert(largest_region_size);
   puts(p2::format<64>("mem: using region %x-%x (%d MB) for page alloc",
                       largest_region.start,
                       largest_region.end,
@@ -120,7 +120,11 @@ void mem_map_kernel(mem_adrspc adrspc, uint32_t flags) {
   for (uintptr_t address = KERNEL_VIRTUAL_BASE;
        address < ALIGN_UP(end, 0x1000);
        address += 0x1000) {
-    mem_map_page(adrspc, address, KERNVIRT2PHYS(address), flags);
+
+    if (address >= (uintptr_t)&__start_READONLY && address <= ALIGN_UP((uintptr_t)&__stop_READONLY, 0x1000))
+      mem_map_page(adrspc, address, KERNVIRT2PHYS(address), flags & ~MEM_PE_RW);
+    else
+      mem_map_page(adrspc, address, KERNVIRT2PHYS(address), flags);
   }
 }
 

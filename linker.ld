@@ -11,21 +11,25 @@ SECTIONS {
 
   /* Enter upper half virtual memory */
   . += 0xC0000000;
+  __start_READONLY = .;
 
   .text ALIGN(4K) : AT(ADDR(.text) - 0xC0000000) {
     *(.text)
-  }
-
-  .bss ALIGN(4K) : AT(ADDR(.bss) - 0xC0000000) {
-    *(.bss)
   }
 
   .rodata ALIGN(4K) : AT(ADDR(.rodata) - 0xC0000000) {
     *(.rodata)
   }
 
+  __stop_READONLY = .;
+
   .data ALIGN(4K) : AT(ADDR(.data) - 0xC0000000) {
     *(.data)
+  }
+
+  .bss ALIGN(4K) : AT(ADDR(.bss) - 0xC0000000) {
+    *(.bss)
+    *(COMMON)
   }
 
   kernel_end = .;

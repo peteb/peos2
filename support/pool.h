@@ -139,6 +139,11 @@ namespace p2 {
       return _count;
     }
 
+    bool full() const
+    {
+      return _count >= _MaxLen - 1;
+    }
+
     _IndexT watermark()
     {
       return _watermark;

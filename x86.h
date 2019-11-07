@@ -56,8 +56,10 @@
 #define IRQ_BASE_INTERRUPT 0x20
 
 #define INT_DEBUG          3
+#define INT_DOUBLEFAULT    8
 #define INT_GPF            13
 #define INT_PAGEFAULT      14
+
 
 #define GDT_SEGSEL(rpl, index) (((rpl) & 0x3) | ((index) << 3))
 

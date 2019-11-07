@@ -122,23 +122,6 @@ namespace p2 {
     const char *_fmt_pos;
   };
 
-  inline void _test_format() {
-    // TODO: get rid of this function when we have usage of all cases
-    {
-      format<123> f("Hello %s");
-    }
-
-    {
-      char buf[100];
-      format hej(buf, "hello %s");
-    }
-
-    {
-      char buf[100];
-      char *ptr = buf;
-      format<100> hej(ptr, "hello %s");
-    }
-  }
 }
 
 #endif // !PEOS2_FORMAT_H

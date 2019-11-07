@@ -33,8 +33,7 @@ namespace p2 {
     }
 
     // A nice helper for deducing _MaxLen from array length
-    template<typename T>
-    string(T (&data)[_MaxLen])
+    string(char (&data)[_MaxLen])
       : _storage_ref(data)
     {
       assert(_MaxLen > 0);
@@ -188,6 +187,18 @@ namespace p2 {
     bool operator !=(const p2::string<_Size> &rhs) const
     {
       return !(*this == rhs);
+    }
+
+
+    // find_last_of - find the last occurrence of a character
+    // @c: the char to find
+    //
+    // Returns -1 if missing
+    int find_last_of(char c) const
+    {
+      int pos = _position;
+      while (_storage_ref[pos] != c && pos-- > 0);
+      return pos;
     }
 
 #if __STDC_HOSTED__ == 1

@@ -83,6 +83,8 @@ struct vfs_device_driver {
   int (*seek)(int handle, int offset, int relative);
 
   int (*tell)(int handle, int *position);
+
+  int (*mkdir)(const char *path);
 };
 
 // Kernel/driver functions

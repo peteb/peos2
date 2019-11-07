@@ -29,7 +29,8 @@ void term_init(const char *name, screen_buffer buffer)
     .close = nullptr,
     .control = nullptr,
     .seek = nullptr,
-    .tell = nullptr
+    .tell = nullptr,
+    .mkdir = nullptr
   };
 
   uintptr_t term_id = terminals.emplace_back(buffer);
