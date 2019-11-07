@@ -200,11 +200,5 @@ isr_routine_err isr_gpf,         int_gpf
 isr_routine     isr_syscall,     int_syscall
 isr_routine     isr_kbd,         int_kbd
 isr_routine     isr_timer,       int_timer
-//isr_routine_err isr_page_fault,  int_page_fault
+isr_routine_err isr_page_fault,  int_page_fault
 isr_routine_err isr_doublefault, int_doublefault
-
-
-.global isr_page_fault
-isr_page_fault:
-        cli
-        hlt

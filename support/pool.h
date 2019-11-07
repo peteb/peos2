@@ -124,13 +124,13 @@ namespace p2 {
 
     T &operator [](_IndexT idx)
     {
-      assert(idx < _MaxLen && "buffer overrun");
+      assert(valid(idx));
       return *element(idx)->value();
     }
 
     const T &operator [](_IndexT idx) const
     {
-      assert(idx < _MaxLen && "buffer overrun");
+      assert(valid(idx));
       return *element(idx)->value();
     }
 

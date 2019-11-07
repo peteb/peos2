@@ -30,6 +30,11 @@ static int verify(int retval)
 static void load_multiboot_modules();
 static void extract_tar(const char *filename);
 
+static void heavy_fun() {
+  char buf[4096 * 4];
+  memset(buf, '!', sizeof(buf));
+}
+
 //
 // Kernel kicks off execution of this user space program "as soon as
 // possible", which is after the kernel and all the drivers have been
@@ -56,11 +61,15 @@ extern "C" int init_main()
     int bytes_read;
 
     while ((bytes_read = verify(SYSCALL3(read, read_fd, buf, sizeof(buf)))) > 0) {
-      verify(SYSCALL3(write, 0, buf, bytes_read));
+      //verify(SYSCALL3(write, 0, buf, bytes_read));
     }
 
     verify(SYSCALL1(close, read_fd));
   }
+
+  heavy_fun();
+
+  while (true) {}
 
   // Start I/O
   int stdin = verify(SYSCALL2(open, "/dev/term0", 0));

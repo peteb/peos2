@@ -143,7 +143,9 @@ static void switch_process(proc_handle pid) {
   uint32_t *current_task_esp = 0;
   uint32_t **current_task_esp_ptr = &current_task_esp;
 
-  if (current_pid != processes.end()) {
+  // Save the old process' kernel stack pointer. But only if the old
+  // process still exists.
+  if (current_pid != processes.end() && processes.valid(current_pid)) {
     current_task_esp_ptr = &processes[current_pid].kernel_esp;
   }
 
@@ -261,26 +263,35 @@ static proc_handle create_process(void *eip, uint32_t flags, const char *argumen
   pcb.upush(1);                          // argc
   pcb.upush((uintptr_t)_user_proc_cleanup);
 
-  size_t initial_stack_size = (uintptr_t)initial_user_esp - (uintptr_t)pcb.user_esp;
+  size_t initial_stack_usage = (uintptr_t)initial_user_esp - (uintptr_t)pcb.user_esp;
   uintptr_t user_space_stack_base = 0xB0000000;
 
   // We need a stack that can invoke iret as soon as possible, without
   // invoking any gcc function epilogues or prologues.  First, we need
   // a stack good for `switch_task`. As we set the return address to
   // be `switch_task_iret`, we also need to push values for IRET.
-  pcb.kpush(USER_DATA_SEL);                               // SS
-  pcb.kpush(user_space_stack_base - initial_stack_size);  // ESP
-  pcb.kpush(0x202);                                       // EFLAGS, IF
-  pcb.kpush(USER_CODE_SEL);                               // CS
-  pcb.kpush((uint32_t)eip);                               // Return EIP from switch_task_iret
-  pcb.kpush((uint32_t)switch_task_iret);                  // Return EIP from switch_task
-  pcb.kpush(0);                                           // EBX
-  pcb.kpush(0);                                           // ESI
-  pcb.kpush(0);                                           // EDI
-  pcb.kpush(0);                                           // EBP
+  pcb.kpush(USER_DATA_SEL);                                // SS
+  pcb.kpush(user_space_stack_base - initial_stack_usage);  // ESP
+  pcb.kpush(0x202);                                        // EFLAGS, IF
+  pcb.kpush(USER_CODE_SEL);                                // CS
+  pcb.kpush((uint32_t)eip);                                // Return EIP from switch_task_iret
+  pcb.kpush((uint32_t)switch_task_iret);                   // Return EIP from switch_task
+  pcb.kpush(0);                                            // EBX
+  pcb.kpush(0);                                            // ESI
+  pcb.kpush(0);                                            // EDI
+  pcb.kpush(0);                                            // EBP
 
-  // Map one page of stack
-  mem_map_page(space_handle, user_space_stack_base - 0x1000, KERNVIRT2PHYS((uintptr_t)user_stacks[us_idx].bottom_of_stack()) - 0x1000, MEM_PE_P|MEM_PE_RW|MEM_PE_U);
+  size_t stack_area_size = 4096 * 1024;
+  size_t guard_size = 4096 * 10;
+
+  // The first page of the stack is in a kernel pool, this is an easy
+  // way for the kernel to be able to populate the stack, albeit
+  // wasteful. The rest of the stack pages will be allocated on the
+  // fly.
+  mem_map_linear(space_handle, user_space_stack_base - 0x1000, user_space_stack_base, KERNVIRT2PHYS((uintptr_t)user_stacks[us_idx].bottom_of_stack()) - 0x1000, MEM_PE_P|MEM_PE_RW|MEM_PE_U);
+  mem_map_alloc(space_handle, user_space_stack_base - stack_area_size, user_space_stack_base - 0x1000, MEM_PE_P|MEM_PE_RW|MEM_PE_U);
+  mem_map_guard(space_handle, user_space_stack_base - stack_area_size - guard_size, user_space_stack_base - stack_area_size);
+
   return pid;
 }
 
@@ -290,7 +301,6 @@ static uint32_t syscall_yield() {
 }
 
 void proc_kill(proc_handle pid, uint32_t exit_status) {
-  (void)exit_status;
   process_control_block &pcb = processes[pid];
 
   if (pcb.suspended) {
