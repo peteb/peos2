@@ -13,7 +13,7 @@ CRTBEGIN_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
 INTERNAL_OBJECTS=boot.o main.o screen.o panic.o x86.o protected_mode.o multiboot.o \
 		 keyboard.o syscalls.o filesystem.o terminal.o process.o memory.o \
-		 ramfs.o init.o
+		 ramfs.o init.o tar.o
 
 OBJECTS=$(OBJDIR)/crti.o $(CRTBEGIN_OBJECT) $(addprefix $(OBJDIR)/,$(INTERNAL_OBJECTS)) $(UNITTESTABLE_OBJECTS) $(CRTEND_OBJECT) $(OBJDIR)/crtn.o
 BINARIES=vmpeoz

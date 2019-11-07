@@ -3,9 +3,9 @@
 #include "screen.h"
 #include "memareas.h"
 #include "memory.h"
+#include "tar.h"
 
 #include "support/format.h"
-#include "support/tar.h"
 
 extern multiboot_info *multiboot_header;
 static int stdout;
