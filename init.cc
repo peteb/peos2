@@ -40,7 +40,7 @@ extern "C" int init_main()
 
   {
     // Try to read a file
-    int read_fd = SYSCALL2(open, "/ramfs/x86.h", 0);
+    int read_fd = SYSCALL2(open, "/ramfs/bin/panic.h", 0);
     char buf[2];
     int bytes_read;
 
@@ -120,9 +120,15 @@ void extract_tar(const char *filename)
     // TODO: assert return value
     puts_sys(stdout, p2::format<128>("got entry '%s' size: %d address: %x\n", entry_name.c_str(), size, file_mem_start + cur_pos));
 
-    // If we can't rely on contiguous memory anymore, change this into a write
-    if (entry_name[0] != 'b') {
+    // If we can't rely on continuous memory anymore, change this into a write
+    if (hdr.type == '0' || hdr.type == '\0') {
       write_info("/", entry_name.c_str(), file_mem_start + cur_pos, size);
+    }
+    else if (hdr.type == '5') {
+      char buf[128];
+      p2::format(buf, "/ramfs/%s", entry_name.c_str());
+      SYSCALL1(mkdir, buf);
+      // TODO: check return code
     }
 
     SYSCALL3(seek, fd, ALIGN_UP(size, 512), SEEK_CUR);

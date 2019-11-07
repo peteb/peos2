@@ -231,10 +231,19 @@ static int tell(int handle, int *position)
   return 0;
 }
 
-static int mkdir(const char *path)
+static int mkdir(const char *pathname)
 {
+  p2::string<128> path(pathname);
+  if (path.size() == 0)
+    return -1;
+
+  if (path[path.size() - 1] == '/')
+    path.backspace();
+
   p2::string<128> dir, base;
-  p2::dirname(p2::string<128>(path), &dir, &base);
+  p2::dirname(path, &dir, &base);
+
+  dbg_puts(ramfs, "mkdir '%s' in '%s'", base.c_str(), dir.c_str());
 
   int ret = create_file(dir.c_str(), base.c_str(), TYPE_DIRECTORY);
   if (ret >= 0)
