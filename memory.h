@@ -28,7 +28,8 @@ struct region {
   uintptr_t start, end;
 };
 
-typedef uint16_t mem_adrspc;
+typedef uint16_t mem_space;
+typedef uint16_t mem_area;
 
 void       mem_init(const region *phys_region);
 
@@ -36,11 +37,12 @@ void      *mem_alloc_page();
 void      *mem_alloc_page_zero();
 void       mem_free_page(void *page);
 
-mem_adrspc mem_create_address_space();
-void       mem_map_kernel(mem_adrspc adrspc, uint32_t flags);
-void       mem_destroy_address_space(mem_adrspc address_space);
-void       mem_activate_address_space(mem_adrspc address_space);
-void       mem_map_page(mem_adrspc, uint32_t virt, uint32_t phys, uint16_t flags);
-
+// Address space management
+mem_space  mem_create_space();
+void       mem_map_kernel(mem_space space, uint32_t flags);
+void       mem_destroy_space(mem_space space);
+void       mem_activate_space(mem_space space);
+void       mem_map_page(mem_space space, uint32_t virt, uint32_t phys, uint16_t flags);
+mem_area   mem_map_linear(mem_space space, uintptr_t start, uintptr_t end, uintptr_t phys_start, uint16_t flags);
 
 #endif // !PEOS2_MEMORY_H

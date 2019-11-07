@@ -21,7 +21,7 @@ struct page_table_entry {
   uint32_t frame_11_31:20;
 } __attribute__((packed));
 
-struct address_space {
+struct space_info {
   page_dir_entry *page_dir;
 };
 
@@ -40,12 +40,13 @@ static p2::page_allocator page_table_allocator((uintptr_t)page_table_area,
                                                (uintptr_t)(page_table_area + sizeof(page_table_area)));
 
 static p2::page_allocator *pmem;
-static p2::pool<address_space, 16, mem_adrspc> address_spaces;
-static mem_adrspc current_address_space = address_spaces.end();
+
+static p2::pool<space_info, 16, mem_space> spaces;
+static mem_space current_space = spaces.end();
 
 
-
-void mem_init(const region *phys_region) {
+void mem_init(const region *phys_region)
+{
   puts(p2::format<64>("mem: using region %x-%x (%d MB) for page alloc",
                       phys_region->start,
                       phys_region->end,
@@ -58,7 +59,8 @@ void mem_init(const region *phys_region) {
   int_register(INT_PAGEFAULT, isr_page_fault, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 }
 
-void mem_free_page_dir(void *page_directory) {
+void mem_free_page_dir(void *page_directory)
+{
   page_dir_entry *page_dir = (page_dir_entry *)page_directory;
 
   for (int i = 0; i < 1024; ++i) {
@@ -70,37 +72,43 @@ void mem_free_page_dir(void *page_directory) {
   mem_free_page(page_dir);
 }
 
-void *mem_create_page_dir() {
+void *mem_create_page_dir()
+{
   return mem_alloc_page_zero();
 }
 
-void *mem_alloc_page() {
+void *mem_alloc_page()
+{
   assert(pmem);
   void *mem = pmem->alloc_page();
   dbg_puts(mem, "allocated 4k page at %x, space left: %d", (uintptr_t)mem, pmem->free_space());
   return mem;
 }
 
-void *mem_alloc_page_zero() {
+void *mem_alloc_page_zero()
+{
   assert(pmem);
   void *mem = pmem->alloc_page_zero();
   dbg_puts(mem, "allocated 4k page at %x, space left: %d", (uintptr_t)mem, pmem->free_space());
   return mem;
 }
 
-void mem_free_page(void *page) {
+void mem_free_page(void *page)
+{
   assert(pmem);
   pmem->free_page(page);
   dbg_puts(mem, "freed 4k page at %x, space left: %d", (uintptr_t)page, pmem->free_space());
 }
 
-mem_adrspc mem_create_address_space() {
+mem_space mem_create_space()
+{
   page_dir_entry *page_dir = (page_dir_entry *)page_dir_allocator.alloc_page_zero();
   dbg_puts(mem, "created page dir %x", (uintptr_t)page_dir);
-  return address_spaces.push_back({page_dir});
+  return spaces.push_back({page_dir});
 }
 
-void mem_map_kernel(mem_adrspc adrspc, uint32_t flags) {
+void mem_map_kernel(mem_space space_handle, uint32_t flags)
+{
   // TODO: we don't really want to know about multiboot everywhere
   uintptr_t end = multiboot_last_address();
   end = p2::max(end, (uintptr_t)&kernel_end);
@@ -110,22 +118,23 @@ void mem_map_kernel(mem_adrspc adrspc, uint32_t flags) {
        address += 0x1000) {
 
     if (address >= (uintptr_t)&__start_READONLY && address <= ALIGN_UP((uintptr_t)&__stop_READONLY, 0x1000))
-      mem_map_page(adrspc, address, KERNVIRT2PHYS(address), flags & ~MEM_PE_RW);
+      mem_map_page(space_handle, address, KERNVIRT2PHYS(address), flags & ~MEM_PE_RW);
     else
-      mem_map_page(adrspc, address, KERNVIRT2PHYS(address), flags);
+      mem_map_page(space_handle, address, KERNVIRT2PHYS(address), flags);
   }
 }
 
-void mem_destroy_address_space(mem_adrspc adrspc) {
-  if (adrspc == current_address_space) {
+void mem_destroy_space(mem_space space_handle)
+{
+  if (space_handle == current_space) {
     // We assume that the kernel fallback address space (0) is
     // compatible with `adrspc`.
 
     // TODO: remove magic 0 constant
-    mem_activate_address_space(0);
+    mem_activate_space(0);
   }
 
-  address_space *space = &address_spaces[adrspc];
+  space_info *space = &spaces[space_handle];
 
   for (int i = 0; i < 1024; ++i) {
     if (!(space->page_dir[i].flags & MEM_PE_P)) {
@@ -141,27 +150,29 @@ void mem_destroy_address_space(mem_adrspc adrspc) {
   dbg_puts(mem, "deleting page dir %x", (uintptr_t)space->page_dir);
   page_dir_allocator.free_page(space->page_dir);
   space->page_dir = nullptr;
-  address_spaces.erase(adrspc);
+  spaces.erase(space_handle);
 }
 
-void mem_activate_address_space(mem_adrspc adrspc) {
-  if (current_address_space == adrspc) {
+void mem_activate_space(mem_space space_handle)
+{
+  if (current_space == space_handle) {
     return;
   }
 
-  current_address_space = adrspc;
-  address_space *space = &address_spaces[adrspc];
+  current_space = space_handle;
+  space_info *space = &spaces[space_handle];
   uintptr_t page_dir_phys = KERNVIRT2PHYS((uintptr_t)space->page_dir);
 
   asm volatile("mov cr3, %0" : : "a"(page_dir_phys) : "memory");
   // TODO: fix all inline asm to have the same syntax (AT&T vs Intel) as *.s files
 }
 
-void mem_map_page(mem_adrspc adrspc, uint32_t virt, uint32_t phys, uint16_t flags) {
+void mem_map_page(mem_space space_handle, uint32_t virt, uint32_t phys, uint16_t flags)
+{
   assert((virt & 0xFFF) == 0 && "can only map on page boundaries");
   assert((phys & 0xFFF) == 0 && "can only map on page boundaries");
 
-  page_dir_entry *page_dir = address_spaces[adrspc].page_dir;
+  page_dir_entry *page_dir = spaces[space_handle].page_dir;
   page_table_entry *page_table = nullptr;
   int directory_idx = virt >> 22;
   uint16_t pde_flags = flags & ~(MEM_PDE_S|MEM_PTE_D);
@@ -185,7 +196,18 @@ void mem_map_page(mem_adrspc adrspc, uint32_t virt, uint32_t phys, uint16_t flag
   // TODO: flush tlb if current address space
 }
 
-extern "C" void int_page_fault(isr_registers regs) {
+mem_area mem_map_linear(mem_space space_handle, uintptr_t start, uintptr_t end, uintptr_t phys_start, uint16_t flags)
+{
+  (void)space_handle;
+  (void)start;
+  (void)end;
+  (void)phys_start;
+  (void)flags;
+  return 0;
+}
+
+extern "C" void int_page_fault(isr_registers regs)
+{
   p2::string<256> buf;
   regs.to_string(buf);
   puts(buf);

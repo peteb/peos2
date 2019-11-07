@@ -107,9 +107,9 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
 
   // Overwrite the current mappings for the kernel to only include the
   // relevant parts and only at KERNEL_VIRT_BASE.
-  mem_adrspc addr = mem_create_address_space();
-  mem_map_kernel(addr, MEM_PE_P|MEM_PE_RW);
-  mem_activate_address_space(addr);
+  mem_space space = mem_create_space();
+  mem_map_kernel(space, MEM_PE_P|MEM_PE_RW);
+  mem_activate_space(space);
 
   proc_create((void *)init_main, PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, "");
 

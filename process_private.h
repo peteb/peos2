@@ -5,11 +5,11 @@
 
 class process_control_block {
 public:
-  process_control_block(uint32_t *kernel_stack, uint32_t *user_stack, mem_adrspc address_space)
+  process_control_block(uint32_t *kernel_stack, uint32_t *user_stack, mem_space space_handle)
     : kernel_esp(kernel_stack),
       kernel_stack(kernel_stack),
       user_esp(user_stack),
-      address_space(address_space),
+      space_handle(space_handle),
       suspended(false),
       terminating(false),
       last_tick(0)
@@ -30,7 +30,7 @@ public:
 
   void activate() {
     tss_set_kernel_stack((uint32_t)kernel_stack);
-    mem_activate_address_space(address_space);
+    mem_activate_space(space_handle);
   }
 
   uint32_t *kernel_esp;
@@ -41,7 +41,7 @@ public:
   const char *argv[1];
   p2::string<64> argument;
 
-  mem_adrspc address_space;
+  mem_space space_handle;
 
   p2::pool<proc_fd, 32> file_descriptors;
 

@@ -85,7 +85,7 @@ static void destroy_process(proc_handle pid) {
   }
 
 
-  mem_destroy_address_space(pcb.address_space);
+  mem_destroy_space(pcb.space_handle);
 
   // Remove the process so it won't get picked for execution
   dequeue(pid, pcb.suspended ? &suspended_head : &running_head);
@@ -232,7 +232,7 @@ static proc_handle create_process(void *eip, uint32_t flags, const char *argumen
   uint16_t ks_idx = kernel_stacks.emplace_back();
   uint16_t us_idx = user_stacks.emplace_back();
 
-  mem_adrspc adrspc = mem_create_address_space();
+  mem_space space_handle = mem_create_space();
   uint16_t mapping_flags = MEM_PE_P|MEM_PE_RW;
   // We must always map the kernel as RW; it's going to be used in
   // syscalls and other interrupts even if the U bit isn't set.
@@ -242,11 +242,11 @@ static proc_handle create_process(void *eip, uint32_t flags, const char *argumen
     mapping_flags |= MEM_PE_U;
   }
 
-  mem_map_kernel(adrspc, mapping_flags);
+  mem_map_kernel(space_handle, mapping_flags);
 
   proc_handle pid = processes.emplace_back(kernel_stacks[ks_idx].bottom_of_stack(),
                                            user_stacks[us_idx].bottom_of_stack(),
-                                           adrspc);
+                                           space_handle);
   process_control_block &pcb = processes[pid];
   pcb.kernel_stack_idx = ks_idx;
   pcb.user_stack_idx = us_idx;
@@ -280,7 +280,7 @@ static proc_handle create_process(void *eip, uint32_t flags, const char *argumen
   pcb.kpush(0);                                           // EBP
 
   // Map one page of stack
-  mem_map_page(adrspc, user_space_stack_base - 0x1000, KERNVIRT2PHYS((uintptr_t)user_stacks[us_idx].bottom_of_stack()) - 0x1000, MEM_PE_P|MEM_PE_RW|MEM_PE_U);
+  mem_map_page(space_handle, user_space_stack_base - 0x1000, KERNVIRT2PHYS((uintptr_t)user_stacks[us_idx].bottom_of_stack()) - 0x1000, MEM_PE_P|MEM_PE_RW|MEM_PE_U);
   return pid;
 }
 
@@ -317,8 +317,8 @@ void proc_remove_fd(proc_handle pid, int fd) {
   processes[pid].file_descriptors.erase(fd);
 }
 
-mem_adrspc proc_get_address_space(proc_handle pid) {
-  return processes[pid].address_space;
+mem_space proc_get_space(proc_handle pid) {
+  return processes[pid].space_handle;
 }
 
 static uint32_t syscall_exit(int exit_status) {
