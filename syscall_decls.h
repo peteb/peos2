@@ -48,4 +48,7 @@ SYSCALL_DEF3(seek,    SYSCALL_NUM_SEEK, int, int, int);
 SYSCALL_DEF2(tell,    SYSCALL_NUM_TELL, int, int *);
 SYSCALL_DEF1(mkdir,   SYSCALL_NUM_MKDIR, const char *);
 
+// Process definitions
+SYSCALL_DEF1(exit,    SYSCALL_NUM_EXIT, int);
+
 #endif // !PEOS2_SYSCALL_DECLS_H

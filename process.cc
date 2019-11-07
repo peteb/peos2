@@ -25,7 +25,7 @@ extern "C" void _user_proc_cleanup();
 
 // Statics
 static uint32_t    syscall_yield();
-static uint32_t    syscall_exit(uint32_t exit_code);
+static uint32_t    syscall_exit(int exit_code);
 static uint32_t    syscall_kill(uint32_t pid);
 static proc_handle decide_next_process();
 static proc_handle create_process(void *eip, uint32_t flags, const char *argument);
@@ -321,7 +321,7 @@ mem_adrspc proc_get_address_space(proc_handle pid) {
   return processes[pid].address_space;
 }
 
-static uint32_t syscall_exit(uint32_t exit_status) {
+static uint32_t syscall_exit(int exit_status) {
   proc_kill(proc_current_pid(), exit_status);
   proc_yield();
   assert(false && "unreachable");
