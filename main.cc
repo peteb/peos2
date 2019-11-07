@@ -103,7 +103,7 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   largest_region.start = p2::max(largest_region.start, KERNVIRT2PHYS(multiboot_last_address()));
   largest_region.start = ALIGN_UP(largest_region.start, 0x1000);
   largest_region.end = ALIGN_DOWN(largest_region.end, 0x1000);
-  mem_init(&largest_region, 1);
+  mem_init(&largest_region);
 
   // Overwrite the current mappings for the kernel to only include the
   // relevant parts and only at KERNEL_VIRT_BASE.

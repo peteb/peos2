@@ -45,25 +45,13 @@ static mem_adrspc current_address_space = address_spaces.end();
 
 
 
-void mem_init(const region *regions, size_t region_count) {
-  uintptr_t largest_region_size = 0;
-  region largest_region = {};
-
-  for (size_t i = 0; i < region_count; ++i) {
-    size_t size = regions[i].end - regions[i].start;
-    if (size > largest_region_size) {
-      largest_region_size = size;
-      largest_region = regions[i];
-    }
-  }
-
-  assert(largest_region_size);
+void mem_init(const region *phys_region) {
   puts(p2::format<64>("mem: using region %x-%x (%d MB) for page alloc",
-                      largest_region.start,
-                      largest_region.end,
-                      ((uintptr_t)(largest_region.end - largest_region.start) / 1024 / 1024)));
+                      phys_region->start,
+                      phys_region->end,
+                      ((uintptr_t)(phys_region->end - phys_region->start) / 1024 / 1024)));
 
-  static p2::page_allocator alloc{largest_region.start, largest_region.end};
+  static p2::page_allocator alloc{phys_region->start, phys_region->end};
   // TODO: fix this hackery
   pmem = &alloc;
 

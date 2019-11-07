@@ -30,7 +30,7 @@ struct region {
 
 typedef uint16_t mem_adrspc;
 
-void       mem_init(const region *phys_regions, size_t count);
+void       mem_init(const region *phys_region);
 
 void      *mem_alloc_page();
 void      *mem_alloc_page_zero();
