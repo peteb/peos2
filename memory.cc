@@ -7,6 +7,7 @@
 #include "multiboot.h"
 #include "debug.h"
 #include "process.h"
+#include "syscalls.h"
 
 #include "support/page_alloc.h"
 #include "support/pool.h"
@@ -15,6 +16,7 @@
 #define AREA_LINEAR_MAP 1
 #define AREA_GUARD      2
 #define AREA_ALLOC      3
+#define AREA_FILE       4
 
 // Structs
 struct page_dir_entry {
@@ -37,11 +39,17 @@ struct linear_map_info {
   uintptr_t phys_start;
 };
 
+struct file_map_info {
+  int fd;
+  uint32_t offset;
+};
+
 struct space_info {
   space_info(page_dir_entry *page_dir) : page_dir(page_dir) {}
   page_dir_entry *page_dir;
   p2::pool<area_info, 8> areas;
   p2::pool<linear_map_info, 4> linear_maps;
+  p2::pool<file_map_info, 4> file_maps;
 };
 
 
@@ -53,6 +61,7 @@ extern char __start_READONLY, __stop_READONLY;
 // Forward decls
 static void free_alloc_area(space_info &space, area_info &area);
 static void free_page(void *page);
+static int syscall_mmap(void *start, void *end, int fd, uint32_t offset, uint8_t flags);
 
 // Global state
 static p2::internal_page_allocator<sizeof(page_dir_entry)   * 1024 * 100, 0x1000> page_dir_allocator;
@@ -71,11 +80,15 @@ void mem_init(const region *phys_region)
                       phys_region->end,
                       ((uintptr_t)(phys_region->end - phys_region->start) / 1024 / 1024)));
 
-  static p2::page_allocator alloc{{phys_region->start, phys_region->end}, KERNEL_VIRTUAL_BASE};
   // TODO: fix this hackery
+  static p2::page_allocator alloc{{phys_region->start, phys_region->end}, KERNEL_VIRTUAL_BASE};
   user_space_allocator = &alloc;
 
+  // Interrupts
   int_register(INT_PAGEFAULT, isr_page_fault, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+
+  // Syscalls
+  syscall_register(SYSCALL_NUM_MMAP, (syscall_fun)syscall_mmap);
 }
 
 void mem_free_page_dir(void *page_directory)
@@ -126,7 +139,10 @@ void mem_destroy_space(mem_space space_handle)
   space_info *space = &spaces[space_handle];
 
   for (size_t i = 0; i < space->areas.watermark(); ++i) {
-    if (space->areas.valid(i) && space->areas[i].type == AREA_ALLOC)
+    if (!space->areas.valid(i))
+      continue;
+
+    if (space->areas[i].type == AREA_ALLOC || space->areas[i].type == AREA_FILE)
       free_alloc_area(*space, space->areas[i]);
   }
 
@@ -258,6 +274,18 @@ mem_area mem_map_alloc(mem_space space_handle, uintptr_t start, uintptr_t end, u
   return spaces[space_handle].areas.push_back({start, end, AREA_ALLOC, flags, 0});
 }
 
+mem_area mem_map_fd(mem_space space_handle,
+                    uintptr_t start,
+                    uintptr_t end,
+                    int fd,
+                    uint32_t offset,
+                    uint8_t flags)
+{
+  space_info &space = spaces[space_handle];
+  uint16_t map_handle = space.file_maps.push_back({fd, offset});
+  return space.areas.push_back({start, end, AREA_FILE, flags, map_handle});
+}
+
 static p2::optional<mem_area> find_area(mem_space space_handle, uintptr_t address)
 {
   space_info &space = spaces[space_handle];
@@ -280,9 +308,9 @@ static void page_fault_linear_map(area_info &area, uintptr_t faulted_address)
 {
   linear_map_info &lm_info = spaces[current_space].linear_maps[area.info_handle];
   uintptr_t page_address = ALIGN_DOWN(faulted_address, 0x1000);
-  ptrdiff_t page_offset = page_address - area.start;
-  dbg_puts(mem, "linear map; mapping %x to %x", page_address, lm_info.phys_start + page_offset);
-  mem_map_page(current_space, page_address, lm_info.phys_start + page_offset, area.flags);
+  ptrdiff_t area_offset = page_address - area.start;
+  dbg_puts(mem, "linear map; mapping %x to %x", page_address, lm_info.phys_start + area_offset);
+  mem_map_page(current_space, page_address, lm_info.phys_start + area_offset, area.flags);
 }
 
 static void page_fault_guard(area_info &/*area*/, uintptr_t faulted_address)
@@ -301,9 +329,30 @@ static void page_fault_alloc(area_info &area, uintptr_t faulted_address)
   memset((void *)page_address, 0, 0x1000);
 }
 
+static void page_fault_file(area_info &area, uintptr_t faulted_address)
+{
+  uintptr_t page_address = ALIGN_DOWN(faulted_address, 0x1000);
+  uintptr_t phys_block = (uintptr_t)alloc_page();
+  dbg_puts(mem, "file map; allocated %x and mapping it at %x", phys_block, page_address);
+  mem_map_page(current_space, page_address, phys_block, area.flags);
+  memset((void *)page_address, 0, 0x1000);
+
+  file_map_info &fm_info = spaces[current_space].file_maps[area.info_handle];
+  ptrdiff_t area_offset = page_address - area.start;
+  uint32_t file_offset = area_offset + fm_info.offset;
+
+  if (SYSCALL3(seek, fm_info.fd, file_offset, SEEK_BEG) < 0) {
+    panic("failed to seek");
+  }
+
+  if (SYSCALL3(read, fm_info.fd, (char *)page_address, 0x1000) < 0) {
+    panic("failed to read");
+  }
+}
+
 static void free_alloc_area(space_info &space, area_info &area)
 {
-  assert(area.type == AREA_ALLOC);
+  assert(area.type == AREA_ALLOC || area.type == AREA_FILE);
 
   for (uintptr_t page_address = area.start;
        page_address < area.end;
@@ -312,7 +361,7 @@ static void free_alloc_area(space_info &space, area_info &area)
     if (auto *pte = find_pte(space, page_address); pte && pte->flags & MEM_PE_P) {
       dbg_puts(mem, "free allocated page virt %x (%x)", page_address, pte_frame(pte));
       free_page((void *)pte_frame(pte));
-      //pte->flags &= ~MEM_PE_P;
+      pte->flags &= ~MEM_PE_P;
     }
   }
 }
@@ -356,9 +405,21 @@ extern "C" void int_page_fault(isr_registers regs)
     handler = page_fault_alloc;
     break;
 
+  case AREA_FILE:
+    handler = page_fault_file;
+    break;
+
   default:
     panic("invalid area type");
   }
 
   handler(area, faulted_address);
+}
+
+static int syscall_mmap(void *start, void *end, int fd, uint32_t offset, uint8_t flags)
+{
+  // TODO: check that the pointers are in valid space
+  mem_map_fd(current_space, (uintptr_t)start, (uintptr_t)end, fd, offset, flags | MEM_PE_P|MEM_PE_RW|MEM_PE_U);
+  // TODO: handle errors
+  return 0;
 }

@@ -22,6 +22,8 @@
 #define SYSCALL_NUM_EXIT        11
 #define SYSCALL_NUM_KILL        12
 
+#define SYSCALL_NUM_MMAP        20
+
 // Flags
 #define FLAG_OPEN_READWRITE   0x01
 #define FLAG_OPEN_CREATE      0x02
@@ -50,5 +52,8 @@ SYSCALL_DEF1(mkdir,   SYSCALL_NUM_MKDIR, const char *);
 
 // Process definitions
 SYSCALL_DEF1(exit,    SYSCALL_NUM_EXIT, int);
+
+// Memory definitions
+SYSCALL_DEF5(mmap,    SYSCALL_NUM_MMAP, void *, void *, int, uint32_t, uint8_t);
 
 #endif // !PEOS2_SYSCALL_DECLS_H

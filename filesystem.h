@@ -87,7 +87,7 @@ struct vfs_device_driver {
   int (*mkdir)(const char *path);
 };
 
-// Kernel/driver functions
+// Structure management
 void            vfs_init();
 void            vfs_print();
 vfs_node_handle vfs_create_node(uint8_t type);
@@ -96,5 +96,16 @@ void            vfs_set_driver(vfs_node_handle dev_node, vfs_device_driver *driv
 vfs_node_handle vfs_lookup(const char *path);
 void            *vfs_get_opaque(vfs_device *device);
 int             vfs_close_handle(proc_handle pid, int handle);
+
+//
+// vfs_syscall_open - creates a file descriptor.
+// @pid: in which process the fd should be created
+// @filename: aboslute global path
+// @flags: defined in syscall_decls.h
+//
+// Opens a file just as how SYSCALL(open) would, but accessible for
+// the kernel to use for non-current processes.
+//
+int vfs_syscall_open(proc_handle pid, const char *filename, uint32_t flags);
 
 #endif // !PEOS2_FILESYSTEM_H

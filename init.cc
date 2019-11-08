@@ -30,10 +30,6 @@ static int verify(int retval)
 static void load_multiboot_modules();
 static void extract_tar(const char *filename);
 
-static void heavy_fun() {
-  char buf[4096 * 4];
-  memset(buf, '!', sizeof(buf));
-}
 
 //
 // Kernel kicks off execution of this user space program "as soon as
@@ -67,7 +63,11 @@ extern "C" int init_main()
     verify(SYSCALL1(close, read_fd));
   }
 
-  heavy_fun();
+  int mmap_fd = verify(SYSCALL2(open, "/ramfs/x86.cc", 0));
+  verify(SYSCALL5(mmap, (void *)0xBEEF0000, (void *)0xBEEFF000, mmap_fd, 0, 0));
+
+  char *data = (char *)0xBEEF0000;
+  SYSCALL3(write, stdout, data, 4100);
 
   // Start I/O
   int stdin = verify(SYSCALL2(open, "/dev/term0", 0));

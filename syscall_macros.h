@@ -17,7 +17,7 @@ inline static int _syscall_##name()                              \
   asm volatile("int 0x90"                                        \
                : "=a"(ret)                                       \
                : "a"(num)                                        \
-               : "memory", "esi", "edi");                              \
+               : "memory", "esi", "edi");                        \
   return ret;                                                    \
 }
 
@@ -29,7 +29,7 @@ inline static int _syscall_##name(P1 p1)                         \
                : "=a"(ret)                                       \
                : "a"(num),                                       \
                  "b"(p1)                                         \
-               : "memory", "esi", "edi");                              \
+               : "memory", "esi", "edi");                        \
   return ret;                                                    \
 }
 
@@ -42,7 +42,7 @@ inline static int _syscall_##name(P1 p1, P2 p2)                  \
                : "a"(num),                                       \
                  "b"(p1),                                        \
                  "c"(p2)                                         \
-               : "memory", "esi", "edi");                              \
+               : "memory", "esi", "edi");                        \
   return ret;                                                    \
 }
 
@@ -56,7 +56,7 @@ inline static int _syscall_##name(P1 p1, P2 p2, P3 p3)           \
                  "b"(p1),                                        \
                  "c"(p2),                                        \
                  "d"(p3)                                         \
-               : "memory", "esi", "edi");                              \
+               : "memory", "esi", "edi");                        \
   return ret;                                                    \
 }
 
@@ -71,8 +71,24 @@ inline static int _syscall_##name(P1 p1, P2 p2, P3 p3, P4 p4)    \
                  "c"(p2),                                        \
                  "d"(p3),                                        \
                  "S"(p4)                                         \
-               : "memory", "edi");                                     \
+               : "memory", "edi");                               \
   return ret;                                                    \
+}
+
+#define SYSCALL_DEF5(name, num, P1, P2, P3, P4, P5)                  \
+inline static int _syscall_##name(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5) \
+{                                                                    \
+  int ret;                                                           \
+  asm volatile("int 0x90"                                            \
+               : "=a"(ret)                                           \
+               : "a"(num),                                           \
+                 "b"(p1),                                            \
+                 "c"(p2),                                            \
+                 "d"(p3),                                            \
+                 "S"(p4),                                            \
+                 "D"(p5)                                             \
+               : "memory");                                          \
+  return ret;                                                        \
 }
 
 #define SYSCALL0(name) _syscall_##name()
@@ -80,5 +96,6 @@ inline static int _syscall_##name(P1 p1, P2 p2, P3 p3, P4 p4)    \
 #define SYSCALL2(name, p1, p2) _syscall_##name(p1, p2)
 #define SYSCALL3(name, p1, p2, p3) _syscall_##name(p1, p2, p3)
 #define SYSCALL4(name, p1, p2, p3, p4) _syscall_##name(p1, p2, p3, p4)
+#define SYSCALL5(name, p1, p2, p3, p4, p5) _syscall_##name(p1, p2, p3, p4, p5)
 
 #endif // !PEOS2_SYSCALL_MACROS_H

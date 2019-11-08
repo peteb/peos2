@@ -225,7 +225,7 @@ static int syscall_read(int fd, char *data, int length)
   return device_node->driver->read(pfd->value, data, length);
 }
 
-static int syscall_open(const char *filename, uint32_t flags)
+int vfs_syscall_open(proc_handle pid, const char *filename, uint32_t flags)
 {
   auto driver = find_first_driver(root_dir, filename);
   assert(driver.node_idx != nodes.end());
@@ -244,9 +244,14 @@ static int syscall_open(const char *filename, uint32_t flags)
 
   int local_fd = device_node.driver->open(&device_node, driver.rest_path, flags);
   // TODO: check that it returned OK
-  int proc_fd = proc_create_fd(proc_current_pid(), {(void *)&device_node, local_fd});
-  dbg_puts(vfs, "opened %s at %d.%d", filename, proc_current_pid(), proc_fd);
+  int proc_fd = proc_create_fd(pid, {(void *)&device_node, local_fd});
+  dbg_puts(vfs, "opened %s at %d.%d", filename, pid, proc_fd);
   return proc_fd;
+}
+
+static int syscall_open(const char *filename, uint32_t flags)
+{
+  return vfs_syscall_open(proc_current_pid(), filename, flags);
 }
 
 static int syscall_mkdir(const char *path)
