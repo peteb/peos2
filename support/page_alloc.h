@@ -4,6 +4,8 @@
 #define PEOS2_SUPPORT_PAGE_ALLOC_H
 
 #include <stdint.h>
+#include "support/utils.h"
+#include "assert.h"
 
 namespace p2 {
   struct region {
@@ -47,6 +49,7 @@ namespace p2 {
 
       assert((_phys_bookkeeping.start & 0xFFF) == 0);
       assert((_phys_bookkeeping.end & 0xFFF) == 0);
+      assert(_phys_bookkeeping.end < phys_region.end);
 
       _fs_start = (uintptr_t *)(_phys_bookkeeping.start + virtual_offset);
       _fs_end = (uintptr_t *)(_phys_bookkeeping.end + virtual_offset);
@@ -65,14 +68,16 @@ namespace p2 {
       }
 
       assert((uintptr_t)_watermark < _phys_region.end);
-      return (void *)(_watermark += 0x1000);
+      void *address = _watermark;
+      _watermark += 0x1000;
+      return address;
     }
 
     void *alloc_page_zero()
     {
-      void *mem = alloc_page();
-      memset(mem, 0, 0x1000);
-      return mem;
+      void *page = alloc_page();
+      memset(page, 0, 0x1000);
+      return page;
     }
 
     void free_page(void *page)
@@ -90,14 +95,15 @@ namespace p2 {
       }
     }
 
-    size_t free_space() const
+    size_t free_pages() const
     {
-      return ((_phys_region.end - (uintptr_t)_watermark) + (_fs_head - _fs_start)) / 0x1000;
+      return ((_phys_region.end - (uintptr_t)_watermark)) / 0x1000 + (_fs_head - _fs_start);
     }
 
     //
     // Returns the region that has to be mapped into calling address
-    // spaces.
+    // spaces. Should be mapped relative to the virtual_offset given
+    // in the constructor.
     //
     region bookkeeping_phys_region() const
     {

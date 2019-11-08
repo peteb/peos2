@@ -95,16 +95,15 @@ static void *alloc_page()
 {
   assert(user_space_allocator);
   void *mem = user_space_allocator->alloc_page();
-  dbg_puts(mem, "allocated 4k page at %x, pages left: %d", (uintptr_t)mem, user_space_allocator->free_space());
+  dbg_puts(mem, "allocated 4k page at %x, pages left: %d", (uintptr_t)mem, user_space_allocator->free_pages());
   return mem;
 }
 
 static void free_page(void *page)
 {
   assert(user_space_allocator);
-  dbg_puts(mem, "trying to free %x", (uintptr_t)page);
   user_space_allocator->free_page(page);
-  dbg_puts(mem, "freed 4k page at %x, pages left: %d", (uintptr_t)page, user_space_allocator->free_space());
+  dbg_puts(mem, "freed 4k page at %x, pages left: %d", (uintptr_t)page, user_space_allocator->free_pages());
 }
 
 mem_space mem_create_space()
