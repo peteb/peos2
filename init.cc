@@ -69,8 +69,6 @@ extern "C" int init_main()
 
   heavy_fun();
 
-  while (true) {}
-
   // Start I/O
   int stdin = verify(SYSCALL2(open, "/dev/term0", 0));
   char input[240];

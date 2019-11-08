@@ -10,6 +10,7 @@
 
 #include "support/page_alloc.h"
 #include "support/pool.h"
+#include "support/optional.h"
 
 #define AREA_LINEAR_MAP 1
 #define AREA_GUARD      2
@@ -234,7 +235,7 @@ mem_area mem_map_alloc(mem_space space_handle, uintptr_t start, uintptr_t end, u
   return spaces[space_handle].areas.push_back({start, end, AREA_ALLOC, flags, 0});
 }
 
-static mem_area find_area(mem_space space_handle, uintptr_t address)
+static p2::optional<mem_area> find_area(mem_space space_handle, uintptr_t address)
 {
   space_info &space = spaces[space_handle];
 
@@ -247,7 +248,7 @@ static mem_area find_area(mem_space space_handle, uintptr_t address)
       return i;
   }
 
-  return space.areas.end();
+  return {};
 }
 
 typedef void (*page_fault_handler)(area_info &area, uintptr_t faulted_address);
@@ -282,15 +283,25 @@ extern "C" void int_page_fault(isr_registers regs)
   uint32_t faulted_address = 0;
   asm volatile("mov eax, cr2" : "=a"(faulted_address));
 
-  mem_area area_handle = find_area(current_space, faulted_address);
-  dbg_puts(mem, "page fault (error %x) at %x, area %d", regs.error_code, faulted_address, area_handle);
-  // TODO: better handle handling
-  if (area_handle > 100) {
-    // TODO: kill process
-    panic("No mem area");
+  if (regs.error_code & 1) {
+    dbg_puts(mem, "process tried to access protected page at %x", faulted_address);
+    proc_kill(proc_current_pid(), 15);
+    proc_yield();
+    return;
   }
 
-  area_info &area = spaces[current_space].areas[area_handle];
+  p2::optional<mem_area> area_handle = find_area(current_space, faulted_address);
+
+  if (!area_handle) {
+    dbg_puts(mem, "process tried to access un-mapped area at %x", faulted_address);
+    proc_kill(proc_current_pid(), 15);
+    proc_yield();
+    return;
+  }
+
+  dbg_puts(mem, "page fault (error %x) at %x, area %d", regs.error_code, faulted_address, *area_handle);
+
+  area_info &area = spaces[current_space].areas[*area_handle];
   page_fault_handler handler = nullptr;
 
   switch (area.type) {
