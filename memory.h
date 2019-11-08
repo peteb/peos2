@@ -33,9 +33,7 @@ typedef uint16_t mem_area;
 
 void       mem_init(const region *phys_region);
 
-void      *mem_alloc_page();
-void      *mem_alloc_page_zero();
-void       mem_free_page(void *page);
+
 
 // Address space management
 mem_space  mem_create_space();

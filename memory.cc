@@ -50,16 +50,15 @@ extern "C" void isr_page_fault(isr_registers);
 extern int kernel_end;
 extern char __start_READONLY, __stop_READONLY;
 
+// Forward decls
+static void free_alloc_area(space_info &space, area_info &area);
+static void free_page(void *page);
+
 // Global state
-static char page_dir_area[sizeof(page_dir_entry) * 1024 * 100] alignas(0x1000);
-static char page_table_area[sizeof(page_table_entry) * 1024 * 100] alignas(0x1000);
+static p2::internal_page_allocator<sizeof(page_dir_entry)   * 1024 * 100, 0x1000> page_dir_allocator;
+static p2::internal_page_allocator<sizeof(page_table_entry) * 1024 * 100, 0x1000> page_table_allocator;
 
-static p2::page_allocator page_dir_allocator((uintptr_t)page_dir_area,
-                                             (uintptr_t)(page_dir_area + sizeof(page_dir_area)));
-static p2::page_allocator page_table_allocator((uintptr_t)page_table_area,
-                                               (uintptr_t)(page_table_area + sizeof(page_table_area)));
-
-static p2::page_allocator *pmem;
+static p2::page_allocator *user_space_allocator;
 
 static p2::pool<space_info, 16, mem_space> spaces;
 static mem_space current_space = spaces.end();
@@ -72,9 +71,9 @@ void mem_init(const region *phys_region)
                       phys_region->end,
                       ((uintptr_t)(phys_region->end - phys_region->start) / 1024 / 1024)));
 
-  static p2::page_allocator alloc{phys_region->start, phys_region->end};
+  static p2::page_allocator alloc{{phys_region->start, phys_region->end}, KERNEL_VIRTUAL_BASE};
   // TODO: fix this hackery
-  pmem = &alloc;
+  user_space_allocator = &alloc;
 
   int_register(INT_PAGEFAULT, isr_page_fault, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 }
@@ -85,39 +84,27 @@ void mem_free_page_dir(void *page_directory)
 
   for (int i = 0; i < 1024; ++i) {
     if (page_dir[i].flags & MEM_PE_P) {
-      mem_free_page((void *)(page_dir[i].table_11_31 << 12));
+      free_page((void *)(page_dir[i].table_11_31 << 12));
     }
   }
 
-  mem_free_page(page_dir);
+  free_page(page_dir);
 }
 
-void *mem_create_page_dir()
+static void *alloc_page()
 {
-  return mem_alloc_page_zero();
-}
-
-void *mem_alloc_page()
-{
-  assert(pmem);
-  void *mem = pmem->alloc_page();
-  dbg_puts(mem, "allocated 4k page at %x, pages left: %d", (uintptr_t)mem, pmem->free_space());
+  assert(user_space_allocator);
+  void *mem = user_space_allocator->alloc_page();
+  dbg_puts(mem, "allocated 4k page at %x, pages left: %d", (uintptr_t)mem, user_space_allocator->free_space());
   return mem;
 }
 
-void *mem_alloc_page_zero()
+static void free_page(void *page)
 {
-  assert(pmem);
-  void *mem = pmem->alloc_page_zero();
-  dbg_puts(mem, "allocated 4k page at %x, pages left: %d", (uintptr_t)mem, pmem->free_space());
-  return mem;
-}
-
-void mem_free_page(void *page)
-{
-  assert(pmem);
-  pmem->free_page(page);
-  dbg_puts(mem, "freed 4k page at %x, pages left: %d", (uintptr_t)page, pmem->free_space());
+  assert(user_space_allocator);
+  dbg_puts(mem, "trying to free %x", (uintptr_t)page);
+  user_space_allocator->free_page(page);
+  dbg_puts(mem, "freed 4k page at %x, pages left: %d", (uintptr_t)page, user_space_allocator->free_space());
 }
 
 mem_space mem_create_space()
@@ -130,14 +117,19 @@ mem_space mem_create_space()
 void mem_destroy_space(mem_space space_handle)
 {
   if (space_handle == current_space) {
-    // We assume that the kernel fallback address space (0) is
-    // compatible with `adrspc`.
+    // We assume that the kernel fallback space (0) is compatible with
+    // the current space.
 
-    // TODO: remove magic 0 constant
+    // TODO: don't use a magic 0 constant
     mem_activate_space(0);
   }
 
   space_info *space = &spaces[space_handle];
+
+  for (size_t i = 0; i < space->areas.watermark(); ++i) {
+    if (space->areas.valid(i) && space->areas[i].type == AREA_ALLOC)
+      free_alloc_area(*space, space->areas[i]);
+  }
 
   for (int i = 0; i < 1024; ++i) {
     if (!(space->page_dir[i].flags & MEM_PE_P)) {
@@ -163,6 +155,28 @@ void mem_activate_space(mem_space space_handle)
   uintptr_t page_dir_phys = KERNVIRT2PHYS((uintptr_t)space->page_dir);
   asm volatile("mov cr3, %0" : : "a"(page_dir_phys) : "memory");
   // TODO: fix all inline asm to have the same syntax (AT&T vs Intel) as *.s files
+}
+
+static page_table_entry *find_pte(const space_info &space, uintptr_t virtual_address)
+{
+  int pde_idx = virtual_address >> 22;
+  const page_dir_entry &pde = space.page_dir[pde_idx];
+  if (!(pde.flags & MEM_PE_P))
+    return nullptr;
+
+  page_table_entry *page_table = (page_table_entry *)PHYS2KERNVIRT(pde.table_11_31 << 12);
+  assert(page_table);
+
+  page_table_entry *pte = &page_table[(virtual_address >> 12) & 0x3FF];
+  if (!(pte->flags & MEM_PE_P))
+    return nullptr;
+
+  return pte;
+}
+
+static uintptr_t pte_frame(const page_table_entry *pte)
+{
+  return pte->frame_11_31 << 12;
 }
 
 void mem_map_page(mem_space space_handle, uint32_t virt, uint32_t phys, uint16_t flags)
@@ -203,6 +217,7 @@ void mem_map_kernel(mem_space space_handle, uint32_t flags)
   // TODO: we don't really want to know about multiboot everywhere
   uintptr_t end = p2::max(multiboot_last_address(), (uintptr_t)&kernel_end);
 
+  // Map kernel sections (.text, .bss, .rodata, etc)
   for (uintptr_t address = KERNEL_VIRTUAL_BASE;
        address < ALIGN_UP(end, 0x1000);
        address += 0x1000) {
@@ -211,6 +226,15 @@ void mem_map_kernel(mem_space space_handle, uint32_t flags)
       mem_map_page(space_handle, address, KERNVIRT2PHYS(address), flags & ~MEM_PE_RW);
     else
       mem_map_page(space_handle, address, KERNVIRT2PHYS(address), flags);
+  }
+
+  // Map allocator bookkeeping area
+  assert(user_space_allocator);
+
+  for (uintptr_t phys_address = user_space_allocator->bookkeeping_phys_region().start;
+       phys_address < user_space_allocator->bookkeeping_phys_region().end;
+       phys_address += 0x1000) {
+    mem_map_page(space_handle, PHYS2KERNVIRT(phys_address), phys_address, flags);
   }
 }
 
@@ -272,10 +296,26 @@ static void page_fault_guard(area_info &/*area*/, uintptr_t faulted_address)
 static void page_fault_alloc(area_info &area, uintptr_t faulted_address)
 {
   uintptr_t page_address = ALIGN_DOWN(faulted_address, 0x1000);
-  uintptr_t phys_block = (uintptr_t)mem_alloc_page();
+  uintptr_t phys_block = (uintptr_t)alloc_page();
   dbg_puts(mem, "alloc map; allocated %x and mapping it at %x", phys_block, page_address);
   mem_map_page(current_space, page_address, phys_block, area.flags);
   memset((void *)page_address, 0, 0x1000);
+}
+
+static void free_alloc_area(space_info &space, area_info &area)
+{
+  assert(area.type == AREA_ALLOC);
+
+  for (uintptr_t page_address = area.start;
+       page_address < area.end;
+       page_address += 0x1000) {
+
+    if (auto *pte = find_pte(space, page_address); pte && pte->flags & MEM_PE_P) {
+      dbg_puts(mem, "free allocated page virt %x (%x)", page_address, pte_frame(pte));
+      free_page((void *)pte_frame(pte));
+      //pte->flags &= ~MEM_PE_P;
+    }
+  }
 }
 
 extern "C" void int_page_fault(isr_registers regs)

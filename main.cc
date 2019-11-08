@@ -92,8 +92,6 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   ramfs_init();
   vfs_print();
 
-  proc_init();
-
   // Prepare for any interrupts that might happen before we start multitasking
   size_t interrupt_stack_length = sizeof(interrupt_stack) / sizeof(interrupt_stack[0]);
   tss_set_kernel_stack((uint32_t)&interrupt_stack[interrupt_stack_length - 1]);
@@ -104,6 +102,10 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   largest_region.start = ALIGN_UP(largest_region.start, 0x1000);
   largest_region.end = ALIGN_DOWN(largest_region.end, 0x1000);
   mem_init(&largest_region);
+
+  // Create process structures, this needs a working memory subsystem
+  proc_init();
+
 
   // Overwrite the current mappings for the kernel to only include the
   // relevant parts and only at KERNEL_VIRT_BASE.

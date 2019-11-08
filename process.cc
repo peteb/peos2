@@ -84,7 +84,6 @@ static void destroy_process(proc_handle pid) {
     vfs_close_handle(pid, i);
   }
 
-
   mem_destroy_space(pcb.space_handle);
 
   // Remove the process so it won't get picked for execution
