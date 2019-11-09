@@ -103,7 +103,7 @@ int             vfs_close_handle(proc_handle pid, int handle);
 // @filename: aboslute global path
 // @flags: defined in syscall_decls.h
 //
-// Opens a file just as how SYSCALL(open) would, but accessible for
+// Opens a file just as how syscallN(open) would, but accessible for
 // the kernel to use for non-current processes.
 //
 int vfs_syscall_open(proc_handle pid, const char *filename, uint32_t flags);

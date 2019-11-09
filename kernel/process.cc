@@ -404,5 +404,5 @@ extern "C" void _user_proc_cleanup()
 {
   uint32_t retval;
   asm volatile("" : "=a"(retval));
-  SYSCALL1(exit, retval);
+  syscall1(exit, retval);
 }

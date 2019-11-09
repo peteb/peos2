@@ -66,13 +66,13 @@ int elf_map_process(proc_handle pid, const char *filename)
   elf_header hdr = {};
 
   // TODO: flags
-  int fd = SYSCALL2(open, filename, 0);
+  int fd = syscall2(open, filename, 0);
   assert(fd >= 0);
 
   {
     // TODO: how do we handle if this would block?
     // TODO: repeating read
-    int bytes_read = SYSCALL3(read, fd, (char *)&hdr, sizeof(hdr));  // TODO: read more if 0 < read < sizeof(header)
+    int bytes_read = syscall3(read, fd, (char *)&hdr, sizeof(hdr));  // TODO: read more if 0 < read < sizeof(header)
     assert(bytes_read == sizeof(hdr));  // TODO: correct error handling
   }
 
@@ -111,7 +111,7 @@ int elf_map_process(proc_handle pid, const char *filename)
 
   {
     // TODO: repeating read
-    size_t bytes_read = SYSCALL3(read, fd, (char *)pht, sizeof(elf_program_header) * hdr.e_phnum);
+    size_t bytes_read = syscall3(read, fd, (char *)pht, sizeof(elf_program_header) * hdr.e_phnum);
     assert(bytes_read == sizeof(elf_program_header) * hdr.e_phnum);
   }
 
@@ -139,7 +139,7 @@ int elf_map_process(proc_handle pid, const char *filename)
     }
   }
 
-  SYSCALL1(close, fd);
+  syscall1(close, fd);
 
   proc_setup_stack(pid, (void *)hdr.e_entry);
 

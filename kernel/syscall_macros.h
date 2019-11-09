@@ -91,11 +91,11 @@ inline static int _syscall_##name(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5) \
   return ret;                                                        \
 }
 
-#define SYSCALL0(name) _syscall_##name()
-#define SYSCALL1(name, p1) _syscall_##name(p1)
-#define SYSCALL2(name, p1, p2) _syscall_##name(p1, p2)
-#define SYSCALL3(name, p1, p2, p3) _syscall_##name(p1, p2, p3)
-#define SYSCALL4(name, p1, p2, p3, p4) _syscall_##name(p1, p2, p3, p4)
-#define SYSCALL5(name, p1, p2, p3, p4, p5) _syscall_##name(p1, p2, p3, p4, p5)
+#define syscall0(name) _syscall_##name()
+#define syscall1(name, p1) _syscall_##name(p1)
+#define syscall2(name, p1, p2) _syscall_##name(p1, p2)
+#define syscall3(name, p1, p2, p3) _syscall_##name(p1, p2, p3)
+#define syscall4(name, p1, p2, p3, p4) _syscall_##name(p1, p2, p3, p4)
+#define syscall5(name, p1, p2, p3, p4, p5) _syscall_##name(p1, p2, p3, p4, p5)
 
 #endif // !PEOS2_SYSCALL_MACROS_H
