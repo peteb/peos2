@@ -3,8 +3,8 @@ CC=i686-elf-gcc
 CXX=i686-elf-g++
 AS=i686-elf-as
 OPT_LEVEL=-g
-CFLAGS=-std=gnu99 -m32 -masm=intel -ffreestanding $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -DNDEBUG
-CXXFLAGS=-std=c++17 -m32 -masm=intel -ffreestanding $(OPT_LEVEL) -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fno-threadsafe-statics -mno-red-zone -mgeneral-regs-only -I. -DNDEBUG
+CFLAGS=-std=gnu99 -m32 -masm=intel -ffreestanding -I.. $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -DNDEBUG
+CXXFLAGS=-std=c++17 -m32 -masm=intel -ffreestanding -I.. $(OPT_LEVEL) -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fno-threadsafe-statics -mno-red-zone -mgeneral-regs-only -I. -DNDEBUG
 
 OBJECTS=first_program.o
 

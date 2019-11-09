@@ -48,11 +48,11 @@ extern "C" int init_main()
 
   // TODO: enumerate files in /ramfs/modules and execute extract_tar
   // on those ending with .tar
-  extract_tar("/ramfs/modules/test.tar");
+  extract_tar("/ramfs/modules/init.tar");
 
   {
     // Try to read a file
-    int read_fd = verify(SYSCALL2(open, "/ramfs/bin/panic.h", 0));
+    /*int read_fd = verify(SYSCALL2(open, "/ramfs/bin/panic.h", 0));
     char buf[2];
     int bytes_read;
 
@@ -60,15 +60,16 @@ extern "C" int init_main()
       //verify(SYSCALL3(write, 0, buf, bytes_read));
     }
 
-    verify(SYSCALL1(close, read_fd));
+    verify(SYSCALL1(close, read_fd));*/
   }
 
-  int mmap_fd = verify(SYSCALL2(open, "/ramfs/x86.cc", 0));
+  /*int mmap_fd = verify(SYSCALL2(open, "/ramfs/x86.cc", 0));
   verify(SYSCALL5(mmap, (void *)0xBEEF0000, (void *)0xBEEFF000, mmap_fd, 0, 0));
 
   char *data = (char *)0xBEEF0000;
   SYSCALL3(write, stdout, data, 4100);
 
+  */
 
   // Start process
   verify(SYSCALL1(spawn, "/ramfs/bin/first_program"));
