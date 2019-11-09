@@ -11,7 +11,7 @@
 
 namespace p2 {
   //
-  // Pool allocator with a linked list freelist. A benefit of the
+  // Pool allocator with a linked list free list. A benefit of the
   // linked list is that the next pointers are next to the element
   // data, leading to fewer cache misses. This solution has been
   // measured to be faster than a stack based allocator but more tests
@@ -64,12 +64,12 @@ namespace p2 {
     {
       _IndexT idx;
 
-      if (_freelist_head != END_SENTINEL) {
-        // We've got items on the freelist which we can use
-        idx = _freelist_head;
-        _freelist_head = element(idx)->next_free;
-        if (_freelist_head == END_SENTINEL)
-          _freelist_tail = END_SENTINEL;
+      if (_free_list_head != END_SENTINEL) {
+        // We've got items on the free list which we can use
+        idx = _free_list_head;
+        _free_list_head = element(idx)->next_free;
+        if (_free_list_head == END_SENTINEL)
+          _free_list_tail = END_SENTINEL;
 
         element(idx)->next_free = END_SENTINEL;
       }
@@ -95,12 +95,12 @@ namespace p2 {
         return;
       }
 
-      // Add the item to the freelist
-      element(idx)->next_free = _freelist_head;
-      _freelist_head = idx;
+      // Add the item to the free list
+      element(idx)->next_free = _free_list_head;
+      _free_list_head = idx;
 
-      if (_freelist_tail == END_SENTINEL)
-        _freelist_tail = idx;
+      if (_free_list_tail == END_SENTINEL)
+        _free_list_tail = idx;
 
       --_count;
     }
@@ -113,10 +113,10 @@ namespace p2 {
       if (element(idx)->next_free != END_SENTINEL)
         return false;
 
-      if (idx == _freelist_head)
+      if (idx == _free_list_head)
         return false;
 
-      if (idx == _freelist_tail)
+      if (idx == _free_list_tail)
         return false;
 
       return true;
@@ -161,8 +161,8 @@ namespace p2 {
     }
 
     _IndexT _watermark = 0,
-      _freelist_head = END_SENTINEL,
-      _freelist_tail = END_SENTINEL,
+      _free_list_head = END_SENTINEL,
+      _free_list_tail = END_SENTINEL,
       _count = 0;
 
     char _element_data[_MaxLen * sizeof(node)] alignas(node);

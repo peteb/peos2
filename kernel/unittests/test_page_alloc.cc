@@ -49,7 +49,7 @@ TESTSUITE(p2::page_alloc) {
     ASSERT_PANIC(alloc.alloc_page());
   }
 
-  TESTCASE("scenario: freelist allocation") {
+  TESTCASE("scenario: free list allocation") {
     char buf[0x1000 + 0x1000 * 32] alignas(0x1000);
     p2::page_allocator alloc({(uintptr_t)buf, (uintptr_t)buf + sizeof(buf)}, 0);
 
@@ -65,16 +65,16 @@ TESTSUITE(p2::page_alloc) {
     void *page4 = alloc.alloc_page();
     ASSERT_EQ(alloc.free_pages(), 28u);
 
-    // Remove one item, causing a hole (so the item is pushed on the freelist/stack)
+    // Remove one item, causing a hole (so the item is pushed on the free list/stack)
     alloc.free_page(page2);
     ASSERT_EQ(alloc.free_pages(), 29u);
 
-    // Check that new allocation will use the freelist
+    // Check that new allocation will use the free list
     void *page2_temp = alloc.alloc_page();
     ASSERT_EQ(page2_temp, page2);
     ASSERT_EQ(alloc.free_pages(), 28u);
 
-    // Free all pages (puting them all on the freelist
+    // Free all pages (puting them all on the free list
     alloc.free_page(page1);
     alloc.free_page(page2);
     alloc.free_page(page3);

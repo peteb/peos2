@@ -38,14 +38,14 @@ namespace p2 {
       assert((phys_region.start & 0xFFF) == 0 && "range must be 4k aligned");
       assert((phys_region.end & 0xFFF) == 0 && "range must be 4k aligned");
 
-      // Calculate how much space we need for the freelist stack
+      // Calculate how much space we need for the free list stack
       uintptr_t needed_for_bookkeeping = ((phys_region.end - phys_region.start) / 0x1000) * sizeof(uintptr_t);
-      uintptr_t freelist_size_pages = (needed_for_bookkeeping + 0x0FFF) / 0x1000;
+      uintptr_t free_list_size_pages = (needed_for_bookkeeping + 0x0FFF) / 0x1000;
 
-      // TODO: we're wasting some space here because the freelist
+      // TODO: we're wasting some space here because the free list
       // takes space out of the allocatable region. Make this tighter.
       _phys_bookkeeping.start = phys_region.start;
-      _phys_bookkeeping.end = phys_region.start + freelist_size_pages * 0x1000;
+      _phys_bookkeeping.end = phys_region.start + free_list_size_pages * 0x1000;
 
       assert((_phys_bookkeeping.start & 0xFFF) == 0);
       assert((_phys_bookkeeping.end & 0xFFF) == 0);

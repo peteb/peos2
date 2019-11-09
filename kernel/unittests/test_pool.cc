@@ -47,7 +47,7 @@ TESTSUITE(p2::pool) {
         ASSERT_EQ(items.size(), size_t(i + 1));
       }
 
-      // From bottom: using freelist
+      // From bottom: using free list
       for (int i = 0; i < 6; ++i) {
         items.erase(i);
       }
