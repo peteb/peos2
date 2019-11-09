@@ -21,6 +21,7 @@
 #define SYSCALL_NUM_YIELD       10
 #define SYSCALL_NUM_EXIT        11
 #define SYSCALL_NUM_KILL        12
+#define SYSCALL_NUM_SPAWN       13
 
 #define SYSCALL_NUM_MMAP        20
 
@@ -52,6 +53,7 @@ SYSCALL_DEF1(mkdir,   SYSCALL_NUM_MKDIR, const char *);
 
 // Process definitions
 SYSCALL_DEF1(exit,    SYSCALL_NUM_EXIT, int);
+SYSCALL_DEF1(spawn,   SYSCALL_NUM_SPAWN, const char *);
 
 // Memory definitions
 SYSCALL_DEF5(mmap,    SYSCALL_NUM_MMAP, void *, void *, int, uint32_t, uint8_t);

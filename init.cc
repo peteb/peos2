@@ -69,6 +69,10 @@ extern "C" int init_main()
   char *data = (char *)0xBEEF0000;
   SYSCALL3(write, stdout, data, 4100);
 
+
+  // Start process
+  verify(SYSCALL1(spawn, "/ramfs/x86.h"));
+
   // Start I/O
   int stdin = verify(SYSCALL2(open, "/dev/term0", 0));
   char input[240];

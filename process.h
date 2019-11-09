@@ -21,7 +21,9 @@ struct proc_fd {
 };
 
 void        proc_init();
-proc_handle proc_create(void *eip, uint32_t flags, const char *argument);
+proc_handle proc_create(uint32_t flags, const char *argument);
+void        proc_setup_stack(proc_handle pid, void *eip);
+void        proc_enqueue(proc_handle pid);
 void        proc_switch(proc_handle pid);
 void        proc_suspend(proc_handle pid);
 void        proc_resume(proc_handle pid);

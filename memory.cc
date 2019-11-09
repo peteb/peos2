@@ -271,6 +271,17 @@ mem_area mem_map_guard(mem_space space_handle, uintptr_t start, uintptr_t end)
 
 mem_area mem_map_alloc(mem_space space_handle, uintptr_t start, uintptr_t end, uint8_t flags)
 {
+  // Another nifty way of doing allocations would be to get rid of
+  // AREA_ALLOC and instead let people mmap /dev/zero, decreasing
+  // complexity in the kernel. On the other hand, I see a number of
+  // cons; 1) every process that needs more memory would need to keep
+  // an fd open to /dev/zero, requiring slightly more memory. 2) the
+  // extra fd risks user space mistakes causing "chaos", for example
+  // if they were to replace that fd with a file or stdin. 3) Not
+  // separating allocation from file mapping can lead to a slightly
+  // higher risk of a mistake in the kernel leading to user space
+  // pages getting unmapped.  Using AREA_ALLOC doesn't require any
+  // extra space over an mmap -- it's actually more memory efficient.
   return spaces[space_handle].areas.push_back({start, end, AREA_ALLOC, flags, 0});
 }
 
@@ -341,6 +352,7 @@ static void page_fault_file(area_info &area, uintptr_t faulted_address)
   ptrdiff_t area_offset = page_address - area.start;
   uint32_t file_offset = area_offset + fm_info.offset;
 
+  // TODO: syscall here is unnecessary; we're already in the kernel
   if (SYSCALL3(seek, fm_info.fd, file_offset, SEEK_BEG) < 0) {
     panic("failed to seek");
   }

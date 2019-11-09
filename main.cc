@@ -113,7 +113,9 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   mem_map_kernel(space, MEM_PE_P|MEM_PE_RW);
   mem_activate_space(space);
 
-  proc_create((void *)init_main, PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, "");
+  proc_handle init_pid = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, "");
+  proc_setup_stack(init_pid, (void *)init_main);
+  proc_enqueue(init_pid);
 
   // Let the mayhem begin
   asm volatile("sti");
