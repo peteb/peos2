@@ -126,7 +126,6 @@ void proc_setup_stack(proc_handle pid, void *eip)
   pcb.kpush(0);                                            // EBP
 
   size_t stack_area_size = 4096 * 1024;
-  size_t guard_size = 4096 * 10;
 
   // The first page of the stack is in a kernel pool, this is an easy
   // way for the kernel to be able to populate the stack, albeit
@@ -135,7 +134,6 @@ void proc_setup_stack(proc_handle pid, void *eip)
   mem_space space_handle = proc_get_space(pid);
   mem_map_linear(space_handle, user_space_stack_base - 0x1000, user_space_stack_base, KERNVIRT2PHYS((uintptr_t)user_stacks[user_stack_handle].base()) - 0x1000, MEM_PE_P|MEM_PE_RW|MEM_PE_U);
   mem_map_alloc(space_handle, user_space_stack_base - stack_area_size, user_space_stack_base - 0x1000, MEM_PE_P|MEM_PE_RW|MEM_PE_U);
-  mem_map_guard(space_handle, user_space_stack_base - stack_area_size - guard_size, user_space_stack_base - stack_area_size);
 }
 
 void proc_enqueue(proc_handle pid)

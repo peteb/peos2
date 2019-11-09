@@ -14,9 +14,8 @@
 #include "support/optional.h"
 
 #define AREA_LINEAR_MAP 1
-#define AREA_GUARD      2
-#define AREA_ALLOC      3
-#define AREA_FILE       4
+#define AREA_ALLOC      2
+#define AREA_FILE       3
 
 // Structs
 struct page_dir_entry {
@@ -265,11 +264,6 @@ mem_area mem_map_linear(mem_space space_handle,
   return space->areas.push_back({start, end, AREA_LINEAR_MAP, flags, map_handle});
 }
 
-mem_area mem_map_guard(mem_space space_handle, uintptr_t start, uintptr_t end)
-{
-  return spaces[space_handle].areas.push_back({start, end, AREA_GUARD, 0, 0});
-}
-
 mem_area mem_map_alloc(mem_space space_handle, uintptr_t start, uintptr_t end, uint8_t flags)
 {
   // Another nifty way of doing allocations would be to get rid of
@@ -324,13 +318,6 @@ static void page_fault_linear_map(area_info &area, uintptr_t faulted_address)
   ptrdiff_t area_offset = page_address - area.start;
   dbg_puts(mem, "linear map; mapping %x to %x", page_address, lm_info.phys_start + area_offset);
   mem_map_page(current_space, page_address, lm_info.phys_start + area_offset, area.flags);
-}
-
-static void page_fault_guard(area_info &/*area*/, uintptr_t faulted_address)
-{
-  dbg_puts(mem, "guard triggered at %x", faulted_address);
-  proc_kill(proc_current_pid(), 15);
-  proc_yield();
 }
 
 static void page_fault_alloc(area_info &area, uintptr_t faulted_address)
@@ -411,10 +398,6 @@ extern "C" void int_page_fault(isr_registers regs)
   switch (area.type) {
   case AREA_LINEAR_MAP:
     handler = page_fault_linear_map;
-    break;
-
-  case AREA_GUARD:
-    handler = page_fault_guard;
     break;
 
   case AREA_ALLOC:

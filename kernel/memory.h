@@ -41,7 +41,6 @@ void       mem_map_page(mem_space space, uint32_t virt, uint32_t phys, uint16_t 
 void       mem_map_kernel(mem_space space, uint32_t flags);
 void       mem_map_kernel_lazy(mem_space space, uint32_t flags);
 mem_area   mem_map_linear(mem_space space, uintptr_t start, uintptr_t end, uintptr_t phys_start, uint8_t flags);
-mem_area   mem_map_guard(mem_space space, uintptr_t start, uintptr_t end);
 mem_area   mem_map_alloc(mem_space space, uintptr_t start, uintptr_t end, uint8_t flags);
 mem_area   mem_map_fd(mem_space space, uintptr_t start, uintptr_t end, int fd, uint32_t offset, uint32_t file_size, uint8_t flags);
 
