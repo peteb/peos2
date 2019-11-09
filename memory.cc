@@ -42,6 +42,7 @@ struct linear_map_info {
 struct file_map_info {
   int fd;
   uint32_t offset;
+  uint32_t size;
 };
 
 struct space_info {
@@ -290,10 +291,11 @@ mem_area mem_map_fd(mem_space space_handle,
                     uintptr_t end,
                     int fd,
                     uint32_t offset,
+                    uint32_t file_size,
                     uint8_t flags)
 {
   space_info &space = spaces[space_handle];
-  uint16_t map_handle = space.file_maps.push_back({fd, offset});
+  uint16_t map_handle = space.file_maps.push_back({fd, offset, file_size});
   return space.areas.push_back({start, end, AREA_FILE, flags, map_handle});
 }
 
@@ -357,7 +359,9 @@ static void page_fault_file(area_info &area, uintptr_t faulted_address)
     panic("failed to seek");
   }
 
-  if (SYSCALL3(read, fm_info.fd, (char *)page_address, 0x1000) < 0) {
+  uint32_t read_count = p2::min<uint32_t>(fm_info.offset + fm_info.size - file_offset, 0x1000);
+  dbg_puts(mem, "Reading max %d bytes", read_count);
+  if (SYSCALL3(read, fm_info.fd, (char *)page_address, read_count) < 0) {
     panic("failed to read");
   }
 }
@@ -431,7 +435,14 @@ extern "C" void int_page_fault(isr_registers regs)
 static int syscall_mmap(void *start, void *end, int fd, uint32_t offset, uint8_t flags)
 {
   // TODO: check that the pointers are in valid space
-  mem_map_fd(current_space, (uintptr_t)start, (uintptr_t)end, fd, offset, flags | MEM_PE_P|MEM_PE_RW|MEM_PE_U);
+  // TODO: add parameter for size!
+  mem_map_fd(current_space,
+             (uintptr_t)start,
+             (uintptr_t)end,
+             fd,
+             offset,
+             p2::numeric_limits<uint32_t>::max(),
+             flags | MEM_PE_P|MEM_PE_RW|MEM_PE_U);
   // TODO: handle errors
   return 0;
 }

@@ -71,7 +71,7 @@ extern "C" int init_main()
 
 
   // Start process
-  verify(SYSCALL1(spawn, "/ramfs/x86.h"));
+  verify(SYSCALL1(spawn, "/ramfs/bin/first_program"));
 
   // Start I/O
   int stdin = verify(SYSCALL2(open, "/dev/term0", 0));
@@ -106,7 +106,7 @@ void load_multiboot_modules()
 
 void extract_tar(const char *filename)
 {
-  const p2::string<7> expected_magic("ustar");
+  const p2::string<6> expected_magic("ustar");
   int fd = verify(SYSCALL2(open, filename, 0));
 
   tar_entry hdr;
@@ -122,7 +122,7 @@ void extract_tar(const char *filename)
     }
 
     // TODO: do the string comparison without copying the string first
-    if (p2::string<sizeof(hdr.magic) + 1>(hdr.magic, sizeof(hdr.magic)) != expected_magic) {
+    if (p2::string<6>(hdr.magic, sizeof(hdr.magic)) != expected_magic) {
       panic("incorrect tar magic");
     }
 

@@ -8,6 +8,7 @@
 #include "memory.h"
 #include "filesystem.h"
 #include "debug.h"
+#include "elf.h"
 
 #include "support/pool.h"
 #include "support/format.h"
@@ -373,8 +374,11 @@ static uint32_t syscall_kill(uint32_t pid)
 static int syscall_spawn(const char *filename)
 {
   dbg_puts(proc, "spawning process with image '%s'", filename);
-  // TODO: implement
-  return 0;
+  // TODO: handle flags
+  proc_handle pid = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, "");
+  elf_map_process(pid, filename);
+  proc_enqueue(pid);
+  return pid;
 }
 
 //

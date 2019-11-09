@@ -4,3 +4,4 @@ vmpeoz
 unittest
 *.tar
 .*
+*.d

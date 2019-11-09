@@ -7,6 +7,6 @@
 
 #include "process.h"
 
-int elf_map_process(const char *filename, proc_handle pid);
+int elf_map_process(proc_handle pid, const char *filename);
 
 #endif // !PEOS2_ELF_H
