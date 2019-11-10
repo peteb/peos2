@@ -333,20 +333,30 @@ void proc_kill(proc_handle pid, uint32_t exit_status)
   destroy_process(pid);
 }
 
-int proc_create_fd(proc_handle pid, proc_fd fd)
+p2::opt<proc_fd_handle> proc_create_fd(proc_handle pid, proc_fd fd)
 {
-  process_control_block &pcb = processes[pid];
-  return pcb.file_descriptors.push_back(fd);
+  if (process_control_block *proc_info = processes.at(pid)) {
+    if (!proc_info->file_descriptors.full())
+      return proc_info->file_descriptors.push_back(fd);
+  }
+
+  return {};
 }
 
-proc_fd *proc_get_fd(proc_handle pid, int fd)
+proc_fd *proc_get_fd(proc_handle pid, proc_fd_handle fd)
 {
-  return &processes[pid].file_descriptors[fd];
+  if (process_control_block *proc_info = processes.at(pid))
+    return proc_info->file_descriptors.at(fd);
+
+  return nullptr;
 }
 
-void proc_remove_fd(proc_handle pid, int fd)
+void proc_remove_fd(proc_handle pid, proc_fd_handle fd)
 {
-  processes[pid].file_descriptors.erase(fd);
+  if (process_control_block *proc_info = processes.at(pid)) {
+    if (proc_info->file_descriptors.valid(fd))
+      proc_info->file_descriptors.erase(fd);
+  }
 }
 
 mem_space proc_get_space(proc_handle pid)

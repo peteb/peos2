@@ -134,6 +134,22 @@ namespace p2 {
       return *element(idx)->value();
     }
 
+    T *at(_IndexT idx)
+    {
+      if (!valid(idx))
+        return nullptr;
+
+      return element(idx)->value();
+    }
+
+    const T *at(_IndexT idx) const
+    {
+      if (!valid(idx))
+        return nullptr;
+
+      return element(idx)->value();
+    }
+
     size_t size() const
     {
       return _count;

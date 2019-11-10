@@ -36,6 +36,7 @@
 #define EINVOP       -100  // Invalid operation
 #define ENOENT       -200  // Some component of the given path is missing
 #define ENODIR       -201  // Path parent isn't a directory
+#define ENODRIVER    -202  // Path doesn't contain a mapped driver
 
 // Control numbers
 #define CTRL_RAMFS_SET_FILE_RANGE 0x0100      // (start_addr, size)

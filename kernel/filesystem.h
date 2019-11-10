@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include "process.h"
+#include "support/result.h"
 
 #define VFS_DIRECTORY    0x01
 #define VFS_DRIVER       0x02
@@ -106,6 +107,6 @@ int             vfs_close_handle(proc_handle pid, int handle);
 // Opens a file just as how syscallN(open) would, but accessible for
 // the kernel to use for non-current processes.
 //
-int vfs_syscall_open(proc_handle pid, const char *filename, uint32_t flags);
+p2::res<proc_fd_handle> vfs_syscall_open(proc_handle pid, const char *filename, uint32_t flags);
 
 #endif // !PEOS2_FILESYSTEM_H

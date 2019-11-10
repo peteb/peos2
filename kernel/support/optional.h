@@ -31,6 +31,18 @@ namespace p2 {
       return *reinterpret_cast<const T *>(_storage);
     }
 
+    T *operator ->()
+    {
+      assert(_is_assigned);
+      return reinterpret_cast<T *>(_storage);
+    }
+
+    const T *operator ->() const
+    {
+      assert(_is_assigned);
+      return reinterpret_cast<const T *>(_storage);
+    }
+
     explicit operator bool() const
     {
       return _is_assigned;
@@ -50,6 +62,8 @@ namespace p2 {
     bool _is_assigned = false;
   };
 
+  template<typename T>
+  using opt = optional<T>;
 }
 
 #endif // !PEOS2_SUPPORT_OPTIONAL_H

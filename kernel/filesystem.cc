@@ -140,11 +140,12 @@ void vfs_print()
 }
 
 struct ffd_retval {
+  ffd_retval(vfs_node_handle node_idx, const char *rest_path) : node_idx(node_idx), rest_path(rest_path) {}
   vfs_node_handle node_idx;
   const char *rest_path;
 };
 
-static ffd_retval find_first_driver(vfs_node_handle parent_idx, const char *path)
+static p2::opt<ffd_retval> find_first_driver(vfs_node_handle parent_idx, const char *path)
 {
   if (nodes[parent_idx].type & VFS_DRIVER) {
     return {parent_idx, path};
@@ -170,7 +171,7 @@ static ffd_retval find_first_driver(vfs_node_handle parent_idx, const char *path
     return find_first_driver(dirent->node, next_segment);
   }
 
-  return {nodes.end(), next_segment};
+  return {};
 }
 
 void *vfs_get_opaque(vfs_device *device)
@@ -225,12 +226,13 @@ static int syscall_read(int fd, char *data, int length)
   return device_node->driver->read(pfd->value, data, length);
 }
 
-int vfs_syscall_open(proc_handle pid, const char *filename, uint32_t flags)
+p2::res<proc_fd_handle> vfs_syscall_open(proc_handle pid, const char *filename, uint32_t flags)
 {
   auto driver = find_first_driver(root_dir, filename);
-  assert(driver.node_idx != nodes.end());
+  if (!driver)
+    return p2::failure(ENODRIVER);
 
-  const vfs_node &driver_node = nodes[driver.node_idx];
+  const vfs_node &driver_node = nodes[driver->node_idx];
   assert(driver_node.type & VFS_DRIVER);
   assert(driver_node.info_node != drivers.end());
 
@@ -238,28 +240,39 @@ int vfs_syscall_open(proc_handle pid, const char *filename, uint32_t flags)
   assert(device_node.driver);
 
   if (!device_node.driver->open)
-    return EINVOP;
+    return p2::failure(EINVOP);
 
   // TODO: handle the error cases better than asserts
 
-  int local_fd = device_node.driver->open(&device_node, driver.rest_path, flags);
+  int local_fd = device_node.driver->open(&device_node, driver->rest_path, flags);
   // TODO: check that it returned OK
-  int proc_fd = proc_create_fd(pid, {(void *)&device_node, local_fd});
-  dbg_puts(vfs, "opened %s at %d.%d", filename, pid, proc_fd);
-  return proc_fd;
+  p2::opt<proc_fd_handle> proc_local_handle = proc_create_fd(pid, {(void *)&device_node, local_fd});
+  assert(proc_local_handle);
+  dbg_puts(vfs, "opened %s at %d.%d", filename, pid, *proc_local_handle);
+  return p2::success(*proc_local_handle);
 }
 
 static int syscall_open(const char *filename, uint32_t flags)
 {
-  return vfs_syscall_open(proc_current_pid(), filename, flags);
+  p2::res<proc_fd_handle> open_res = vfs_syscall_open(proc_current_pid(), filename, flags);
+
+  if (open_res) {
+    assert(*open_res >= 0);
+    return *open_res;
+  }
+  else {
+    assert(open_res.error() < 0);
+    return open_res.error();
+  }
 }
 
 static int syscall_mkdir(const char *path)
 {
   auto driver = find_first_driver(root_dir, path);
-  assert(driver.node_idx != nodes.end());
+  if (!driver)
+    return ENODRIVER;
 
-  const vfs_node &driver_node = nodes[driver.node_idx];
+  const vfs_node &driver_node = nodes[driver->node_idx];
   assert(driver_node.type & VFS_DRIVER);
   assert(driver_node.info_node != drivers.end());
 
@@ -269,7 +282,7 @@ static int syscall_mkdir(const char *path)
   if (!device_node.driver->mkdir)
     return EINVOP;
 
-  return device_node.driver->mkdir(driver.rest_path);
+  return device_node.driver->mkdir(driver->rest_path);
 }
 
 static int syscall_close(int fd)

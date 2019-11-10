@@ -4,7 +4,8 @@
 #include "memareas.h"
 #include "memory.h"
 #include "tar.h"
-
+#include "process.h"
+#include "support/result.h"
 #include "support/format.h"
 
 extern multiboot_info *multiboot_header;
@@ -30,7 +31,6 @@ static int verify(int retval)
 static void load_multiboot_modules();
 static void extract_tar(const char *filename);
 
-
 //
 // Kernel kicks off execution of this user space program "as soon as
 // possible", which is after the kernel and all the drivers have been
@@ -45,6 +45,7 @@ extern "C" int init_main()
   stdout = verify(syscall2(open, "/dev/term0", 0));
 
   load_multiboot_modules();
+
 
   // TODO: enumerate files in /ramfs/modules and execute extract_tar
   // on those ending with .tar

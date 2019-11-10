@@ -115,11 +115,17 @@ int elf_map_process(proc_handle pid, const char *filename)
     assert(bytes_read == sizeof(elf_program_header) * hdr.e_phnum);
   }
 
-  // So we've managed to parse the ELF file a bit and get the program
+  syscall1(close, fd);
+
+  // So we've managed to parse the ELF file a bit to get the program
   // header table. Let's set up the file descriptor in the target
   // process.
-  int proc_fd = vfs_syscall_open(pid, filename, 0);  // TODO: flags
-  assert(proc_fd >= 0);
+  p2::res<proc_fd_handle> img_open_res = vfs_syscall_open(pid, filename, 0);  // TODO: flags
+
+  if (!img_open_res)
+    return img_open_res.error();
+
+  proc_fd_handle proc_fd = *img_open_res;
 
   for (int i = 0; i < hdr.e_phnum; ++i) {
     dbg_puts(elf, "type: %x ofs: %x virt: %x flags: %x",
@@ -138,8 +144,6 @@ int elf_map_process(proc_handle pid, const char *filename)
                  MEM_PE_P|MEM_PE_U|MEM_PE_RW);  // TODO: flags
     }
   }
-
-  syscall1(close, fd);
 
   proc_setup_stack(pid, (void *)hdr.e_entry);
 
