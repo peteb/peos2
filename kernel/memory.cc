@@ -59,9 +59,9 @@ struct file_map_info {
 struct space_info {
   space_info(page_dir_entry *page_dir) : page_dir(page_dir) {}
   page_dir_entry *page_dir;
-  p2::pool<area_info, 8> areas;
-  p2::pool<linear_map_info, 4> linear_maps;
-  p2::pool<file_map_info, 4> file_maps;
+  p2::pool<area_info, 32> areas;
+  p2::pool<linear_map_info, 16> linear_maps;
+  p2::pool<file_map_info, 16> file_maps;
 };
 
 
@@ -260,25 +260,48 @@ void mem_map_kernel(mem_space space_handle, uint16_t flags)
 {
   // TODO: we don't really want to know about multiboot everywhere
   uintptr_t end = p2::max(multiboot_last_address(), (uintptr_t)&kernel_end);
-
-  // Map kernel sections (.text, .bss, .rodata, etc)
-  for (uintptr_t address = KERNEL_VIRTUAL_BASE;
-       address < ALIGN_UP(end, 0x1000);
-       address += 0x1000) {
-
-    if (address >= (uintptr_t)&__start_READONLY && address <= ALIGN_UP((uintptr_t)&__stop_READONLY, 0x1000))
-      map_page(space_handle, address, KERNVIRT2PHYS(address), page_flags(flags & ~MEM_AREA_READWRITE));
-    else
-      map_page(space_handle, address, KERNVIRT2PHYS(address), page_flags(flags & ~MEM_AREA_EXECUTABLE));
-  }
-
-  // Map allocator bookkeeping area
   assert(user_space_allocator);
 
-  for (uintptr_t phys_address = user_space_allocator->bookkeeping_phys_region().start;
-       phys_address < user_space_allocator->bookkeeping_phys_region().end;
-       phys_address += 0x1000) {
-    map_page(space_handle, PHYS2KERNVIRT(phys_address), phys_address, page_flags(flags));
+  struct {
+    uintptr_t virt_address;
+    int flags;
+  } segments[] = {
+    {0,                                                                    -1},
+    {KERNEL_VIRTUAL_BASE,                                                  flags & ~MEM_AREA_EXECUTABLE},
+    // Misc stuff before the code starts
+
+    {ALIGN_UP((uintptr_t)&__start_READONLY, 0x1000),                       flags & ~MEM_AREA_READWRITE},
+    // Kernel .text, .rodata
+
+    {ALIGN_DOWN((uintptr_t)&__stop_READONLY, 0x1000),                      flags & ~MEM_AREA_EXECUTABLE},
+    // Kernel .bss, .data, etc
+
+    {ALIGN_UP(end, 0x1000),                                                -1},
+    // ??
+
+    {PHYS2KERNVIRT(user_space_allocator->bookkeeping_phys_region().start), flags & ~MEM_AREA_EXECUTABLE},
+    // Metadata for the physical page allocator
+
+    {PHYS2KERNVIRT(user_space_allocator->bookkeeping_phys_region().end),   -1},
+  };
+
+  uintptr_t current_address = 0;
+  int last_flags = 0;
+
+  for (size_t i = 0; i < ARRAY_SIZE(segments); ++i) {
+    if (segments[i].virt_address != current_address && last_flags != -1) {
+      // Map previous segment
+      mem_map_linear_eager(space_handle,
+                           current_address,
+                           segments[i].virt_address,
+                           KERNVIRT2PHYS(current_address),
+                           last_flags);
+      dbg_puts(mem, "%d: map %x-%x @ %x: %x", i, current_address, segments[i].virt_address, KERNVIRT2PHYS(current_address), last_flags);
+      assert(segments[i].virt_address >= current_address);
+    }
+
+    current_address = segments[i].virt_address;
+    last_flags = segments[i].flags;
   }
 }
 
@@ -288,6 +311,26 @@ mem_area mem_map_linear(mem_space space_handle,
                         uintptr_t phys_start,
                         uint16_t flags)
 {
+  space_info *space = &spaces[space_handle];
+  uint16_t map_handle = space->linear_maps.push_back({phys_start});
+  return space->areas.push_back({start, end, AREA_LINEAR_MAP, flags, map_handle});
+}
+
+mem_area mem_map_linear_eager(mem_space space_handle,
+                              uintptr_t start,
+                              uintptr_t end,
+                              uintptr_t phys_start,
+                              uint16_t flags)
+{
+  uintptr_t phys_address = phys_start;
+
+  for (uintptr_t virt_address = start;
+       virt_address < end;
+       virt_address += 0x1000) {
+    map_page(space_handle, virt_address, phys_address, page_flags(flags));
+    phys_address += 0x1000;
+  }
+
   space_info *space = &spaces[space_handle];
   uint16_t map_handle = space->linear_maps.push_back({phys_start});
   return space->areas.push_back({start, end, AREA_LINEAR_MAP, flags, map_handle});
@@ -323,7 +366,7 @@ mem_area mem_map_fd(mem_space space_handle,
   return space.areas.push_back({start, end, AREA_FILE, flags, map_handle});
 }
 
-static p2::optional<mem_area> find_area(mem_space space_handle, uintptr_t address)
+static p2::opt<mem_area> find_area(mem_space space_handle, uintptr_t address)
 {
   space_info &space = spaces[space_handle];
 
@@ -337,6 +380,14 @@ static p2::optional<mem_area> find_area(mem_space space_handle, uintptr_t addres
   }
 
   return {};
+}
+
+p2::opt<uint16_t> mem_area_flags(mem_space space_handle, const void *address)
+{
+  if (auto area_handle = find_area(space_handle, (uintptr_t)address))
+    return spaces[space_handle].areas[*area_handle].flags;
+  else
+    return {};
 }
 
 typedef void (*page_fault_handler)(area_info &area, uintptr_t faulted_address);
@@ -455,7 +506,7 @@ static int syscall_mmap(void *start, void *end, int fd, uint32_t offset, uint8_t
              fd,
              offset,
              p2::numeric_limits<uint32_t>::max(),
-             flags | MEM_PE_P|MEM_PE_RW|MEM_PE_U);
+             flags | MEM_AREA_USER);
   // TODO: handle errors
   return 0;
 }

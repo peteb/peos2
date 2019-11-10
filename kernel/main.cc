@@ -106,7 +106,6 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   // Create process structures, this needs a working memory subsystem
   proc_init();
 
-
   // Overwrite the current mappings for the kernel to only include the
   // relevant parts and only at KERNEL_VIRT_BASE.
   mem_space space = mem_create_space();

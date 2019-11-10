@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include "support/optional.h"
+
 #define ALIGN_UP(val, align) (((val) + (align) - 1) & ~((align) - 1))
 #define ALIGN_DOWN(val, align) ((val) & ~((align) - 1))
 
@@ -46,7 +48,10 @@ void       mem_activate_space(mem_space space);
 //
 void mem_map_kernel(mem_space space, uint16_t flags);
 mem_area mem_map_linear(mem_space space, uintptr_t start, uintptr_t end, uintptr_t phys_start, uint16_t flags);
+mem_area mem_map_linear_eager(mem_space space, uintptr_t start, uintptr_t end, uintptr_t phys_start, uint16_t flags);
 mem_area mem_map_alloc(mem_space space, uintptr_t start, uintptr_t end, uint16_t flags);
 mem_area mem_map_fd(mem_space space, uintptr_t start, uintptr_t end, int fd, uint32_t offset, uint32_t file_size, uint16_t flags);
+
+p2::opt<uint16_t> mem_area_flags(mem_space space, const void *address);
 
 #endif // !PEOS2_MEMORY_H

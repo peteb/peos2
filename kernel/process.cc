@@ -9,6 +9,7 @@
 #include "filesystem.h"
 #include "debug.h"
 #include "elf.h"
+#include "syscall_utils.h"
 
 #include "support/pool.h"
 #include "support/format.h"
@@ -80,7 +81,7 @@ proc_handle proc_create(uint32_t flags, const char *argument)
     mapping_flags |= MEM_AREA_USER;
   }
 
-  mem_map_kernel(space_handle, mapping_flags);
+  mem_map_kernel(space_handle, MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
 
   proc_handle pid = processes.emplace_back(space_handle);
   process_control_block &pcb = processes[pid];
@@ -136,12 +137,12 @@ void proc_setup_stack(proc_handle pid, void *eip)
                  user_space_stack_base - 0x1000,
                  user_space_stack_base,
                  KERNVIRT2PHYS((uintptr_t)user_stacks[user_stack_handle].base()) - 0x1000,
-                 MEM_AREA_READWRITE|MEM_AREA_USER);
+                 MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
 
   mem_map_alloc(space_handle,
                 user_space_stack_base - stack_area_size,
                 user_space_stack_base - 0x1000,
-                MEM_AREA_READWRITE|MEM_AREA_USER);
+                MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
 }
 
 void proc_enqueue(proc_handle pid)
@@ -389,6 +390,7 @@ static uint32_t syscall_kill(uint32_t pid)
 
 static int syscall_spawn(const char *filename)
 {
+  verify_ptr(proc, filename);
   dbg_puts(proc, "spawning process with image '%s'", filename);
   // TODO: handle flags
   proc_handle pid = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, "");

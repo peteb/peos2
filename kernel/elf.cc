@@ -120,7 +120,7 @@ int elf_map_process(proc_handle pid, const char *filename)
   // So we've managed to parse the ELF file a bit to get the program
   // header table. Let's set up the file descriptor in the target
   // process.
-  p2::res<proc_fd_handle> img_open_res = vfs_syscall_open(pid, filename, 0);  // TODO: flags
+  p2::res<proc_fd_handle> img_open_res = vfs_open(pid, filename, 0);  // TODO: flags
 
   if (!img_open_res)
     return img_open_res.error();
@@ -141,7 +141,7 @@ int elf_map_process(proc_handle pid, const char *filename)
                  proc_fd,
                  pht[i].p_offset,
                  pht[i].p_filesz,
-                 MEM_AREA_USER|MEM_AREA_READWRITE);  // TODO: flags
+                 MEM_AREA_USER|MEM_AREA_READWRITE|MEM_AREA_SYSCALL);  // TODO: flags
     }
   }
 

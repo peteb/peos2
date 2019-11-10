@@ -4,6 +4,7 @@
 #include "syscalls.h"
 #include "process.h"
 #include "debug.h"
+#include "syscall_utils.h"
 
 #include "support/pool.h"
 #include "support/string.h"
@@ -200,7 +201,8 @@ int vfs_close_handle(proc_handle pid, int local_fd)
 
 static int syscall_write(int fd, const char *data, int length)
 {
-  // TODO: verify that pointers are OK
+  verify_ptr(vfs, data);
+
   proc_fd *pfd = proc_get_fd(proc_current_pid(), fd);
   assert(pfd);
 
@@ -215,6 +217,8 @@ static int syscall_write(int fd, const char *data, int length)
 
 static int syscall_read(int fd, char *data, int length)
 {
+  verify_ptr(vfs, data);
+
   proc_fd *pfd = proc_get_fd(proc_current_pid(), fd);
   assert(pfd);
   vfs_device *device_node = (vfs_device *)pfd->opaque;
@@ -226,7 +230,7 @@ static int syscall_read(int fd, char *data, int length)
   return device_node->driver->read(pfd->value, data, length);
 }
 
-p2::res<proc_fd_handle> vfs_syscall_open(proc_handle pid, const char *filename, uint32_t flags)
+p2::res<proc_fd_handle> vfs_open(proc_handle pid, const char *filename, uint32_t flags)
 {
   auto driver = find_first_driver(root_dir, filename);
   if (!driver)
@@ -254,7 +258,9 @@ p2::res<proc_fd_handle> vfs_syscall_open(proc_handle pid, const char *filename, 
 
 static int syscall_open(const char *filename, uint32_t flags)
 {
-  p2::res<proc_fd_handle> open_res = vfs_syscall_open(proc_current_pid(), filename, flags);
+  verify_ptr(vfs, filename);
+
+  p2::res<proc_fd_handle> open_res = vfs_open(proc_current_pid(), filename, flags);
 
   if (open_res) {
     assert(*open_res >= 0);
@@ -268,6 +274,8 @@ static int syscall_open(const char *filename, uint32_t flags)
 
 static int syscall_mkdir(const char *path)
 {
+  verify_ptr(vfs, path);
+
   auto driver = find_first_driver(root_dir, path);
   if (!driver)
     return ENODRIVER;
@@ -305,6 +313,8 @@ static int syscall_seek(int fd, int offset, int relative)
 
 static int syscall_tell(int fd, int *position)
 {
+  verify_ptr(vfs, position);
+
   proc_fd *pfd = proc_get_fd(proc_current_pid(), fd);
   assert(pfd);
   assert(position);

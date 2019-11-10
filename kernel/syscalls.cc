@@ -2,6 +2,8 @@
 #include "x86.h"
 #include "protected_mode.h"
 #include "screen.h"
+#include "debug.h"
+#include "syscall_utils.h"
 
 #include "support/format.h"
 #include "support/utils.h"
@@ -22,7 +24,8 @@ extern "C" void int_syscall(volatile isr_registers regs) {
 
   if (syscall_num >= ARRAY_SIZE(syscalls)) {
     // TODO: should we kill the process?
-    panic("Called invalid syscall");
+    dbg_puts(syscall, "process invoked invalid syscall %d", syscall_num);
+    kill_caller();
   }
 
   syscall_fun handler = (syscall_fun)syscalls[syscall_num];

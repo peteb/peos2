@@ -21,6 +21,7 @@ SECTIONS {
     *(.rodata)
   }
 
+  . = ALIGN(4K);
   __stop_READONLY = .;
 
   .data ALIGN(4K) : AT(ADDR(.data) - 0xC0000000) {
@@ -32,5 +33,6 @@ SECTIONS {
     *(COMMON)
   }
 
+  . = ALIGN(4K);
   kernel_end = .;
 }

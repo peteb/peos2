@@ -99,7 +99,7 @@ void            *vfs_get_opaque(vfs_device *device);
 int             vfs_close_handle(proc_handle pid, int handle);
 
 //
-// vfs_syscall_open - creates a file descriptor.
+// vfs_open - creates a file descriptor.
 // @pid: in which process the fd should be created
 // @filename: aboslute global path
 // @flags: defined in syscall_decls.h
@@ -107,6 +107,6 @@ int             vfs_close_handle(proc_handle pid, int handle);
 // Opens a file just as how syscallN(open) would, but accessible for
 // the kernel to use for non-current processes.
 //
-p2::res<proc_fd_handle> vfs_syscall_open(proc_handle pid, const char *filename, uint32_t flags);
+p2::res<proc_fd_handle> vfs_open(proc_handle pid, const char *filename, uint32_t flags);
 
 #endif // !PEOS2_FILESYSTEM_H

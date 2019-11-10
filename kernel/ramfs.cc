@@ -4,6 +4,7 @@
 #include "syscalls.h"
 #include "screen.h"
 #include "debug.h"
+#include "syscall_utils.h"
 
 #include "support/format.h"
 #include "support/pool.h"
@@ -168,6 +169,9 @@ static int control(int handle, uint32_t function, uint32_t param1, uint32_t para
 {
   file_node &node = nodes[opened_files[handle].node];
 
+  // Note that any address can be pointed to here, there's no
+  // protection that it actually points somewhere good, so be careful.
+
   if (function == CTRL_RAMFS_SET_FILE_RANGE) {
     assert(node.type == TYPE_MEM_RANGE_FILE);
     mem_range_file &file = mem_range_files[node.file];
@@ -183,10 +187,16 @@ static int control(int handle, uint32_t function, uint32_t param1, uint32_t para
     uint32_t *start_ptr = (uint32_t *)param1;
     uint32_t *size_ptr = (uint32_t *)param2;
 
-    if (start_ptr)
+    if (start_ptr) {
+      verify_ptr(ramfs, start_ptr);
       *start_ptr = file.start;
-    if (size_ptr)
+    }
+
+    if (size_ptr) {
       *size_ptr = file.size;
+      verify_ptr(ramfs, size_ptr);
+    }
+
     return 0;
   }
 
