@@ -17,6 +17,18 @@
 #define AREA_ALLOC      2
 #define AREA_FILE       3
 
+#define MEM_PE_P   0x0001  // Present
+#define MEM_PE_RW  0x0002  // Read/write
+#define MEM_PE_U   0x0004  // User/supervisor (0 = user not allowed)
+#define MEM_PE_W   0x0008  // Write through
+#define MEM_PE_D   0x0010  // Cache disabled
+#define MEM_PE_A   0x0020  // Accessed
+
+#define MEM_PDE_S  0x0080  // Page size (0 = 4kb)
+
+#define MEM_PTE_D  0x0040  // Dirty
+#define MEM_PTE_G  0x0080  // Global
+
 // Structs
 struct page_dir_entry {
   uint16_t flags:12;
@@ -30,7 +42,7 @@ struct page_table_entry {
 
 struct area_info {
   uintptr_t start, end;
-  uint8_t type, flags;
+  uint16_t type, flags;
   uint16_t info_handle;
 };
 
@@ -61,6 +73,7 @@ extern char __start_READONLY, __stop_READONLY;
 // Forward decls
 static void free_alloc_area(space_info &space, area_info &area);
 static void free_page(void *page);
+static void map_page(mem_space space, uint32_t virt, uint32_t phys, uint16_t flags);
 static int syscall_mmap(void *start, void *end, int fd, uint32_t offset, uint8_t flags);
 
 // Global state
@@ -172,6 +185,22 @@ void mem_activate_space(mem_space space_handle)
   // TODO: fix all inline asm to have the same syntax (AT&T vs Intel) as *.s files
 }
 
+static uint16_t page_flags(uint16_t mem_flags)
+{
+  uint16_t converted = MEM_PE_P;
+
+  if (mem_flags & MEM_AREA_READWRITE)
+    converted |= MEM_PE_RW;
+
+  if (mem_flags & MEM_AREA_USER)
+    converted |= MEM_PE_U;
+
+  if (mem_flags & MEM_AREA_CACHE_DISABLED)
+    converted |= MEM_PE_D;
+
+  return converted;
+}
+
 static page_table_entry *find_pte(const space_info &space, uintptr_t virtual_address)
 {
   int pde_idx = virtual_address >> 22;
@@ -194,7 +223,7 @@ static uintptr_t pte_frame(const page_table_entry *pte)
   return pte->frame_11_31 << 12;
 }
 
-void mem_map_page(mem_space space_handle, uint32_t virt, uint32_t phys, uint16_t flags)
+void map_page(mem_space space_handle, uint32_t virt, uint32_t phys, uint16_t flags)
 {
   assert((virt & 0xFFF) == 0 && "can only map on page boundaries");
   assert((phys & 0xFFF) == 0 && "can only map on page boundaries");
@@ -227,7 +256,7 @@ void mem_map_page(mem_space space_handle, uint32_t virt, uint32_t phys, uint16_t
   }
 }
 
-void mem_map_kernel(mem_space space_handle, uint32_t flags)
+void mem_map_kernel(mem_space space_handle, uint16_t flags)
 {
   // TODO: we don't really want to know about multiboot everywhere
   uintptr_t end = p2::max(multiboot_last_address(), (uintptr_t)&kernel_end);
@@ -238,9 +267,9 @@ void mem_map_kernel(mem_space space_handle, uint32_t flags)
        address += 0x1000) {
 
     if (address >= (uintptr_t)&__start_READONLY && address <= ALIGN_UP((uintptr_t)&__stop_READONLY, 0x1000))
-      mem_map_page(space_handle, address, KERNVIRT2PHYS(address), flags & ~MEM_PE_RW);
+      map_page(space_handle, address, KERNVIRT2PHYS(address), page_flags(flags & ~MEM_AREA_READWRITE));
     else
-      mem_map_page(space_handle, address, KERNVIRT2PHYS(address), flags);
+      map_page(space_handle, address, KERNVIRT2PHYS(address), page_flags(flags & ~MEM_AREA_EXECUTABLE));
   }
 
   // Map allocator bookkeeping area
@@ -249,7 +278,7 @@ void mem_map_kernel(mem_space space_handle, uint32_t flags)
   for (uintptr_t phys_address = user_space_allocator->bookkeeping_phys_region().start;
        phys_address < user_space_allocator->bookkeeping_phys_region().end;
        phys_address += 0x1000) {
-    mem_map_page(space_handle, PHYS2KERNVIRT(phys_address), phys_address, flags);
+    map_page(space_handle, PHYS2KERNVIRT(phys_address), phys_address, page_flags(flags));
   }
 }
 
@@ -257,14 +286,14 @@ mem_area mem_map_linear(mem_space space_handle,
                         uintptr_t start,
                         uintptr_t end,
                         uintptr_t phys_start,
-                        uint8_t flags)
+                        uint16_t flags)
 {
   space_info *space = &spaces[space_handle];
   uint16_t map_handle = space->linear_maps.push_back({phys_start});
   return space->areas.push_back({start, end, AREA_LINEAR_MAP, flags, map_handle});
 }
 
-mem_area mem_map_alloc(mem_space space_handle, uintptr_t start, uintptr_t end, uint8_t flags)
+mem_area mem_map_alloc(mem_space space_handle, uintptr_t start, uintptr_t end, uint16_t flags)
 {
   // Another nifty way of doing allocations would be to get rid of
   // AREA_ALLOC and instead let people mmap /dev/zero, decreasing
@@ -286,9 +315,10 @@ mem_area mem_map_fd(mem_space space_handle,
                     int fd,
                     uint32_t offset,
                     uint32_t file_size,
-                    uint8_t flags)
+                    uint16_t flags)
 {
   space_info &space = spaces[space_handle];
+  // TODO: check reference
   uint16_t map_handle = space.file_maps.push_back({fd, offset, file_size});
   return space.areas.push_back({start, end, AREA_FILE, flags, map_handle});
 }
@@ -317,7 +347,7 @@ static void page_fault_linear_map(area_info &area, uintptr_t faulted_address)
   uintptr_t page_address = ALIGN_DOWN(faulted_address, 0x1000);
   ptrdiff_t area_offset = page_address - area.start;
   dbg_puts(mem, "linear map; mapping %x to %x", page_address, lm_info.phys_start + area_offset);
-  mem_map_page(current_space, page_address, lm_info.phys_start + area_offset, area.flags);
+  map_page(current_space, page_address, lm_info.phys_start + area_offset, page_flags(area.flags));
 }
 
 static void page_fault_alloc(area_info &area, uintptr_t faulted_address)
@@ -325,7 +355,7 @@ static void page_fault_alloc(area_info &area, uintptr_t faulted_address)
   uintptr_t page_address = ALIGN_DOWN(faulted_address, 0x1000);
   uintptr_t phys_block = (uintptr_t)alloc_page();
   dbg_puts(mem, "alloc map; allocated %x and mapping it at %x", phys_block, page_address);
-  mem_map_page(current_space, page_address, phys_block, area.flags);
+  map_page(current_space, page_address, phys_block, page_flags(area.flags));
   memset((void *)page_address, 0, 0x1000);
 }
 
@@ -334,7 +364,7 @@ static void page_fault_file(area_info &area, uintptr_t faulted_address)
   uintptr_t page_address = ALIGN_DOWN(faulted_address, 0x1000);
   uintptr_t phys_block = (uintptr_t)alloc_page();
   dbg_puts(mem, "file map; allocated %x and mapping it at %x", phys_block, page_address);
-  mem_map_page(current_space, page_address, phys_block, area.flags);
+  map_page(current_space, page_address, phys_block, page_flags(area.flags));
   memset((void *)page_address, 0, 0x1000);
 
   file_map_info &fm_info = spaces[current_space].file_maps[area.info_handle];

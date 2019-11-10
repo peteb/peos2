@@ -71,13 +71,13 @@ proc_handle proc_create(uint32_t flags, const char *argument)
 {
   // TODO: support multiple arguments
   mem_space space_handle = mem_create_space();
-  uint16_t mapping_flags = MEM_PE_P|MEM_PE_RW;
+  uint16_t mapping_flags = MEM_AREA_READWRITE;
   // We must always map the kernel as RW; it's going to be used in
   // syscalls and other interrupts even if the U bit isn't set.
   assert(flags & PROC_USER_SPACE);
 
   if (flags & PROC_KERNEL_ACCESSIBLE) {
-    mapping_flags |= MEM_PE_U;
+    mapping_flags |= MEM_AREA_USER;
   }
 
   mem_map_kernel(space_handle, mapping_flags);
@@ -132,8 +132,16 @@ void proc_setup_stack(proc_handle pid, void *eip)
   // wasteful. The rest of the stack pages will be allocated on the
   // fly.
   mem_space space_handle = proc_get_space(pid);
-  mem_map_linear(space_handle, user_space_stack_base - 0x1000, user_space_stack_base, KERNVIRT2PHYS((uintptr_t)user_stacks[user_stack_handle].base()) - 0x1000, MEM_PE_P|MEM_PE_RW|MEM_PE_U);
-  mem_map_alloc(space_handle, user_space_stack_base - stack_area_size, user_space_stack_base - 0x1000, MEM_PE_P|MEM_PE_RW|MEM_PE_U);
+  mem_map_linear(space_handle,
+                 user_space_stack_base - 0x1000,
+                 user_space_stack_base,
+                 KERNVIRT2PHYS((uintptr_t)user_stacks[user_stack_handle].base()) - 0x1000,
+                 MEM_AREA_READWRITE|MEM_AREA_USER);
+
+  mem_map_alloc(space_handle,
+                user_space_stack_base - stack_area_size,
+                user_space_stack_base - 0x1000,
+                MEM_AREA_READWRITE|MEM_AREA_USER);
 }
 
 void proc_enqueue(proc_handle pid)

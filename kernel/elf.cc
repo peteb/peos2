@@ -141,7 +141,7 @@ int elf_map_process(proc_handle pid, const char *filename)
                  proc_fd,
                  pht[i].p_offset,
                  pht[i].p_filesz,
-                 MEM_PE_P|MEM_PE_U|MEM_PE_RW);  // TODO: flags
+                 MEM_AREA_USER|MEM_AREA_READWRITE);  // TODO: flags
     }
   }
 
