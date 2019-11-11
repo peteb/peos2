@@ -251,9 +251,7 @@ void map_page(mem_space space_handle, uint32_t virt, uint32_t phys, uint16_t fla
   page_table[table_idx].flags = flags;
 
   if (space_handle == current_space) {
-    // Reload CR3 to flush TLB. This is probably not good for performance
-    // TODO: use INVLPG instead?
-    mem_activate_space(space_handle);
+    asm volatile("invlpg %0" : : "m"(virt) : "memory");
   }
 }
 
