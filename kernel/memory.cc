@@ -305,12 +305,30 @@ void mem_map_kernel(mem_space space_handle, uint16_t flags)
   }
 }
 
+static bool overlaps_existing_area(mem_space space_handle, uintptr_t start, uintptr_t end)
+{
+  space_info &space = spaces[space_handle];
+
+  for (size_t i = 0; i < space.areas.watermark(); ++i) {
+    if (!space.areas.valid(i))
+      continue;
+
+    area_info &area = space.areas[i];
+
+    if (start < area.end && end > area.start)
+      return true;
+  }
+
+  return false;
+}
+
 mem_area mem_map_linear(mem_space space_handle,
                         uintptr_t start,
                         uintptr_t end,
                         uintptr_t phys_start,
                         uint16_t flags)
 {
+  assert(!overlaps_existing_area(space_handle, start, end));
   space_info *space = &spaces[space_handle];
   uint16_t map_handle = space->linear_maps.push_back({phys_start});
   return space->areas.push_back({start, end, AREA_LINEAR_MAP, flags, map_handle});
@@ -322,6 +340,8 @@ mem_area mem_map_linear_eager(mem_space space_handle,
                               uintptr_t phys_start,
                               uint16_t flags)
 {
+  assert(!overlaps_existing_area(space_handle, start, end));
+
   uintptr_t phys_address = phys_start;
 
   for (uintptr_t virt_address = start;
@@ -338,6 +358,8 @@ mem_area mem_map_linear_eager(mem_space space_handle,
 
 mem_area mem_map_alloc(mem_space space_handle, uintptr_t start, uintptr_t end, uint16_t flags)
 {
+  assert(!overlaps_existing_area(space_handle, start, end));
+
   // Another nifty way of doing allocations would be to get rid of
   // AREA_ALLOC and instead let people mmap /dev/zero, decreasing
   // complexity in the kernel. On the other hand, I see a number of
@@ -360,6 +382,7 @@ mem_area mem_map_fd(mem_space space_handle,
                     uint32_t file_size,
                     uint16_t flags)
 {
+  assert(!overlaps_existing_area(space_handle, start, end));
   space_info &space = spaces[space_handle];
   // TODO: check reference
   uint16_t map_handle = space.file_maps.push_back({fd, offset, file_size});
