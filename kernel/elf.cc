@@ -9,6 +9,10 @@
 
 #define EI_NIDENT 16
 
+#define PF_X 1
+#define PF_W 2
+#define PF_R 4
+
 struct elf_header {
   uint8_t  e_ident[EI_NIDENT];
   uint16_t e_type;
@@ -125,8 +129,6 @@ int elf_map_process(proc_handle pid, const char *filename)
   if (!img_open_res)
     return img_open_res.error();
 
-  proc_fd_handle proc_fd = *img_open_res;
-
   for (int i = 0; i < hdr.e_phnum; ++i) {
     dbg_puts(elf, "type: %x ofs: %x virt: %x flags: %x",
              pht[i].p_type,
@@ -138,7 +140,7 @@ int elf_map_process(proc_handle pid, const char *filename)
       mem_map_fd(proc_get_space(pid),
                  ALIGN_DOWN(pht[i].p_vaddr, 0x1000),
                  ALIGN_UP(pht[i].p_vaddr + pht[i].p_memsz, 0x1000),
-                 proc_fd,
+                 *img_open_res,
                  pht[i].p_offset,
                  pht[i].p_filesz,
                  MEM_AREA_USER|MEM_AREA_READWRITE|MEM_AREA_SYSCALL);  // TODO: flags

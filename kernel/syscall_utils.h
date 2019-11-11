@@ -7,13 +7,13 @@
 
 static void kill_caller()
 {
-  proc_kill(proc_current_pid(), 15);
+  proc_kill(*proc_current_pid(), 15);
   proc_yield();
 }
 
 static inline bool valid_pointer(const void *address)
 {
-  auto area_flags = mem_area_flags(proc_get_space(proc_current_pid()), address);
+  auto area_flags = mem_area_flags(proc_get_space(*proc_current_pid()), address);
   return area_flags && (*area_flags & MEM_AREA_SYSCALL);
 }
 

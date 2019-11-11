@@ -457,7 +457,7 @@ extern "C" void int_page_fault(isr_registers regs)
 
   if (regs.error_code & 1) {
     dbg_puts(mem, "process tried to access protected page at %x", faulted_address);
-    proc_kill(proc_current_pid(), 15);
+    proc_kill(*proc_current_pid(), 15);
     proc_yield();
     return;
   }
@@ -466,7 +466,7 @@ extern "C" void int_page_fault(isr_registers regs)
 
   if (!area_handle) {
     dbg_puts(mem, "process tried to access un-mapped area at %x", faulted_address);
-    proc_kill(proc_current_pid(), 15);
+    proc_kill(*proc_current_pid(), 15);
     proc_yield();
     return;
   }

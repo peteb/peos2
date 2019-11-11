@@ -75,13 +75,15 @@ proc_handle proc_create(uint32_t flags, const char *argument)
   uint16_t mapping_flags = MEM_AREA_READWRITE;
   // We must always map the kernel as RW; it's going to be used in
   // syscalls and other interrupts even if the U bit isn't set.
+
+
   assert(flags & PROC_USER_SPACE);
 
   if (flags & PROC_KERNEL_ACCESSIBLE) {
-    mapping_flags |= MEM_AREA_USER;
+    mapping_flags |= (MEM_AREA_USER|MEM_AREA_SYSCALL);
   }
 
-  mem_map_kernel(space_handle, MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
+  mem_map_kernel(space_handle, mapping_flags);
 
   proc_handle pid = processes.emplace_back(space_handle);
   process_control_block &pcb = processes[pid];
@@ -182,9 +184,12 @@ static void destroy_process(proc_handle pid)
 }
 
 
-proc_handle proc_current_pid()
+p2::opt<proc_handle> proc_current_pid()
 {
-  return current_pid;
+  if (current_pid != processes.end())
+    return current_pid;
+
+  return {};
 }
 
 extern "C" void int_timer(isr_registers)
@@ -375,7 +380,7 @@ mem_space proc_get_space(proc_handle pid)
 
 static uint32_t syscall_exit(int exit_status)
 {
-  proc_kill(proc_current_pid(), exit_status);
+  proc_kill(*proc_current_pid(), exit_status);
   proc_yield();
   assert(false && "unreachable");
   // We can't return from this one; there's nothing left to do in the process
@@ -393,7 +398,7 @@ static int syscall_spawn(const char *filename)
   verify_ptr(proc, filename);
   dbg_puts(proc, "spawning process with image '%s'", filename);
   // TODO: handle flags
-  proc_handle pid = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, "");
+  proc_handle pid = proc_create(PROC_USER_SPACE, "");
   elf_map_process(pid, filename);
   proc_enqueue(pid);
   return pid;

@@ -22,17 +22,18 @@ struct proc_fd {
   int value;
 };
 
-void        proc_init();
-proc_handle proc_create(uint32_t flags, const char *argument);
-void        proc_setup_stack(proc_handle pid, void *eip);
-void        proc_enqueue(proc_handle pid);
-void        proc_switch(proc_handle pid);
-void        proc_suspend(proc_handle pid);
-void        proc_resume(proc_handle pid);
-void        proc_yield();
-proc_handle proc_current_pid();
-void        proc_kill(proc_handle pid, uint32_t exit_status);
-mem_space   proc_get_space(proc_handle pid);
+void                 proc_init();
+proc_handle          proc_create(uint32_t flags, const char *argument);
+void                 proc_setup_stack(proc_handle pid, void *eip);
+void                 proc_enqueue(proc_handle pid);
+void                 proc_switch(proc_handle pid);
+void                 proc_suspend(proc_handle pid);
+void                 proc_resume(proc_handle pid);
+void                 proc_yield();
+p2::opt<proc_handle> proc_current_pid();
+void                 proc_kill(proc_handle pid, uint32_t exit_status);
+mem_space            proc_get_space(proc_handle pid);
+
 
 // Mapping filesystem-local fd to process-local fd
 // TODO: move this into filesystem

@@ -33,7 +33,7 @@
 #define SEEK_BEG              2
 
 // Errors
-#define EINVOP       -100  // Invalid operation
+#define ENOSUPPORT   -100  // Invalid operation/not supported
 #define ENOENT       -200  // Some component of the given path is missing
 #define ENODIR       -201  // Path parent isn't a directory
 #define ENODRIVER    -202  // Path doesn't contain a mapped driver

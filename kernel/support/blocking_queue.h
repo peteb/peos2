@@ -64,8 +64,8 @@ namespace p2 {
         if (_queue.size() == 0) {
           // We need to block!
           // TODO: check that there's none already waiting
-          proc_suspend(proc_current_pid());
-          _waiting_process = proc_current_pid();
+          proc_suspend(*proc_current_pid());
+          _waiting_process = *proc_current_pid();
           _process_waiting = true;
 
           proc_yield();
