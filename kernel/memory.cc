@@ -199,6 +199,9 @@ static uint16_t page_flags(uint16_t mem_flags)
   if (mem_flags & MEM_AREA_CACHE_DISABLED)
     converted |= MEM_PE_D;
 
+  if (mem_flags & MEM_AREA_GLOBAL)
+    converted |= MEM_PTE_G;
+
   return converted;
 }
 

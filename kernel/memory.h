@@ -21,6 +21,7 @@
 #define MEM_AREA_EXECUTABLE      0x0002  // Area can execute code
 #define MEM_AREA_USER            0x0004  // Area can be accessed by user space
 #define MEM_AREA_CACHE_DISABLED  0x0008  // No caching of pages
+#define MEM_AREA_GLOBAL          0x0010  // Area will be mapped "globally"
 #define MEM_AREA_SYSCALL         0x0100  // Area is good for syscall pointers
 
 struct region {
