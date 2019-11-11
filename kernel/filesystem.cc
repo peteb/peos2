@@ -180,7 +180,7 @@ void *vfs_get_opaque(vfs_device *device)
   return device->opaque;
 }
 
-int vfs_close_handle(proc_handle pid, int local_fd)
+int vfs_close_handle(proc_handle pid, proc_fd_handle local_fd)
 {
   proc_fd *pfd = proc_get_fd(pid, local_fd);
   assert(pfd);
@@ -217,16 +217,36 @@ static int syscall_write(int fd, const char *data, int length)
 static int syscall_read(int fd, char *data, int length)
 {
   verify_ptr(vfs, data);
+  // TODO: verify that the range data, data + length is valid
 
-  proc_fd *pfd = proc_get_fd(*proc_current_pid(), fd);
+  p2::res<size_t> read_result = vfs_read(*proc_current_pid(), fd, data, length);
+
+  if (!read_result) {
+    return read_result.error();
+  }
+  else {
+    // TODO: handle possible overflow
+    return *read_result;
+  }
+}
+
+p2::res<size_t> vfs_read(proc_handle pid, proc_fd_handle fd, char *data, int length)
+{
+  proc_fd *pfd = proc_get_fd(pid, fd);
   assert(pfd);
+
   vfs_device *device_node = (vfs_device *)pfd->opaque;
   assert(device_node && device_node->driver);
 
   if (!device_node->driver->read)
-    return ENOSUPPORT;
+    return p2::failure(ENOSUPPORT);
 
-  return device_node->driver->read(pfd->value, data, length);
+  int retval = device_node->driver->read(pfd->value, data, length);
+
+  if (retval < 0)
+    return p2::failure(retval);
+
+  return p2::success((size_t)retval);
 }
 
 p2::res<proc_fd_handle> vfs_open(proc_handle pid, const char *filename, uint32_t flags)
@@ -255,9 +275,23 @@ p2::res<proc_fd_handle> vfs_open(proc_handle pid, const char *filename, uint32_t
   return p2::success(*proc_local_handle);
 }
 
+int vfs_seek(proc_handle pid, int fd, int offset, int relative)
+{
+  proc_fd *pfd = proc_get_fd(pid, fd);
+  assert(pfd);
+  vfs_device *device_node = (vfs_device *)pfd->opaque;
+  assert(device_node && device_node->driver);
+
+  if (!device_node->driver->seek)
+    return ENOSUPPORT;
+
+  return device_node->driver->seek(pfd->value, offset, relative);
+}
+
 static int syscall_open(const char *filename, uint32_t flags)
 {
   verify_ptr(vfs, filename);
+  // TODO: verify that the whole string is in valid memory
 
   p2::res<proc_fd_handle> open_res = vfs_open(*proc_current_pid(), filename, flags);
 
@@ -299,15 +333,7 @@ static int syscall_close(int fd)
 
 static int syscall_seek(int fd, int offset, int relative)
 {
-  proc_fd *pfd = proc_get_fd(*proc_current_pid(), fd);
-  assert(pfd);
-  vfs_device *device_node = (vfs_device *)pfd->opaque;
-  assert(device_node && device_node->driver);
-
-  if (!device_node->driver->seek)
-    return ENOSUPPORT;
-
-  return device_node->driver->seek(pfd->value, offset, relative);
+  return vfs_seek(*proc_current_pid(), fd, offset, relative);
 }
 
 static int syscall_tell(int fd, int *position)

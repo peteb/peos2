@@ -96,7 +96,6 @@ void            vfs_add_dirent(vfs_node_handle dir_node, const char *name, vfs_n
 void            vfs_set_driver(vfs_node_handle dev_node, vfs_device_driver *driver, void *opaque);
 vfs_node_handle vfs_lookup(const char *path);
 void            *vfs_get_opaque(vfs_device *device);
-int             vfs_close_handle(proc_handle pid, int handle);
 
 //
 // vfs_open - creates a file descriptor.
@@ -104,9 +103,12 @@ int             vfs_close_handle(proc_handle pid, int handle);
 // @filename: aboslute global path
 // @flags: defined in syscall_decls.h
 //
-// Opens a file just as how syscallN(open) would, but accessible for
-// the kernel to use for non-current processes.
+// Opens a file just as how syscallN(open) would, but accessible to
+// the kernel.
 //
 p2::res<proc_fd_handle> vfs_open(proc_handle pid, const char *filename, uint32_t flags);
+p2::res<size_t> vfs_read(proc_handle pid, proc_fd_handle fd, char *data, int length);
+int vfs_seek(proc_handle pid, int fd, int offset, int relative);
+int vfs_close_handle(proc_handle pid, proc_fd_handle handle);
 
 #endif // !PEOS2_FILESYSTEM_H

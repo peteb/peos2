@@ -70,14 +70,21 @@ int elf_map_process(proc_handle pid, const char *filename)
   elf_header hdr = {};
 
   // TODO: flags
-  int fd = syscall2(open, filename, 0);
-  assert(fd >= 0);
+  p2::res<proc_fd_handle> open_result = vfs_open(*proc_current_pid(), filename, 0);
+  if (!open_result)
+    return open_result.error();
+
+  int fd = *open_result;
 
   {
     // TODO: how do we handle if this would block?
     // TODO: repeating read
-    int bytes_read = syscall3(read, fd, (char *)&hdr, sizeof(hdr));  // TODO: read more if 0 < read < sizeof(header)
-    assert(bytes_read == sizeof(hdr));  // TODO: correct error handling
+    p2::res<size_t> read_result = vfs_read(*proc_current_pid(), fd, (char *)&hdr, sizeof(hdr));
+
+    if (!read_result)
+      return read_result.error();
+    else
+      assert(*read_result == sizeof(hdr));  // TODO: correct error handling
   }
 
   if (hdr.e_ident[0] != 0x7F ||
@@ -115,19 +122,24 @@ int elf_map_process(proc_handle pid, const char *filename)
 
   {
     // TODO: repeating read
-    size_t bytes_read = syscall3(read, fd, (char *)pht, sizeof(elf_program_header) * hdr.e_phnum);
+    p2::res<size_t> read_result = vfs_read(*proc_current_pid(), fd, (char *)pht, sizeof(elf_program_header) * hdr.e_phnum);
+
+    if (!read_result)
+      return read_result.error();
+
+    size_t bytes_read = *read_result;
     assert(bytes_read == sizeof(elf_program_header) * hdr.e_phnum);
   }
 
-  syscall1(close, fd);
+  vfs_close_handle(*proc_current_pid(), fd);
 
   // So we've managed to parse the ELF file a bit to get the program
   // header table. Let's set up the file descriptor in the target
   // process.
-  p2::res<proc_fd_handle> img_open_res = vfs_open(pid, filename, 0);  // TODO: flags
+  p2::res<proc_fd_handle> img_open_result = vfs_open(pid, filename, 0);  // TODO: flags
 
-  if (!img_open_res)
-    return img_open_res.error();
+  if (!img_open_result)
+    return img_open_result.error();
 
   for (int i = 0; i < hdr.e_phnum; ++i) {
     dbg_puts(elf, "type: %x ofs: %x virt: %x flags: %x",
@@ -151,7 +163,7 @@ int elf_map_process(proc_handle pid, const char *filename)
       mem_map_fd(proc_get_space(pid),
                  ALIGN_DOWN(pht[i].p_vaddr, 0x1000),
                  ALIGN_UP(pht[i].p_vaddr + pht[i].p_memsz, 0x1000),
-                 *img_open_res,
+                 *img_open_result,
                  pht[i].p_offset,
                  pht[i].p_filesz,
                  flags);
