@@ -23,6 +23,7 @@ extern char __start_READONLY, __stop_READONLY;
 
 // Forward decls
 static void free_alloc_area(space_info &space, area_info &area);
+static void *alloc_page();
 static void free_page(void *page);
 static void map_page(mem_space space, uint32_t virt, uint32_t phys, uint16_t flags);
 static int syscall_mmap(void *start, void *end, int fd, uint32_t offset, uint8_t flags);

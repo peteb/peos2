@@ -60,8 +60,8 @@ Plan
 * DONE Multi screen terminal (Terminal)
 * DONE Some way to get a basic FS up with files/a ramdisk (user programs, text)
 * DONE Improved memory protection with kernel memory marked for supervisor
-* TAR parsing for initial ramdisk
-* Start user process from binary on filesystem, ELF
+* DONE TAR parsing for initial ramdisk
+* DONE Start user process from binary on filesystem, ELF
 * PCI device enumeration
 * RTL8139 support
 * Basic Ethernet

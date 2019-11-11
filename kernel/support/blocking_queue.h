@@ -26,7 +26,8 @@ namespace p2 {
     // Returns how many bytes were pushed
     //
     template<typename _CleanupFunT>
-    size_t push_back(const char *data, size_t length, _CleanupFunT cleanup_fun) {
+    size_t push_back(const char *data, size_t length, _CleanupFunT cleanup_fun)
+    {
       asm volatile("cli");
       size_t bytes_written = 0;
 
@@ -53,9 +54,10 @@ namespace p2 {
       }
 
       return bytes_written;
-    };
+    }
 
-    size_t pop_front(char *destination, size_t max_size) {
+    size_t pop_front(char *destination, size_t max_size)
+    {
       int bytes_read = 0;
 
       while (true) {

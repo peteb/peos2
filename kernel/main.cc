@@ -23,7 +23,8 @@ extern "C" int init_main();
 static uint32_t interrupt_stack[1024] alignas(16);
 char debug_out_buffer[128];
 
-extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr) {
+extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr)
+{
   multiboot_header = (multiboot_info *)PHYS2KERNVIRT((uintptr_t)multiboot_hdr);
   screen_init();
 

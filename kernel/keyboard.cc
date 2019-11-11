@@ -102,7 +102,8 @@ static scancode_mapping scancode_set1_map[0xFF] =
 
 static bool shift_depressed = false, ctrl_depressed = false;
 
-extern "C" void int_kbd(isr_registers regs) {
+extern "C" void int_kbd(isr_registers regs)
+{
   bool gray_keys = false;
   (void)gray_keys;
   (void)regs;
@@ -172,7 +173,8 @@ extern "C" void int_kbd(isr_registers regs) {
 
 extern "C" void isr_kbd(isr_registers);
 
-void kbd_init() {
+void kbd_init()
+{
   // TODO: verify that the PS/2 controller exists using ACPI
   outb_wait(KBD_CMD, 0xAA);
   if (inb(KBD_DATA) != 0x55) {
