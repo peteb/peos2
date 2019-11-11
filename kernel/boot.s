@@ -195,10 +195,27 @@ switch_task_iret:
         iret
 .endm
 
-isr_routine     isr_debug,       int_debug
-isr_routine_err isr_gpf,         int_gpf
-isr_routine     isr_syscall,     int_syscall
-isr_routine     isr_kbd,         int_kbd
-isr_routine     isr_timer,       int_timer
-isr_routine_err isr_page_fault,  int_page_fault
-isr_routine_err isr_doublefault, int_doublefault
+        isr_routine     isr_divzero,     int_divzero
+        isr_routine     isr_debug,       int_debug
+        isr_routine     isr_nmi,         int_nmi
+        isr_routine     isr_breakpoint,  int_breakpoint
+        isr_routine     isr_overflow,    int_overflow
+        isr_routine     isr_bre,         int_bre
+        isr_routine     isr_invop,       int_invop
+        isr_routine     isr_devnotavail, int_devnotavail
+        isr_routine_err isr_doublefault, int_doublefault
+        isr_routine_err isr_invtss,      int_invtss
+        isr_routine_err isr_segnotpres,  int_segnotpres
+        isr_routine_err isr_stacksegfault, int_stacksegfault
+        isr_routine_err isr_gpf,         int_gpf
+        isr_routine_err isr_page_fault,  int_page_fault
+        isr_routine     isr_fpe,         int_fpe
+        isr_routine_err isr_align,       int_align
+        isr_routine     isr_machine,     int_machine
+        isr_routine     isr_simdfp,      int_simdfp
+        isr_routine     isr_virt,        int_virt
+        isr_routine     isr_sec,         int_sec
+
+        isr_routine     isr_syscall,     int_syscall
+        isr_routine     isr_kbd,         int_kbd
+        isr_routine     isr_timer,       int_timer

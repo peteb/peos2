@@ -55,7 +55,24 @@
 
 #define IRQ_BASE_INTERRUPT 0x20
 
-#define INT_DEBUG          3
+#define INT_DIVZERO        0
+#define INT_DEBUG          1
+#define INT_NMI            2
+#define INT_BREAKPOINT     3
+#define INT_OVERFLOW       4
+#define INT_BRE            5
+#define INT_INVOP          6
+#define INT_DEVNOTAVAIL    7
+#define INT_INVTSS         10
+#define INT_SEGNOTPRES     11
+#define INT_STACKSEGFAULT  12
+#define INT_FPE            16
+#define INT_ALIGN          17
+#define INT_MACHINE        18
+#define INT_SIMDFP         19
+#define INT_VIRT           20
+#define INT_SEC            30
+
 #define INT_DOUBLEFAULT    8
 #define INT_GPF            13
 #define INT_PAGEFAULT      14

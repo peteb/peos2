@@ -32,30 +32,102 @@ idt_descriptor::idt_descriptor(uint32_t offset, uint16_t segment, uint8_t type) 
   this->type = type;
 }
 
-extern "C" void int_debug(isr_registers regs) {
-  puts("== DEBUG =============================");
+extern "C" void int_divzero(isr_registers) {
+  panic("divison by zero");
+}
+
+extern "C" void int_debug(isr_registers) {
+  panic("debug");
+}
+
+extern "C" void int_nmi(isr_registers) {
+  panic("NMI");
+}
+
+extern "C" void int_overflow(isr_registers) {
+  panic("overflow");
+}
+
+extern "C" void int_bre(isr_registers) {
+  panic("bound-range exception");
+}
+
+extern "C" void int_invop(isr_registers) {
+  panic("invalid opcode");
+}
+
+extern "C" void int_devnotavail(isr_registers) {
+  panic("device not available");
+}
+
+extern "C" void int_invtss(isr_registers) {
+  panic("invalid tss");
+}
+
+extern "C" void int_segnotpres(isr_registers) {
+  panic("segment not present");
+}
+
+extern "C" void int_stacksegfault(isr_registers) {
+  panic("stack segment fault");
+}
+
+extern "C" void int_fpe(isr_registers) {
+  panic("x87 floating point exception");
+}
+
+extern "C" void int_align(isr_registers) {
+  panic("alignment");
+}
+
+extern "C" void int_machine(isr_registers) {
+  panic("machine check");
+}
+
+extern "C" void int_simdfp(isr_registers) {
+  panic("SIMD FP");
+}
+
+extern "C" void int_virt(isr_registers) {
+  panic("virtualization");
+}
+
+extern "C" void int_sec(isr_registers) {
+  panic("security exception");
+}
+
+extern "C" void int_breakpoint(isr_registers regs) {
+  puts("== BREAKPOINT =============================");
   p2::string<256> buf;
   regs.to_string(buf);
   puts(buf);
 }
 
 extern "C" void int_gpf(isr_registers regs) {
-  p2::string<256> buf;
-  regs.to_string(buf);
-  puts(buf);
-  uint32_t eip_inst = *(char *)regs.eip & 0xFF;
-  panic(p2::format<128>("General protection fault: %x ([eip]: %x)", regs.error_code, eip_inst).str().c_str());
+  panic(p2::format<128>("general protection fault (%x)", regs.error_code).str().c_str());
 }
 
 extern "C" void int_doublefault(isr_registers regs) {
-  p2::string<256> buf;
-  regs.to_string(buf);
-  puts(buf);
-  uint32_t eip_inst = *(char *)regs.eip & 0xFF;
-  panic(p2::format<128>("DOUBLE FAULT: %x ([eip]: %x)", regs.error_code, eip_inst).str().c_str());
+  panic(p2::format<128>("double fault (%x)", regs.error_code).str().c_str());
 }
 
+extern "C" void isr_divzero(isr_registers);
 extern "C" void isr_debug(isr_registers);
+extern "C" void isr_nmi(isr_registers);
+extern "C" void isr_breakpoint(isr_registers);
+extern "C" void isr_overflow(isr_registers);
+extern "C" void isr_bre(isr_registers);
+extern "C" void isr_invop(isr_registers);
+extern "C" void isr_devnotavail(isr_registers);
+extern "C" void isr_invtss(isr_registers);
+extern "C" void isr_segnotpres(isr_registers);
+extern "C" void isr_stacksegfault(isr_registers);
+extern "C" void isr_fpe(isr_registers);
+extern "C" void isr_align(isr_registers);
+extern "C" void isr_machine(isr_registers);
+extern "C" void isr_simdfp(isr_registers);
+extern "C" void isr_virt(isr_registers);
+extern "C" void isr_sec(isr_registers);
 extern "C" void isr_gpf(isr_registers);
 extern "C" void isr_doublefault(isr_registers);
 
@@ -63,9 +135,25 @@ void int_init() {
   static const gdtr idt_ptr = {sizeof(idt_descriptors) - 1, reinterpret_cast<uint32_t>(idt_descriptors)};
   asm volatile("lidt [%0]" : : "m"(idt_ptr));
 
-  int_register(INT_DEBUG,       isr_debug,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
-  int_register(INT_GPF,         isr_gpf,     KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+  int_register(INT_DIVZERO,     isr_divzero, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_DEBUG,       isr_debug, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_NMI,         isr_nmi, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_BREAKPOINT,  isr_breakpoint,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_OVERFLOW,  isr_overflow,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_BRE,  isr_bre,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_INVOP,  isr_invop,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_DEVNOTAVAIL,  isr_devnotavail,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
   int_register(INT_DOUBLEFAULT, isr_doublefault,     KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+  int_register(INT_INVTSS,  isr_invtss,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_SEGNOTPRES,  isr_segnotpres,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_STACKSEGFAULT,  isr_stacksegfault,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_GPF,         isr_gpf,     KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+  int_register(INT_FPE,  isr_fpe,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_ALIGN,  isr_align,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_MACHINE,  isr_machine,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_SIMDFP,  isr_simdfp,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_VIRT,  isr_virt,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(INT_SEC,  isr_sec,   KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
 
   puts(p2::format<64>("IDT at %x", (uint32_t)idt_descriptors));
 }

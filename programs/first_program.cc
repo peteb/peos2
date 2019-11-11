@@ -16,6 +16,5 @@ int main() {
 
   const char *message = ">>> Hello World! <<<\n";
   syscall3(write, fd, message, 21);
-
   return 555 + hej;
 }
