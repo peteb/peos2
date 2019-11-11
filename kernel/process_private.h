@@ -25,10 +25,11 @@ struct stack {
 // TODO: this file needs to be cleaned up
 class process_control_block {
 public:
-  process_control_block(mem_space space_handle)
+  process_control_block(mem_space space_handle, uint32_t flags)
     : space_handle(space_handle),
       suspended(false),  // TODO: move this into a status field
-      terminating(false)
+      terminating(false),
+      flags(flags)
   {
     argv[0] = argument.c_str();
   }
@@ -83,6 +84,8 @@ public:
   proc_handle prev_process, next_process;
   uint64_t last_tick = 0;
   uint16_t kernel_stack_handle, user_stack_handle;
+
+  uint32_t flags;
 };
 
 

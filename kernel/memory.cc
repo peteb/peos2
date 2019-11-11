@@ -8,6 +8,7 @@
 #include "debug.h"
 #include "process.h"
 #include "syscalls.h"
+#include "syscall_utils.h"
 
 #include "support/page_alloc.h"
 #include "support/pool.h"
@@ -429,8 +430,15 @@ static void page_fault_alloc(area_info &area, uintptr_t faulted_address)
   uintptr_t page_address = ALIGN_DOWN(faulted_address, 0x1000);
   uintptr_t phys_block = (uintptr_t)alloc_page();
   dbg_puts(mem, "alloc map; allocated %x and mapping it at %x", phys_block, page_address);
-  map_page(current_space, page_address, phys_block, page_flags(area.flags));
+
+  uint16_t writable = area.flags & MEM_AREA_READWRITE;
+  // Temporarily set the page to readwrite so we can null the page
+  map_page(current_space, page_address, phys_block, page_flags(area.flags | MEM_AREA_READWRITE));
   memset((void *)page_address, 0, 0x1000);
+
+  // Then turn it back to readonly
+  if (!writable)
+    map_page(current_space, page_address, phys_block, page_flags(area.flags & ~MEM_AREA_READWRITE));
 }
 
 static void page_fault_file(area_info &area, uintptr_t faulted_address)
@@ -438,7 +446,9 @@ static void page_fault_file(area_info &area, uintptr_t faulted_address)
   uintptr_t page_address = ALIGN_DOWN(faulted_address, 0x1000);
   uintptr_t phys_block = (uintptr_t)alloc_page();
   dbg_puts(mem, "file map; allocated %x and mapping it at %x", phys_block, page_address);
-  map_page(current_space, page_address, phys_block, page_flags(area.flags));
+
+  uint16_t writable = area.flags & MEM_AREA_READWRITE;
+  map_page(current_space, page_address, phys_block, page_flags(area.flags | MEM_AREA_READWRITE));
   memset((void *)page_address, 0, 0x1000);
 
   file_map_info &fm_info = spaces[current_space].file_maps[area.info_handle];
@@ -452,9 +462,14 @@ static void page_fault_file(area_info &area, uintptr_t faulted_address)
 
   uint32_t read_count = p2::min<uint32_t>(fm_info.offset + fm_info.size - file_offset, 0x1000);
   dbg_puts(mem, "Reading max %d bytes", read_count);
+
   if (syscall3(read, fm_info.fd, (char *)page_address, read_count) < 0) {
     panic("failed to read");
   }
+
+  // Turn the page back to readonly if needed
+  if (!writable)
+    map_page(current_space, page_address, phys_block, page_flags(area.flags & ~MEM_AREA_READWRITE));
 }
 
 static void free_alloc_area(space_info &space, area_info &area)
@@ -479,9 +494,13 @@ extern "C" void int_page_fault(isr_registers regs)
   asm volatile("mov eax, cr2" : "=a"(faulted_address));
 
   if (regs.error_code & 1) {
-    dbg_puts(mem, "process tried to access protected page at %x", faulted_address);
-    proc_kill(*proc_current_pid(), 15);
-    proc_yield();
+    const char *access_type = "read";
+
+    if (regs.error_code & 0x2)
+      access_type = "write";
+
+    dbg_puts(mem, "process tried to %s protected page at %x", access_type, faulted_address);
+    kill_caller();
     return;
   }
 
@@ -489,8 +508,7 @@ extern "C" void int_page_fault(isr_registers regs)
 
   if (!area_handle) {
     dbg_puts(mem, "process tried to access un-mapped area at %x", faulted_address);
-    proc_kill(*proc_current_pid(), 15);
-    proc_yield();
+    kill_caller();
     return;
   }
 

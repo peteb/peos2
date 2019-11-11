@@ -85,7 +85,7 @@ proc_handle proc_create(uint32_t flags, const char *argument)
 
   mem_map_kernel(space_handle, mapping_flags);
 
-  proc_handle pid = processes.emplace_back(space_handle);
+  proc_handle pid = processes.emplace_back(space_handle, flags);
   process_control_block &pcb = processes[pid];
   pcb.argument = argument;
 
@@ -108,7 +108,12 @@ void proc_setup_stack(proc_handle pid, void *eip)
   uint32_t *initial_user_esp = pcb.user_esp;
   pcb.upush((uintptr_t)pcb.argv);        // argv
   pcb.upush(1);                          // argc
-  pcb.upush((uintptr_t)_user_proc_cleanup);
+
+  // If the kernel is accessible, we'll add a cleanup function to make
+  // sure the process is killed when its main function returns. User
+  // space processes are on their own.
+  if (pcb.flags & PROC_KERNEL_ACCESSIBLE)
+    pcb.upush((uintptr_t)_user_proc_cleanup);
 
   size_t initial_stack_usage = (uintptr_t)initial_user_esp - (uintptr_t)pcb.user_esp;
   uintptr_t user_space_stack_base = 0xB0000000;

@@ -137,13 +137,24 @@ int elf_map_process(proc_handle pid, const char *filename)
              pht[i].p_flags);
 
     if (pht[i].p_type == PT_LOAD) {
+      uint16_t flags = MEM_AREA_USER;
+
+      if (pht[i].p_flags & PF_X)
+        flags |= MEM_AREA_EXECUTABLE;
+
+      if (pht[i].p_flags & PF_W)
+        flags |= MEM_AREA_READWRITE;
+
+      if (pht[i].p_flags & PF_R)
+        flags |= MEM_AREA_SYSCALL;
+
       mem_map_fd(proc_get_space(pid),
                  ALIGN_DOWN(pht[i].p_vaddr, 0x1000),
                  ALIGN_UP(pht[i].p_vaddr + pht[i].p_memsz, 0x1000),
                  *img_open_res,
                  pht[i].p_offset,
                  pht[i].p_filesz,
-                 MEM_AREA_USER|MEM_AREA_READWRITE|MEM_AREA_SYSCALL);  // TODO: flags
+                 flags);
     }
   }
 
