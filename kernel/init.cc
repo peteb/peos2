@@ -72,7 +72,13 @@ extern "C" int init_main()
   */
 
   // Start process
-  verify(syscall1(spawn, "/ramfs/bin/first_program"));
+  const char *argv[] = {
+    "hello",
+    "param2",
+    nullptr
+  };
+
+  verify(syscall2(exec, "/ramfs/bin/first_program", argv));
 
   // Start I/O
   int stdin = verify(syscall2(open, "/dev/term0", 0));
@@ -88,7 +94,7 @@ extern "C" int init_main()
 
 static int write_info(const char *path, const char *filename, uintptr_t start_addr, uintptr_t size)
 {
-  int mod_fd = verify(syscall2(open, p2::format<64>("/ramfs%s%s", path, filename).str().c_str(), FLAG_OPEN_CREATE));
+  int mod_fd = verify(syscall2(open, p2::format<64>("/ramfs%s%s", path, filename).str().c_str(), OPEN_CREATE));
   verify(syscall4(control, mod_fd, CTRL_RAMFS_SET_FILE_RANGE, start_addr, size));
   verify(syscall1(close, mod_fd));
   return 0;

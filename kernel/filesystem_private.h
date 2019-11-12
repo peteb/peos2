@@ -37,10 +37,12 @@ struct vfs_device {
 };
 
 struct filedesc {
-  filedesc(vfs_device *device, int handle) : device(device), device_local_handle(handle) {}
+  filedesc(vfs_device *device, int handle, uint32_t flags)
+    : device(device), device_local_handle(handle), flags(flags) {}
 
   vfs_device *device;
-  int device_local_handle;
+  int         device_local_handle;
+  uint32_t    flags;
 };
 
 struct context {

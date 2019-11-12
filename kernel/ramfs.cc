@@ -148,7 +148,7 @@ static int open(vfs_device *, const char *path, uint32_t flags)
   node_handle node = lookup(root, path);
 
   if (node == nodes.end()) {
-    if (!(flags & FLAG_OPEN_CREATE))
+    if (!(flags & OPEN_CREATE))
       return ENOENT;
 
     p2::string<128> dir, base;

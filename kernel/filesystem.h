@@ -127,8 +127,16 @@ int vfs_seek(vfs_context context_handle, vfs_fd fd, int offset, int relative);
 //
 int vfs_close(vfs_context context_handle, vfs_fd fd);
 
-// Managing file descriptor tables, process context, etc.
+void vfs_close_not_matching(vfs_context context_handle, uint32_t flags);
+
+//
+// vfs_create_context - creates a new filesystem context
+//
 p2::res<vfs_context> vfs_create_context();
-void                 vfs_destroy_context(vfs_context context_handle);
+
+//
+// vfs_destroy_context - closes all fds and other resources
+//
+void vfs_destroy_context(vfs_context context_handle);
 
 #endif // !PEOS2_FILESYSTEM_H

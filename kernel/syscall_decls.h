@@ -27,8 +27,10 @@
 #define SYSCALL_NUM_MMAP        20
 
 // Flags
-#define FLAG_OPEN_READWRITE   0x01
-#define FLAG_OPEN_CREATE      0x02
+#define OPEN_READ             0x01
+#define OPEN_READWRITE        0x02
+#define OPEN_CREATE           0x04
+#define OPEN_RETAIN_EXEC      0x10  // Keep the fd open after `exec`
 
 #define SEEK_CUR              1
 #define SEEK_BEG              2
@@ -61,6 +63,7 @@ SYSCALL_DEF1(spawn,   SYSCALL_NUM_SPAWN, const char *);
 //
 // exec - rewrites the current process so that it'll run `filename`
 // @filename: path to an ELF executable
+// @argv: null-terminated list of pointers to arguments
 //
 // - file descriptors not marked RETAIN_EXEC will be closed
 // - memory areas not marked RETAIN_EXEC will be removed and backing
@@ -70,7 +73,7 @@ SYSCALL_DEF1(spawn,   SYSCALL_NUM_SPAWN, const char *);
 // - there's no way to "share" data between before and after exec
 //   without using some other syscall; the old data is gone
 //
-SYSCALL_DEF1(exec, SYSCALL_NUM_EXEC, const char *);
+SYSCALL_DEF2(exec, SYSCALL_NUM_EXEC, const char *, const char **);
 
 
 // Memory definitions

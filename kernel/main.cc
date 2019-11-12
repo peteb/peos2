@@ -110,7 +110,7 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   // Overwrite the current mappings for the kernel to only include the
   // relevant parts and only at KERNEL_VIRT_BASE.
   mem_space space = mem_create_space();
-  mem_map_kernel(space, MEM_AREA_READWRITE);
+  mem_map_kernel(space, MEM_AREA_READWRITE|MEM_AREA_RETAIN_EXEC);
   mem_activate_space(space);
 
   proc_handle init_pid = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, "hejsan");

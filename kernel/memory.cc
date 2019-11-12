@@ -22,7 +22,7 @@ extern int kernel_end;
 extern char __start_READONLY, __stop_READONLY;
 
 // Forward decls
-static void free_alloc_area(space_info &space, area_info &area);
+static void unmap_area(space_info &space, mem_area area_handle);
 static void *alloc_page();
 static void free_page(void *page);
 static void map_page(mem_space space, uint32_t virt, uint32_t phys, uint16_t flags);
@@ -59,8 +59,9 @@ void mem_init(const region *phys_region)
 mem_space mem_create_space()
 {
   page_dir_entry *page_dir = (page_dir_entry *)page_dir_allocator.alloc_page_zero();
-  dbg_puts(mem, "created page dir %x", (uintptr_t)page_dir);
-  return spaces.emplace_back(page_dir);
+  mem_space space_handle = spaces.emplace_back(page_dir);
+  dbg_puts(mem, "created space %d with page dir %x", space_handle, (uintptr_t)page_dir);
+  return space_handle;
 }
 
 void mem_destroy_space(mem_space space_handle)
@@ -79,8 +80,9 @@ void mem_destroy_space(mem_space space_handle)
     if (!space->areas.valid(i))
       continue;
 
-    if (space->areas[i].type == AREA_ALLOC || space->areas[i].type == AREA_FILE)
-      free_alloc_area(*space, space->areas[i]);
+    // This will remove from the area list and mark the PTE as
+    // non-present, this isn't strictly necessary
+    unmap_area(*space, i);
   }
 
   for (int i = 0; i < 1024; ++i) {
@@ -98,6 +100,24 @@ void mem_destroy_space(mem_space space_handle)
   page_dir_allocator.free_page(space->page_dir);
   space->page_dir = nullptr;
   spaces.erase(space_handle);
+}
+
+//
+// mem_unmap_not_matching - unmaps all areas where flags aren't
+// matching. Be careful not to unmap areas that you need.
+//
+void mem_unmap_not_matching(mem_space space_handle, uint16_t flags)
+{
+  space_info &space = spaces[space_handle];
+
+  for (size_t i = 0; i < space.areas.watermark(); ++i) {
+    if (!space.areas.valid(i))
+      continue;
+
+    if (!(space.areas[i].flags & flags)) {
+      unmap_area(space, i);
+    }
+  }
 }
 
 void mem_activate_space(mem_space space_handle)
@@ -308,6 +328,7 @@ mem_area mem_map_fd(mem_space space_handle,
                     uint16_t flags)
 {
   assert(!overlaps_existing_area(space_handle, start, end));
+
   space_info &space = spaces[space_handle];
   // TODO: check reference
   uint16_t map_handle = space.file_maps.push_back({fd, offset, file_size});
@@ -396,17 +417,19 @@ static void page_fault_file(area_info &area, uintptr_t faulted_address)
     map_page(current_space, page_address, phys_block, page_flags(area.flags & ~MEM_AREA_READWRITE));
 }
 
-static void free_alloc_area(space_info &space, area_info &area)
+static void unmap_area(space_info &space, mem_area area_handle)
 {
-  assert(area.type == AREA_ALLOC || area.type == AREA_FILE);
+  auto &area = space.areas[area_handle];
 
   for (uintptr_t page_address = area.start;
        page_address < area.end;
        page_address += 0x1000) {
 
     if (auto *pte = find_pte(space, page_address); pte && pte->flags & MEM_PE_P) {
-      dbg_puts(mem, "free allocated page virt %x (%x)", page_address, pte_frame(pte));
-      free_page((void *)pte_frame(pte));
+      if (area.type == AREA_ALLOC || area.type == AREA_FILE) {
+        free_page((void *)pte_frame(pte));
+      }
+
       pte->flags &= ~MEM_PE_P;
     }
   }
@@ -431,7 +454,7 @@ extern "C" void int_page_fault(isr_registers regs)
   p2::optional<mem_area> area_handle = find_area(current_space, faulted_address);
 
   if (!area_handle) {
-    dbg_puts(mem, "process tried to access un-mapped area at %x", faulted_address);
+    dbg_puts(mem, "process tried to access un-mapped area at %x in space %d", faulted_address, current_space);
     kill_caller();
     return;
   }

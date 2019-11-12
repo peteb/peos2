@@ -30,5 +30,6 @@ void                 proc_kill(proc_handle pid, uint32_t exit_status);
 mem_space            proc_get_space(proc_handle pid);
 vfs_context          proc_get_file_context(proc_handle pid);
 void                 proc_set_syscall_ret(proc_handle pid, uintptr_t ip);
+void                 proc_assign_user_stack(proc_handle pid, const char *argv[], int argc);
 
 #endif // !PEOS2_PROCESS_H

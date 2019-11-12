@@ -272,7 +272,7 @@ p2::res<vfs_fd> vfs_open(vfs_context context_handle, const char *filename, uint3
   if (device_local_handle < 0)
     return p2::failure(device_local_handle);
 
-  vfs_fd fd = context_.descriptors.emplace_back(&device_node, device_local_handle);
+  vfs_fd fd = context_.descriptors.emplace_back(&device_node, device_local_handle, flags);
   dbg_puts(vfs, "opened %s at %d.%d", filename, context_handle, fd);
   return p2::success(fd);
 }
@@ -305,6 +305,16 @@ void vfs_destroy_context(vfs_context context_handle)
 
   for (int i = 0; i < context_.descriptors.watermark(); ++i) {
     if (context_.descriptors.valid(i))
+      vfs_close(context_handle, i);
+  }
+}
+
+void vfs_close_not_matching(vfs_context context_handle, uint32_t flags)
+{
+  context &context_ = contexts[context_handle];
+
+  for (int i = 0; i < context_.descriptors.watermark(); ++i) {
+    if (context_.descriptors.valid(i) && !(context_.descriptors[i].flags & flags))
       vfs_close(context_handle, i);
   }
 }

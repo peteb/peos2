@@ -27,7 +27,7 @@ static uint32_t    syscall_yield();
 static uint32_t    syscall_exit(int exit_code);
 static uint32_t    syscall_kill(uint32_t pid);
 static int         syscall_spawn(const char *filename);
-static int         syscall_exec(const char *filename);
+static int         syscall_exec(const char *filename, const char **argv);
 
 static proc_handle decide_next_process();
 static void        destroy_process(proc_handle pid);
@@ -80,7 +80,7 @@ proc_handle proc_create(uint32_t flags, const char *argument)
     mapping_flags |= (MEM_AREA_USER|MEM_AREA_SYSCALL);
   }
 
-  mem_map_kernel(space_handle, mapping_flags);
+  mem_map_kernel(space_handle, mapping_flags|MEM_AREA_RETAIN_EXEC);
 
   proc_handle pid = processes.emplace_back(space_handle,
                                            *vfs_create_context(),
@@ -91,6 +91,11 @@ proc_handle proc_create(uint32_t flags, const char *argument)
   processes[pid].assign_user_stack(args, 1);
 
   return pid;
+}
+
+void proc_assign_user_stack(proc_handle pid, const char *argv[], int argc)
+{
+  processes[pid].assign_user_stack(argv, argc);
 }
 
 void proc_set_syscall_ret(proc_handle pid, uintptr_t ip)
@@ -313,21 +318,45 @@ static int syscall_spawn(const char *filename)
   return pid;
 }
 
-static int syscall_exec(const char *filename)
+static int syscall_exec(const char *filename, const char *us_argv[])
 {
-  verify_ptr(proc, filename);
-  // TODO: verify whole filename
+  verify_ptr(proc, filename);   // TODO: verify whole filename
+  verify_ptr(proc, us_argv);
+
   dbg_puts(proc, "execing process with image '%s'", filename);
 
+  // User space will be unmapped further down, and to skip copying
+  // arguments into the kernel we'll setup the new user stack
+  // first. The drawback is that if anything fails after assigning the
+  // stack, the process is broken.
+  // TODO: make this safer in the case of errors
+
+  const char *new_argv[32] = {};
+  const char **in_arg = us_argv, **out_arg = new_argv;
+
+  *out_arg++ = filename;
+
+  while (*in_arg) {
+    verify_ptr(proc, *in_arg);
+    // TODO: verify string
+    *out_arg++ = *in_arg++;
+  }
+
+  const int argc = out_arg - new_argv;
+
+  // Overwrite user stack with program arguments. This is the "point of no return"!
+  proc_assign_user_stack(*proc_current_pid(), new_argv, argc);
+
   // Copy filename into the kernel stack so we can swap out user space
-  // underneath us
   p2::string<128> image_path{filename};
 
-  // TODO: remove existing mappings
-  // TODO: remove existing fds
-  // TODO: reset user stack
+  // Remove existing user space mappings so there won't be any collisions
+  mem_unmap_not_matching(proc_get_space(*proc_current_pid()), MEM_AREA_RETAIN_EXEC);
 
-  if (int result = elf_map_process(*proc_current_pid(), filename); result < 0) {
+  // Keep files like stdout and mmap'd elf files
+  vfs_close_not_matching(proc_get_file_context(*proc_current_pid()), OPEN_RETAIN_EXEC);
+
+  if (int result = elf_map_process(*proc_current_pid(), image_path.c_str()); result < 0) {
     return result;
   }
 

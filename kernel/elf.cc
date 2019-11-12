@@ -110,15 +110,7 @@ int elf_map_process(proc_handle pid, const char *filename)
   if (hdr.e_type != 2)
     panic("Only executable files supported");
 
-  dbg_puts(elf, "e_type: %x", hdr.e_type);
   dbg_puts(elf, "e_entry: %x", hdr.e_entry);
-  dbg_puts(elf, "e_phoff: %x", hdr.e_phoff);
-  dbg_puts(elf, "e_shoff: %x", hdr.e_shoff);
-  dbg_puts(elf, "e_flags: %x", hdr.e_flags);
-  dbg_puts(elf, "e_ehsize: %x", hdr.e_ehsize);
-  dbg_puts(elf, "e_phnum: %x", hdr.e_phnum);
-  dbg_puts(elf, "e_shnum: %x", hdr.e_shnum);
-  dbg_puts(elf, "e_shstrndx: %x", hdr.e_shstrndx);
 
   elf_program_header pht[32];
   assert(hdr.e_phnum < ARRAY_SIZE(pht));
@@ -136,18 +128,6 @@ int elf_map_process(proc_handle pid, const char *filename)
     size_t bytes_read = *read_result;
     assert(bytes_read == sizeof(elf_program_header) * hdr.e_phnum);
   }
-
-  vfs_close(proc_get_file_context(pid), fd);
-
-  // So we've managed to parse the ELF file a bit to get the program
-  // header table. Let's set up the file descriptor in the target
-  // process.
-  p2::res<vfs_fd> img_open_result = vfs_open(proc_get_file_context(pid),
-                                             filename,
-                                             0);  // TODO: flags
-
-  if (!img_open_result)
-    return img_open_result.error();
 
   for (int i = 0; i < hdr.e_phnum; ++i) {
     dbg_puts(elf, "type: %x ofs: %x virt: %x flags: %x",
@@ -171,15 +151,12 @@ int elf_map_process(proc_handle pid, const char *filename)
       mem_map_fd(proc_get_space(pid),
                  ALIGN_DOWN(pht[i].p_vaddr, 0x1000),
                  ALIGN_UP(pht[i].p_vaddr + pht[i].p_memsz, 0x1000),
-                 *img_open_result,
+                 fd,
                  pht[i].p_offset,
                  pht[i].p_filesz,
                  flags);
     }
   }
-
-  // TODO: proc_set_syscall_ret(hdr.e_entry);
-  // TODO: proc_set_syscall_ret_sp
 
   proc_set_syscall_ret(pid, hdr.e_entry);
   return 0;

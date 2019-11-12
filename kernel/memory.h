@@ -20,6 +20,7 @@
 #define MEM_AREA_CACHE_DISABLED  0x0008  // No caching of pages
 #define MEM_AREA_GLOBAL          0x0010  // Area will be mapped "globally"
 #define MEM_AREA_SYSCALL         0x0100  // Area is good for syscall pointers
+#define MEM_AREA_RETAIN_EXEC     0x0200  // Keep the area through exec
 
 struct region {
   uintptr_t start, end;
@@ -34,7 +35,7 @@ void       mem_init(const region *phys_region);
 mem_space  mem_create_space();
 void       mem_destroy_space(mem_space space);
 void       mem_activate_space(mem_space space);
-
+void       mem_unmap_not_matching(mem_space space, uint16_t flags);
 
 //
 // mem_map_kernel - directly maps the kernel's memory into the space.
