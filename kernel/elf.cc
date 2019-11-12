@@ -70,7 +70,7 @@ int elf_map_process(proc_handle pid, const char *filename)
   elf_header hdr = {};
 
   // TODO: flags
-  p2::res<proc_fd_handle> open_result = vfs_open(*proc_current_pid(), filename, 0);
+  p2::res<proc_fd_handle> open_result = vfs_open(pid, filename, 0);
   if (!open_result)
     return open_result.error();
 
@@ -79,7 +79,7 @@ int elf_map_process(proc_handle pid, const char *filename)
   {
     // TODO: how do we handle if this would block?
     // TODO: repeating read
-    p2::res<size_t> read_result = vfs_read(*proc_current_pid(), fd, (char *)&hdr, sizeof(hdr));
+    p2::res<size_t> read_result = vfs_read(pid, fd, (char *)&hdr, sizeof(hdr));
 
     if (!read_result)
       return read_result.error();
@@ -122,7 +122,7 @@ int elf_map_process(proc_handle pid, const char *filename)
 
   {
     // TODO: repeating read
-    p2::res<size_t> read_result = vfs_read(*proc_current_pid(), fd, (char *)pht, sizeof(elf_program_header) * hdr.e_phnum);
+    p2::res<size_t> read_result = vfs_read(pid, fd, (char *)pht, sizeof(elf_program_header) * hdr.e_phnum);
 
     if (!read_result)
       return read_result.error();
@@ -131,7 +131,7 @@ int elf_map_process(proc_handle pid, const char *filename)
     assert(bytes_read == sizeof(elf_program_header) * hdr.e_phnum);
   }
 
-  vfs_close_handle(*proc_current_pid(), fd);
+  vfs_close_handle(pid, fd);
 
   // So we've managed to parse the ELF file a bit to get the program
   // header table. Let's set up the file descriptor in the target
@@ -170,7 +170,9 @@ int elf_map_process(proc_handle pid, const char *filename)
     }
   }
 
-  proc_setup_stack(pid, (void *)hdr.e_entry);
+  // TODO: proc_set_syscall_ret(hdr.e_entry);
+  // TODO: proc_set_syscall_ret_sp
 
+  proc_set_syscall_ret(pid, hdr.e_entry);
   return 0;
 }

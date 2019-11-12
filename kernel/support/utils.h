@@ -35,6 +35,16 @@ namespace p2 {
   T&& forward(typename remove_reference<T>::type&& t) noexcept {
     return static_cast<T&&>(t);
   }
+
+  class non_copyable {
+  public:
+    non_copyable() = default;
+    ~non_copyable() = default;
+
+  private:
+    non_copyable(const non_copyable &) = delete;
+    non_copyable &operator =(const non_copyable &) = delete;
+  };
 }
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))

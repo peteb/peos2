@@ -20,16 +20,15 @@
 SYSCALL_DEF1(exit, SYSCALL_NUM_EXIT, uint32_t);
 
 // Externals
-extern "C" void switch_task(uint32_t *old_esp, uint32_t new_esp);
-extern "C" void switch_task_iret();
 extern "C" void isr_timer(isr_registers);
-extern "C" void _user_proc_cleanup();
 
 // Statics
 static uint32_t    syscall_yield();
 static uint32_t    syscall_exit(int exit_code);
 static uint32_t    syscall_kill(uint32_t pid);
 static int         syscall_spawn(const char *filename);
+static int         syscall_exec(const char *filename);
+
 static proc_handle decide_next_process();
 static void        destroy_process(proc_handle pid);
 static void        switch_process(proc_handle pid);
@@ -40,9 +39,7 @@ static void        dequeue(proc_handle pid, proc_handle *head);
 static void        idle_main();
 
 // Global state
-static p2::pool<process_control_block, 16, proc_handle> processes;
-static p2::pool<stack<0x1000>, 16> user_stacks;
-static p2::pool<stack<256>, 16> kernel_stacks;
+static p2::pool<process, 16, proc_handle> processes;
 
 static proc_handle current_pid = processes.end();
 static proc_handle running_head = processes.end(), suspended_head = processes.end();
@@ -58,6 +55,7 @@ void proc_init()
   syscall_register(SYSCALL_NUM_EXIT, (syscall_fun)syscall_exit);
   syscall_register(SYSCALL_NUM_KILL, (syscall_fun)syscall_kill);
   syscall_register(SYSCALL_NUM_SPAWN, (syscall_fun)syscall_spawn);
+  syscall_register(SYSCALL_NUM_EXEC, (syscall_fun)syscall_exec);
 
   // Timer for preemptive task switching
   pit_set_phase(10);
@@ -65,7 +63,7 @@ void proc_init()
   int_register(IRQ_BASE_INTERRUPT + IRQ_SYSTEM_TIMER, isr_timer, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 
   idle_process = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, "");
-  proc_setup_stack(idle_process, (void *)idle_main);
+  proc_set_syscall_ret(idle_process, (uintptr_t)idle_main);
 }
 
 proc_handle proc_create(uint32_t flags, const char *argument)
@@ -73,10 +71,9 @@ proc_handle proc_create(uint32_t flags, const char *argument)
   // TODO: support multiple arguments
   mem_space space_handle = mem_create_space();
   uint16_t mapping_flags = MEM_AREA_READWRITE;
+
   // We must always map the kernel as RW; it's going to be used in
   // syscalls and other interrupts even if the U bit isn't set.
-
-
   assert(flags & PROC_USER_SPACE);
 
   if (flags & PROC_KERNEL_ACCESSIBLE) {
@@ -86,70 +83,16 @@ proc_handle proc_create(uint32_t flags, const char *argument)
   mem_map_kernel(space_handle, mapping_flags);
 
   proc_handle pid = processes.emplace_back(space_handle, flags);
-  process_control_block &pcb = processes[pid];
-  pcb.argument = argument;
+  processes[pid].setup_stacks();
 
+  // TODO: argument
+  (void)argument;
   return pid;
 }
 
-void proc_setup_stack(proc_handle pid, void *eip)
+void proc_set_syscall_ret(proc_handle pid, uintptr_t ip)
 {
-  process_control_block &pcb = processes[pid];
-
-  uint16_t kernel_stack_handle = kernel_stacks.emplace_back();
-  uint16_t user_stack_handle = user_stacks.emplace_back();
-  pcb.set_kernel_stack(kernel_stacks[kernel_stack_handle], kernel_stack_handle);
-  pcb.set_user_stack(user_stacks[user_stack_handle], user_stack_handle);
-
-  // TODO: support non-user space processes
-
-  // Push user space stack things first: the kernel stack references
-  // the user ESP.
-  uint32_t *initial_user_esp = pcb.user_esp;
-  pcb.upush((uintptr_t)pcb.argv);        // argv
-  pcb.upush(1);                          // argc
-
-  // If the kernel is accessible, we'll add a cleanup function to make
-  // sure the process is killed when its main function returns. User
-  // space processes are on their own.
-  if (pcb.flags & PROC_KERNEL_ACCESSIBLE)
-    pcb.upush((uintptr_t)_user_proc_cleanup);
-
-  size_t initial_stack_usage = (uintptr_t)initial_user_esp - (uintptr_t)pcb.user_esp;
-  uintptr_t user_space_stack_base = 0xB0000000;
-
-  // We need a stack that can invoke iret as soon as possible, without
-  // invoking any gcc function epilogues or prologues.  First, we need
-  // a stack good for `switch_task`. As we set the return address to
-  // be `switch_task_iret`, we also need to push values for IRET.
-  pcb.kpush(USER_DATA_SEL);                                // SS
-  pcb.kpush(user_space_stack_base - initial_stack_usage);  // ESP
-  pcb.kpush(0x202);                                        // EFLAGS, IF
-  pcb.kpush(USER_CODE_SEL);                                // CS
-  pcb.kpush((uint32_t)eip);                                // Return EIP from switch_task_iret
-  pcb.kpush((uint32_t)switch_task_iret);                   // Return EIP from switch_task
-  pcb.kpush(0);                                            // EBX
-  pcb.kpush(0);                                            // ESI
-  pcb.kpush(0);                                            // EDI
-  pcb.kpush(0);                                            // EBP
-
-  size_t stack_area_size = 4096 * 1024;
-
-  // The first page of the stack is in a kernel pool, this is an easy
-  // way for the kernel to be able to populate the stack, albeit
-  // wasteful. The rest of the stack pages will be allocated on the
-  // fly.
-  mem_space space_handle = proc_get_space(pid);
-  mem_map_linear(space_handle,
-                 user_space_stack_base - 0x1000,
-                 user_space_stack_base,
-                 KERNVIRT2PHYS((uintptr_t)user_stacks[user_stack_handle].base()) - 0x1000,
-                 MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
-
-  mem_map_alloc(space_handle,
-                user_space_stack_base - stack_area_size,
-                user_space_stack_base - 0x1000,
-                MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
+  processes[pid].set_syscall_ret_ip(ip);
 }
 
 void proc_enqueue(proc_handle pid)
@@ -160,12 +103,12 @@ void proc_enqueue(proc_handle pid)
 
 static void destroy_process(proc_handle pid)
 {
-  process_control_block &pcb = processes[pid];
+  process &proc = processes[pid];
 
   // TODO: performance: we're wasting time iterating over non-valid
   // elements
-  for (size_t i = 0; i < pcb.file_descriptors.watermark(); ++i) {
-    if (!pcb.file_descriptors.valid(i)) {
+  for (size_t i = 0; i < proc.file_descriptors.watermark(); ++i) {
+    if (!proc.file_descriptors.valid(i)) {
       continue;
     }
 
@@ -173,15 +116,12 @@ static void destroy_process(proc_handle pid)
     vfs_close_handle(pid, i);
   }
 
-  mem_destroy_space(pcb.space_handle);
+  mem_destroy_space(proc.space_handle);
 
   // Remove the process so it won't get picked for execution
-  dequeue(pid, pcb.suspended ? &suspended_head : &running_head);
+  dequeue(pid, proc.suspended ? &suspended_head : &running_head);
 
-  // Free up memory used by the process
-  user_stacks.erase(pcb.user_stack_handle);
-  kernel_stacks.erase(pcb.kernel_stack_handle);
-  pcb.kernel_esp = pcb.kernel_stack_base = pcb.user_esp = nullptr;
+  proc.free_stacks();
 
   // TODO: we might want to keep the PCB around for a while so we can
   // read the exit status, detect dangling PIDs, etc...
@@ -206,10 +146,10 @@ extern "C" void int_timer(isr_registers)
 
 void proc_switch(proc_handle pid)
 {
-  process_control_block &pcb = processes[pid];
-  assert(!pcb.suspended && "please resume the process before switching to it");
+  process &proc = processes[pid];
+  assert(!proc.suspended && "please resume the process before switching to it");
 
-  if (pcb.terminating) {
+  if (proc.terminating) {
     dbg_puts(proc, "trying to switch to terminating process %d", pid);
     // The process has been terminated, so we cannot run it. This can
     // happen if the process was in a blocking syscall when someone
@@ -227,25 +167,18 @@ static void switch_process(proc_handle pid)
   // something we want, so disable interrupts.
   asm volatile("cli");
 
-  process_control_block &pcb = processes[pid];
-  pcb.activate();
-  pcb.last_tick = tick_count;
+  process &proc = processes[pid];
+
+  // Update last_tick so the scheduler will work correctly
+  proc.last_tick = tick_count;
 
   if (current_pid == pid) {
     return;
   }
 
-  uint32_t *current_task_esp = 0;
-  uint32_t **current_task_esp_ptr = &current_task_esp;
-
-  // Save the old process' kernel stack pointer. But only if the old
-  // process still exists.
-  if (current_pid != processes.end() && processes.valid(current_pid)) {
-    current_task_esp_ptr = &processes[current_pid].kernel_esp;
-  }
-
+  process *previous_proc = processes.valid(current_pid) ? &processes[current_pid] : nullptr;
   current_pid = pid;
-  switch_task((uint32_t *)current_task_esp_ptr, (uint32_t)pcb.kernel_esp);
+  proc.activate(previous_proc);
 }
 
 void proc_yield()
@@ -255,26 +188,26 @@ void proc_yield()
 
 void proc_suspend(proc_handle pid)
 {
-  process_control_block &pcb = processes[pid];
-  if (pcb.suspended) {
+  process &proc = processes[pid];
+  if (proc.suspended) {
     return;
   }
 
   dequeue(pid, &running_head);
   enqueue_front(pid, &suspended_head);
-  pcb.suspended = true;
+  proc.suspended = true;
 }
 
 void proc_resume(proc_handle pid)
 {
-  process_control_block &pcb = processes[pid];
-  if (!pcb.suspended) {
+  process &proc = processes[pid];
+  if (!proc.suspended) {
     return;
   }
 
   dequeue(pid, &suspended_head);
   enqueue_front(pid, &running_head);
-  pcb.suspended = false;
+  proc.suspended = false;
 }
 
 static void enqueue_front(proc_handle pid, proc_handle *head)
@@ -284,25 +217,25 @@ static void enqueue_front(proc_handle pid, proc_handle *head)
     processes[*head].prev_process = pid;
   }
 
-  process_control_block &pcb = processes[pid];
-  pcb.next_process = *head;
-  pcb.prev_process = processes.end();
+  process &proc = processes[pid];
+  proc.next_process = *head;
+  proc.prev_process = processes.end();
   *head = pid;
 }
 
 static void dequeue(proc_handle pid, proc_handle *head)
 {
-  process_control_block &pcb = processes[pid];
-  if (pcb.prev_process != processes.end()) {
-    processes[pcb.prev_process].next_process = pcb.next_process;
+  process &proc = processes[pid];
+  if (proc.prev_process != processes.end()) {
+    processes[proc.prev_process].next_process = proc.next_process;
   }
 
-  if (pcb.next_process != processes.end()) {
-    processes[pcb.next_process].prev_process = pcb.prev_process;
+  if (proc.next_process != processes.end()) {
+    processes[proc.next_process].prev_process = proc.prev_process;
   }
 
   if (*head == pid) {
-    *head = pcb.next_process;
+    *head = proc.next_process;
   }
 }
 
@@ -315,13 +248,13 @@ static proc_handle decide_next_process()
   proc_handle node = running_head;
 
   while (node != processes.end()) {
-    process_control_block &pcb = processes[node];
-    if (pcb.last_tick < minimum_tick) {
-      minimum_tick = pcb.last_tick;
+    process &proc = processes[node];
+    if (proc.last_tick < minimum_tick) {
+      minimum_tick = proc.last_tick;
       minimum_pid = node;
     }
 
-    node = pcb.next_process;
+    node = proc.next_process;
   }
 
   if (minimum_pid == processes.end()) {
@@ -339,12 +272,12 @@ static uint32_t syscall_yield()
 
 void proc_kill(proc_handle pid, uint32_t exit_status)
 {
-  process_control_block &pcb = processes[pid];
+  process &proc = processes[pid];
 
-  if (pcb.suspended) {
+  if (proc.suspended) {
     // If the process is suspended we need to wait for the driver
     dbg_puts(proc, "pid %d exiting with status %d", pid, exit_status);
-    pcb.terminating = true;
+    proc.terminating = true;
     return;
   }
 
@@ -354,7 +287,7 @@ void proc_kill(proc_handle pid, uint32_t exit_status)
 
 p2::opt<proc_fd_handle> proc_create_fd(proc_handle pid, proc_fd fd)
 {
-  if (process_control_block *proc_info = processes.at(pid)) {
+  if (process *proc_info = processes.at(pid)) {
     if (!proc_info->file_descriptors.full())
       return proc_info->file_descriptors.push_back(fd);
   }
@@ -364,7 +297,7 @@ p2::opt<proc_fd_handle> proc_create_fd(proc_handle pid, proc_fd fd)
 
 proc_fd *proc_get_fd(proc_handle pid, proc_fd_handle fd)
 {
-  if (process_control_block *proc_info = processes.at(pid))
+  if (process *proc_info = processes.at(pid))
     return proc_info->file_descriptors.at(fd);
 
   return nullptr;
@@ -372,7 +305,7 @@ proc_fd *proc_get_fd(proc_handle pid, proc_fd_handle fd)
 
 void proc_remove_fd(proc_handle pid, proc_fd_handle fd)
 {
-  if (process_control_block *proc_info = processes.at(pid)) {
+  if (process *proc_info = processes.at(pid)) {
     if (proc_info->file_descriptors.valid(fd))
       proc_info->file_descriptors.erase(fd);
   }
@@ -409,6 +342,27 @@ static int syscall_spawn(const char *filename)
   return pid;
 }
 
+static int syscall_exec(const char *filename)
+{
+  verify_ptr(proc, filename);
+  // TODO: verify whole filename
+  dbg_puts(proc, "execing process with image '%s'", filename);
+
+  // Copy filename into the kernel stack so we can swap out user space
+  // underneath us
+  p2::string<128> image_path{filename};
+
+  // TODO: remove existing mappings
+  // TODO: remove existing fds
+  // TODO: reset user stack
+
+  if (int result = elf_map_process(*proc_current_pid(), filename); result < 0) {
+    return result;
+  }
+
+  return 0;
+}
+
 //
 // Idling process: when there's nothing else to do.
 //
@@ -420,14 +374,4 @@ static void idle_main()
     count = (count + 1) % 26;
     __builtin_ia32_pause();
   }
-}
-
-//
-// Called in processes that have the kernel accessible.
-//
-extern "C" void _user_proc_cleanup()
-{
-  uint32_t retval;
-  asm volatile("" : "=a"(retval));
-  syscall1(exit, retval);
 }

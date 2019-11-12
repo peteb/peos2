@@ -22,6 +22,7 @@
 #define SYSCALL_NUM_EXIT        11
 #define SYSCALL_NUM_KILL        12
 #define SYSCALL_NUM_SPAWN       13
+#define SYSCALL_NUM_EXEC        14
 
 #define SYSCALL_NUM_MMAP        20
 
@@ -55,6 +56,21 @@ SYSCALL_DEF1(mkdir,   SYSCALL_NUM_MKDIR, const char *);
 // Process definitions
 SYSCALL_DEF1(exit,    SYSCALL_NUM_EXIT, int);
 SYSCALL_DEF1(spawn,   SYSCALL_NUM_SPAWN, const char *);
+
+//
+// exec - rewrites the current process so that it'll run `filename`
+// @filename: path to an ELF executable
+//
+// - file descriptors not marked RETAIN_EXEC will be closed
+// - memory areas not marked RETAIN_EXEC will be removed and backing
+//   pages might be freed
+// - user stack will be reset and pages might be freed
+// - kernel stack remains -- it's used for the syscall invocation
+// - there's no way to "share" data between before and after exec
+//   without using some other syscall; the old data is gone
+//
+SYSCALL_DEF1(exec, SYSCALL_NUM_EXEC, const char *);
+
 
 // Memory definitions
 SYSCALL_DEF5(mmap,    SYSCALL_NUM_MMAP, void *, void *, int, uint32_t, uint8_t);

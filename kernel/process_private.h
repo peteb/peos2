@@ -3,90 +3,246 @@
 #ifndef PEOS2_PROCESS_PRIVATE_H
 #define PEOS2_PROCESS_PRIVATE_H
 
+#include "support/utils.h"
+#include "memareas.h"
+
+extern "C" void switch_task_iret();
+extern "C" void switch_task(uint32_t *old_esp, uint32_t new_esp);
+extern "C" void _user_proc_cleanup();
+
+
 //
-// Wrapper for a kernel or user stack.
+// Storage for kernel and user stacks.
 //
 template<size_t N>
-struct stack {
-  uint32_t *base() {
-    size_t length = ARRAY_SIZE(data);
+class stack_storage {
+public:
+  uint32_t *base()
+  {
+    size_t length = ARRAY_SIZE(_data);
     assert(length > 0);
-    return &data[length];
-    // &data[length] should be correct, ie, one above the end of the
+    return &_data[length];
+    // &_data[length] should be correct, ie, one above the end of the
     // array: it's explicitly a legal pointer in C/C++, and x86 PUSH
     // first decrements ESP before writing to [ESP].
   }
 
   // User stacks need to be aligned on 4096 byte boundaries as we map
   // them into the process. They also need to be aligned on 16 bytes.
-  uint32_t data[N] alignas(0x1000);
+  uint32_t _data[N] alignas(0x1000);
 };
 
-// TODO: this file needs to be cleaned up
-class process_control_block {
+class stack {
 public:
-  process_control_block(mem_space space_handle, uint32_t flags)
-    : space_handle(space_handle),
-      suspended(false),  // TODO: move this into a status field
-      terminating(false),
-      flags(flags)
-  {
-    argv[0] = argument.c_str();
-  }
-
-  // TODO: extract into non-copyable and non-movable
-  process_control_block(const process_control_block &other) = delete;
-  process_control_block &operator =(const process_control_block &other) = delete;
-
-  // TODO: right now the stack allocation logic is a bit split with
-  // this file and process.c, make it nicer.
+  stack() : sp(nullptr), base(nullptr), end(nullptr) {}
 
   template<size_t N>
-  void set_kernel_stack(stack<N> &kernel_stack, uint16_t stack_handle)
+  stack(stack_storage<N> &storage)
+    : sp(storage.base()), base(storage.base()), end(storage.base() - N)
+  {}
+
+  void push(uint32_t value)
   {
-    kernel_esp = kernel_stack.base();
-    kernel_stack_base = kernel_stack.base();
-    kernel_stack_handle = stack_handle;
+    assert(sp <= base);
+    assert(sp > end);
+    *--sp = value;
   }
 
-  template<size_t N>
-  void set_user_stack(stack<N> &user_stack, uint16_t stack_handle)
+  void rewind()
   {
-    user_esp = user_stack.base();
-    user_stack_handle = stack_handle;
+    sp = base;
   }
 
-  void kpush(uint32_t value) {
-    *--kernel_esp = value;
+  size_t bytes_used() const
+  {
+    return (base - sp) * sizeof(*sp);
   }
 
-  void upush(uint32_t value) {
-    *--user_esp = value;
+  uint32_t *sp, *base, *end;
+};
+
+static p2::pool<stack_storage<0x1000>, 16> user_stacks;
+static p2::pool<stack_storage<256>, 16> kernel_stacks;
+
+
+//
+// process - contains state and resources that belongs to a process.
+//
+class process : p2::non_copyable {
+public:
+  process(mem_space space_handle, uint32_t flags)
+    : space_handle(space_handle), flags(flags) {}
+
+  //
+  // setup_stacks - allocates and initializes user and kernel stacks
+  //
+  void setup_stacks()
+  {
+    assert(!user_stack.base);
+    assert(!kernel_stack.base);
+
+    kernel_stack_handle = kernel_stacks.emplace_back();
+    kernel_stack = {kernel_stacks[kernel_stack_handle]};
+    user_stack_handle = user_stacks.emplace_back();
+    user_stack = {user_stacks[user_stack_handle]};
+
+    // We need a stack that can invoke iret as soon as possible, without
+    // invoking any gcc function epilogues or prologues.  First, we need
+    // a stack good for `switch_task`. As we set the return address to
+    // be `switch_task_iret`, we also need to push values for IRET.
+    ks_push(USER_DATA_SEL);                                // SS
+    ks_push(0);                                            // ESP, should be filled in later
+    ks_push(0x202);                                        // EFLAGS, IF
+    ks_push(USER_CODE_SEL);                                // CS
+    ks_push(0);                                            // Return EIP from switch_task_iret, should be filled in later
+    ks_push((uint32_t)switch_task_iret);                   // Return EIP from switch_task
+    ks_push(0);                                            // EBX
+    ks_push(0);                                            // ESI
+    ks_push(0);                                            // EDI
+    ks_push(0);                                            // EBP
+
+    assign_user_stack(nullptr, 0);
+
+    const uintptr_t user_space_stack_base = 0xB0000000;
+    const size_t stack_area_size = 4096 * 1024;
+
+    // The first page of the stack is in a kernel pool, this is an easy
+    // way for the kernel to be able to populate the stack, albeit
+    // wasteful. The rest of the stack pages will be allocated on the
+    // fly.
+    mem_map_linear(space_handle,
+                   user_space_stack_base - 0x1000,
+                   user_space_stack_base,
+                   KERNVIRT2PHYS((uintptr_t)user_stack.base) - 0x1000,
+                   MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
+
+    mem_map_alloc(space_handle,
+                  user_space_stack_base - stack_area_size,
+                  user_space_stack_base - 0x1000,
+                  MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
   }
 
-  void activate() {
-    tss_set_kernel_stack((uint32_t)kernel_stack_base);
+  //
+  // free_stacks - hands back storage for user and kernel stacks
+  //
+  void free_stacks()
+  {
+    // Free up memory used by the process
+    user_stacks.erase(user_stack_handle);
+    kernel_stacks.erase(kernel_stack_handle);
+    user_stack_handle = user_stacks.end();
+    kernel_stack_handle = kernel_stacks.end();
+    user_stack = {};
+    kernel_stack = {};
+  }
+
+  //
+  // assign_user_stack - overwrites the user stack
+  //
+  void assign_user_stack(const char *argv[], int argc)
+  {
+    (void)argv;
+    (void)argc;
+    // TODO: handle argv
+    us_rewind();
+    us_push(0); // argc
+
+    // If the kernel is accessible, we'll add a cleanup function to make
+    // sure the process is killed when its main function returns. User
+    // space processes are on their own.
+    if (flags & PROC_KERNEL_ACCESSIBLE)
+      us_push((uintptr_t)_user_proc_cleanup);
+    else
+      us_push(0);
+  }
+
+  //
+  // set_syscall_ret_ip - which address in user space the current syscall should return to
+  //
+  void set_syscall_ret_ip(uintptr_t ip)
+  {
+    assert(kernel_stack.sp <= kernel_stack.base - 5);
+    assert(kernel_stack.base[-1] == USER_DATA_SEL);
+    assert(kernel_stack.base[-4] == USER_CODE_SEL);
+    kernel_stack.base[-5] = ip;
+  }
+
+  //
+  // activate - executes a full context switch
+  //
+  void activate(process *previous_proc)
+  {
+    uint32_t *current_task_esp = 0;
+    uint32_t **current_task_esp_ptr = &current_task_esp;
+
+    // Save the old process' kernel stack pointer. But only if the old
+    // process still exists.
+    if (previous_proc) {
+      current_task_esp_ptr = &previous_proc->kernel_stack.sp;
+    }
+
+    tss_set_kernel_stack((uint32_t)kernel_stack.base);
     mem_activate_space(space_handle);
+    switch_task((uint32_t *)current_task_esp_ptr, (uint32_t)kernel_stack.sp);
   }
-
-  uint32_t *kernel_esp;
-  uint32_t *kernel_stack_base;
-  uint32_t *user_esp;
-
-  const char *argv[1];
-  p2::string<64> argument;
 
   mem_space space_handle;
 
   p2::pool<proc_fd, 32> file_descriptors;
 
-  bool suspended, terminating;
-  proc_handle prev_process, next_process;
-  uint64_t last_tick = 0;
-  uint16_t kernel_stack_handle, user_stack_handle;
+  bool        suspended = false;
+  bool        terminating = false;
 
+  proc_handle prev_process;
+  proc_handle next_process;
+
+  uint64_t    last_tick = 0;
+
+private:
   uint32_t flags;
+
+  stack    kernel_stack;
+  stack    user_stack;
+  uint16_t kernel_stack_handle;
+  uint16_t user_stack_handle;
+
+  void ks_push(uint32_t value)
+  {
+    kernel_stack.push(value);
+  }
+
+  void us_push(uint32_t value)
+  {
+    user_stack.push(value);
+    update_ks_ret_sp();
+  }
+
+  void us_rewind()
+  {
+    user_stack.rewind();
+    update_ks_ret_sp();
+  }
+
+  void update_ks_ret_sp()
+  {
+    assert(kernel_stack.sp <= kernel_stack.base - 1);
+    assert(kernel_stack.base[-1] == USER_DATA_SEL);
+
+    const uintptr_t user_space_stack_base = 0xB0000000;
+    kernel_stack.base[-2] = user_space_stack_base - user_stack.bytes_used();
+  }
 };
+
+
+//
+// Called in processes that have the kernel accessible.
+//
+extern "C" void _user_proc_cleanup()
+{
+  uint32_t retval;
+  asm volatile("" : "=a"(retval));
+  syscall1(exit, retval);
+}
 
 
 #endif // !PEOS2_PROCESS_PRIVATE_H
