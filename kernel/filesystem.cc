@@ -26,6 +26,8 @@ static int syscall_mkdir(const char *path);
 static p2::pool<vfs_node, 256, vfs_node_handle> nodes;
 static p2::pool<vfs_dirent, 256, decltype(vfs_node::info_node)> directories;
 static p2::pool<vfs_device, 64, decltype(vfs_node::info_node)> drivers;
+static p2::pool<context, 32, vfs_context> contexts;
+
 static vfs_node_handle root_dir;
 
 // Definitions
@@ -180,38 +182,38 @@ void *vfs_get_opaque(vfs_device *device)
   return device->opaque;
 }
 
-int vfs_close_handle(proc_handle pid, proc_fd_handle local_fd)
+int vfs_close(vfs_context context_handle, vfs_fd local_fd)
 {
-  proc_fd *pfd = proc_get_fd(pid, local_fd);
-  assert(pfd);
-  vfs_device *device_node = (vfs_device *)pfd->opaque;
-  assert(device_node && device_node->driver);
-  proc_remove_fd(pid, local_fd);
+  context &context_ = contexts[context_handle];
+  filedesc &fd_info = context_.descriptors[local_fd];
 
-  dbg_puts(vfs, "closing %d.%d (fs local handle: %d)", pid, local_fd, pfd->value);
+  assert(fd_info.device && fd_info.device->driver);
 
-  if (!device_node->driver->close)
+  dbg_puts(vfs, "closing %d.%d", context_handle, local_fd);
+  context_.descriptors.erase(local_fd);
+
+  if (!fd_info.device->driver->close)
     return ENOSUPPORT;
 
   // TODO: what do we do if the driver fails to close the file? But
   // we've already removed our local mapping?
-  return device_node->driver->close(pfd->value);
+  return fd_info.device->driver->close(fd_info.device_local_handle);
 }
 
 static int syscall_write(int fd, const char *data, int length)
 {
   verify_ptr(vfs, data);
 
-  proc_fd *pfd = proc_get_fd(*proc_current_pid(), fd);
-  assert(pfd);
+  vfs_context context_handle = proc_get_file_context(*proc_current_pid());
 
-  vfs_device *device_node = (vfs_device *)pfd->opaque;
-  assert(device_node && device_node->driver);
+  context &context_ = contexts[context_handle];
+  filedesc &fd_info = context_.descriptors[fd];
+  assert(fd_info.device && fd_info.device->driver);
 
-  if (!device_node->driver->write)
+  if (!fd_info.device->driver->write)
     return ENOSUPPORT;
 
-  return device_node->driver->write(pfd->value, data, length);
+  return fd_info.device->driver->write(fd_info.device_local_handle, data, length);
 }
 
 static int syscall_read(int fd, char *data, int length)
@@ -219,7 +221,7 @@ static int syscall_read(int fd, char *data, int length)
   verify_ptr(vfs, data);
   // TODO: verify that the range data, data + length is valid
 
-  p2::res<size_t> read_result = vfs_read(*proc_current_pid(), fd, data, length);
+  p2::res<size_t> read_result = vfs_read(proc_get_file_context(*proc_current_pid()), fd, data, length);
 
   if (!read_result) {
     return read_result.error();
@@ -230,18 +232,16 @@ static int syscall_read(int fd, char *data, int length)
   }
 }
 
-p2::res<size_t> vfs_read(proc_handle pid, proc_fd_handle fd, char *data, int length)
+p2::res<size_t> vfs_read(vfs_context context_handle, vfs_fd fd, char *data, int length)
 {
-  proc_fd *pfd = proc_get_fd(pid, fd);
-  assert(pfd);
+  context &context_ = contexts[context_handle];
+  filedesc &fd_info = context_.descriptors[fd];
+  assert(fd_info.device && fd_info.device->driver);
 
-  vfs_device *device_node = (vfs_device *)pfd->opaque;
-  assert(device_node && device_node->driver);
-
-  if (!device_node->driver->read)
+  if (!fd_info.device->driver->read)
     return p2::failure(ENOSUPPORT);
 
-  int retval = device_node->driver->read(pfd->value, data, length);
+  int retval = fd_info.device->driver->read(fd_info.device_local_handle, data, length);
 
   if (retval < 0)
     return p2::failure(retval);
@@ -249,8 +249,10 @@ p2::res<size_t> vfs_read(proc_handle pid, proc_fd_handle fd, char *data, int len
   return p2::success((size_t)retval);
 }
 
-p2::res<proc_fd_handle> vfs_open(proc_handle pid, const char *filename, uint32_t flags)
+p2::res<vfs_fd> vfs_open(vfs_context context_handle, const char *filename, uint32_t flags)
 {
+  context &context_ = contexts[context_handle];
+
   auto driver = find_first_driver(root_dir, filename);
   if (!driver)
     return p2::failure(ENODRIVER);
@@ -265,27 +267,46 @@ p2::res<proc_fd_handle> vfs_open(proc_handle pid, const char *filename, uint32_t
   if (!device_node.driver->open)
     return p2::failure(ENOSUPPORT);
 
-  // TODO: handle the error cases better than asserts
+  int device_local_handle = device_node.driver->open(&device_node, driver->rest_path, flags);
 
-  int local_fd = device_node.driver->open(&device_node, driver->rest_path, flags);
-  // TODO: check that it returned OK
-  p2::opt<proc_fd_handle> proc_local_handle = proc_create_fd(pid, {(void *)&device_node, local_fd});
-  assert(proc_local_handle);
-  dbg_puts(vfs, "opened %s at %d.%d", filename, pid, *proc_local_handle);
-  return p2::success(*proc_local_handle);
+  if (device_local_handle < 0)
+    return p2::failure(device_local_handle);
+
+  vfs_fd fd = context_.descriptors.emplace_back(&device_node, device_local_handle);
+  dbg_puts(vfs, "opened %s at %d.%d", filename, context_handle, fd);
+  return p2::success(fd);
 }
 
-int vfs_seek(proc_handle pid, int fd, int offset, int relative)
+int vfs_seek(vfs_context context_handle, vfs_fd fd, int offset, int relative)
 {
-  proc_fd *pfd = proc_get_fd(pid, fd);
-  assert(pfd);
-  vfs_device *device_node = (vfs_device *)pfd->opaque;
-  assert(device_node && device_node->driver);
+  context &context_ = contexts[context_handle];
+  filedesc &fd_info = context_.descriptors[fd];
+  assert(fd_info.device);
 
-  if (!device_node->driver->seek)
+  if (!fd_info.device->driver->seek)
     return ENOSUPPORT;
 
-  return device_node->driver->seek(pfd->value, offset, relative);
+  return fd_info.device->driver->seek(fd_info.device_local_handle, offset, relative);
+}
+
+p2::res<vfs_context> vfs_create_context()
+{
+  if (contexts.full())
+    return p2::failure(ENOSPACE);
+
+  return p2::success(contexts.emplace_back());
+}
+
+void vfs_destroy_context(vfs_context context_handle)
+{
+  dbg_puts(vfs, "destroying context %d...", context_handle);
+
+  context &context_ = contexts[context_handle];
+
+  for (int i = 0; i < context_.descriptors.watermark(); ++i) {
+    if (context_.descriptors.valid(i))
+      vfs_close(context_handle, i);
+  }
 }
 
 static int syscall_open(const char *filename, uint32_t flags)
@@ -293,7 +314,7 @@ static int syscall_open(const char *filename, uint32_t flags)
   verify_ptr(vfs, filename);
   // TODO: verify that the whole string is in valid memory
 
-  p2::res<proc_fd_handle> open_res = vfs_open(*proc_current_pid(), filename, flags);
+  p2::res<vfs_fd> open_res = vfs_open(proc_get_file_context(*proc_current_pid()), filename, flags);
 
   if (open_res) {
     assert(*open_res >= 0);
@@ -328,39 +349,39 @@ static int syscall_mkdir(const char *path)
 
 static int syscall_close(int fd)
 {
-  return vfs_close_handle(*proc_current_pid(), fd);
+  return vfs_close(proc_get_file_context(*proc_current_pid()), fd);
 }
 
 static int syscall_seek(int fd, int offset, int relative)
 {
-  return vfs_seek(*proc_current_pid(), fd, offset, relative);
+  return vfs_seek(proc_get_file_context(*proc_current_pid()), fd, offset, relative);
 }
 
 static int syscall_tell(int fd, int *position)
 {
+  assert(position);
   verify_ptr(vfs, position);
 
-  proc_fd *pfd = proc_get_fd(*proc_current_pid(), fd);
-  assert(pfd);
-  assert(position);
-  vfs_device *device_node = (vfs_device *)pfd->opaque;
-  assert(device_node && device_node->driver);
+  vfs_context context_handle = proc_get_file_context(*proc_current_pid());
+  context &context_ = contexts[context_handle];
+  filedesc &fd_info = context_.descriptors[fd];
+  assert(fd_info.device && fd_info.device->driver);
 
-  if (!device_node->driver->tell)
+  if (!fd_info.device->driver->tell)
     return ENOSUPPORT;
 
-  return device_node->driver->tell(pfd->value, position);
+  return fd_info.device->driver->tell(fd_info.device_local_handle, position);
 }
 
 static int syscall_control(int fd, uint32_t function, uint32_t param1, uint32_t param2)
 {
-  proc_fd *pfd = proc_get_fd(*proc_current_pid(), fd);
-  assert(pfd);
-  vfs_device *device_node = (vfs_device *)pfd->opaque;
-  assert(device_node && device_node->driver);
+  vfs_context context_handle = proc_get_file_context(*proc_current_pid());
+  context &context_ = contexts[context_handle];
+  filedesc &fd_info = context_.descriptors[fd];
+  assert(fd_info.device && fd_info.device->driver);
 
-  if (!device_node->driver->control)
+  if (!fd_info.device->driver->control)
     return ENOSUPPORT;
 
-  return device_node->driver->control(pfd->value, function, param1, param2);
+  return fd_info.device->driver->control(fd_info.device_local_handle, function, param1, param2);
 }

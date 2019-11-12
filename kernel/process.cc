@@ -82,7 +82,9 @@ proc_handle proc_create(uint32_t flags, const char *argument)
 
   mem_map_kernel(space_handle, mapping_flags);
 
-  proc_handle pid = processes.emplace_back(space_handle, flags);
+  proc_handle pid = processes.emplace_back(space_handle,
+                                           *vfs_create_context(),
+                                           flags);
   processes[pid].setup_stacks();
 
   const char *args[] = {argument};
@@ -105,18 +107,7 @@ void proc_enqueue(proc_handle pid)
 static void destroy_process(proc_handle pid)
 {
   process &proc = processes[pid];
-
-  // TODO: performance: we're wasting time iterating over non-valid
-  // elements
-  for (size_t i = 0; i < proc.file_descriptors.watermark(); ++i) {
-    if (!proc.file_descriptors.valid(i)) {
-      continue;
-    }
-
-    dbg_puts(proc, "forcefully closing fd %d", i);
-    vfs_close_handle(pid, i);
-  }
-
+  vfs_destroy_context(proc.file_context);
   mem_destroy_space(proc.space_handle);
 
   // Remove the process so it won't get picked for execution
@@ -286,35 +277,14 @@ void proc_kill(proc_handle pid, uint32_t exit_status)
   destroy_process(pid);
 }
 
-p2::opt<proc_fd_handle> proc_create_fd(proc_handle pid, proc_fd fd)
-{
-  if (process *proc_info = processes.at(pid)) {
-    if (!proc_info->file_descriptors.full())
-      return proc_info->file_descriptors.push_back(fd);
-  }
-
-  return {};
-}
-
-proc_fd *proc_get_fd(proc_handle pid, proc_fd_handle fd)
-{
-  if (process *proc_info = processes.at(pid))
-    return proc_info->file_descriptors.at(fd);
-
-  return nullptr;
-}
-
-void proc_remove_fd(proc_handle pid, proc_fd_handle fd)
-{
-  if (process *proc_info = processes.at(pid)) {
-    if (proc_info->file_descriptors.valid(fd))
-      proc_info->file_descriptors.erase(fd);
-  }
-}
-
 mem_space proc_get_space(proc_handle pid)
 {
   return processes[pid].space_handle;
+}
+
+vfs_context proc_get_file_context(proc_handle pid)
+{
+  return processes[pid].file_context;
 }
 
 static uint32_t syscall_exit(int exit_status)

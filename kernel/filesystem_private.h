@@ -36,5 +36,15 @@ struct vfs_device {
   void *opaque;
 };
 
+struct filedesc {
+  filedesc(vfs_device *device, int handle) : device(device), device_local_handle(handle) {}
+
+  vfs_device *device;
+  int device_local_handle;
+};
+
+struct context {
+  p2::pool<filedesc, 16, vfs_fd> descriptors;
+};
 
 #endif // !PEOS2_FILESYSTEM_PRIVATE_H

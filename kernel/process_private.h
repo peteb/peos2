@@ -81,8 +81,8 @@ static p2::pool<stack_storage<256>, 16> kernel_stacks;
 //
 class process : p2::non_copyable {
 public:
-  process(mem_space space_handle, uint32_t flags)
-    : space_handle(space_handle), flags(flags) {}
+  process(mem_space space_handle, vfs_context file_context, uint32_t flags)
+    : space_handle(space_handle), file_context(file_context), flags(flags) {}
 
   const uintptr_t USER_SPACE_STACK_BASE = 0xB0000000;
 
@@ -204,8 +204,7 @@ public:
   }
 
   mem_space space_handle;
-
-  p2::pool<proc_fd, 32> file_descriptors;
+  vfs_context file_context;
 
   bool        suspended = false;
   bool        terminating = false;

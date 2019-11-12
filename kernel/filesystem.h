@@ -4,7 +4,8 @@
 #define PEOS2_FILESYSTEM_H
 
 #include <stdint.h>
-#include "process.h"
+#include <stddef.h>
+
 #include "support/result.h"
 
 #define VFS_DIRECTORY    0x01
@@ -14,6 +15,9 @@
 
 // Types
 typedef uint16_t vfs_node_handle;
+typedef uint16_t vfs_context;
+typedef uint16_t vfs_fd;
+
 struct vfs_device;
 
 struct vfs_device_driver {
@@ -88,7 +92,7 @@ struct vfs_device_driver {
   int (*mkdir)(const char *path);
 };
 
-// Structure management
+// Filesystem management; creating nodes, registering drivers, etc.
 void            vfs_init();
 void            vfs_print();
 vfs_node_handle vfs_create_node(uint8_t type);
@@ -98,17 +102,33 @@ vfs_node_handle vfs_lookup(const char *path);
 void            *vfs_get_opaque(vfs_device *device);
 
 //
-// vfs_open - creates a file descriptor.
-// @pid: in which process the fd should be created
+// vfs_open - creates a file descriptor
+// @context: in which context the fd should be created
 // @filename: aboslute global path
 // @flags: defined in syscall_decls.h
 //
 // Opens a file just as how syscallN(open) would, but accessible to
 // the kernel.
 //
-p2::res<proc_fd_handle> vfs_open(proc_handle pid, const char *filename, uint32_t flags);
-p2::res<size_t> vfs_read(proc_handle pid, proc_fd_handle fd, char *data, int length);
-int vfs_seek(proc_handle pid, int fd, int offset, int relative);
-int vfs_close_handle(proc_handle pid, proc_fd_handle handle);
+p2::res<vfs_fd> vfs_open(vfs_context context_handle, const char *filename, uint32_t flags);
+
+//
+// vfs_read - reads from a file
+//
+p2::res<size_t> vfs_read(vfs_context context_handle, vfs_fd fd, char *data, int length);
+
+//
+// vfs_seek - updates the position in the fd
+//
+int vfs_seek(vfs_context context_handle, vfs_fd fd, int offset, int relative);
+
+//
+// vfs_close - closes a handle
+//
+int vfs_close(vfs_context context_handle, vfs_fd fd);
+
+// Managing file descriptor tables, process context, etc.
+p2::res<vfs_context> vfs_create_context();
+void                 vfs_destroy_context(vfs_context context_handle);
 
 #endif // !PEOS2_FILESYSTEM_H

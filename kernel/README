@@ -44,6 +44,14 @@ Notes
   EIP being in the latter
 * Everything is "work in progress" and you can expect iterations
 
+Style
+-----
+* Internal structs/classes for a subsystem NO prefix (ie, GOOD: "process", "context".)
+* External handle types YES prefix (ie, GOOD: "vfs_context", "mem_space")
+* Handle variables, GOOD: "context_handle"
+* Member variables, GOOD: "_member"
+* To fix name collision, GOOD: "context &context_"
+
 Plan
 ----
 * DONE Basics (compiler, etc)

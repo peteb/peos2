@@ -380,14 +380,14 @@ static void page_fault_file(area_info &area, uintptr_t faulted_address)
   uint32_t file_offset = area_offset + fm_info.offset;
 
   // TODO: syscall here is unnecessary; we're already in the kernel
-  if (vfs_seek(*proc_current_pid(), fm_info.fd, file_offset, SEEK_BEG) < 0) {
+  if (vfs_seek(proc_get_file_context(*proc_current_pid()), fm_info.fd, file_offset, SEEK_BEG) < 0) {
     panic("failed to seek");
   }
 
   uint32_t read_count = p2::min<uint32_t>(fm_info.offset + fm_info.size - file_offset, 0x1000);
   dbg_puts(mem, "Reading max %d bytes", read_count);
 
-  if (!vfs_read(*proc_current_pid(), fm_info.fd, (char *)page_address, read_count)) {
+  if (!vfs_read(proc_get_file_context(*proc_current_pid()), fm_info.fd, (char *)page_address, read_count)) {
     panic("failed to read");
   }
 

@@ -6,6 +6,8 @@
 #ifndef PEOS2_SUPPORT_RESULT_H
 #define PEOS2_SUPPORT_RESULT_H
 
+#include "assert.h"
+
 namespace p2 {
   class failure {
   public:
