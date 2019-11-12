@@ -113,7 +113,7 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   mem_map_kernel(space, MEM_AREA_READWRITE);
   mem_activate_space(space);
 
-  proc_handle init_pid = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, "");
+  proc_handle init_pid = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, "hejsan");
   proc_set_syscall_ret(init_pid, (uintptr_t)init_main);
   proc_enqueue(init_pid);
 

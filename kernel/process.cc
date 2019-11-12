@@ -85,8 +85,9 @@ proc_handle proc_create(uint32_t flags, const char *argument)
   proc_handle pid = processes.emplace_back(space_handle, flags);
   processes[pid].setup_stacks();
 
-  // TODO: argument
-  (void)argument;
+  const char *args[] = {argument};
+  processes[pid].assign_user_stack(args, 1);
+
   return pid;
 }
 

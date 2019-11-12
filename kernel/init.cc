@@ -46,7 +46,6 @@ extern "C" int init_main()
 
   load_multiboot_modules();
 
-
   // TODO: enumerate files in /ramfs/modules and execute extract_tar
   // on those ending with .tar
   extract_tar("/ramfs/modules/init.tar");

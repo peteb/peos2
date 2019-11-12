@@ -3,8 +3,8 @@
 #ifndef PEOS2_PROCESS_PRIVATE_H
 #define PEOS2_PROCESS_PRIVATE_H
 
-#include "support/utils.h"
 #include "memareas.h"
+#include "support/utils.h"
 
 extern "C" void switch_task_iret();
 extern "C" void switch_task(uint32_t *old_esp, uint32_t new_esp);
@@ -48,6 +48,17 @@ public:
     *--sp = value;
   }
 
+  char *push(const char *data, size_t count)
+  {
+    assert(sp <= base);
+    assert((uintptr_t)sp - (uintptr_t)count > (uintptr_t)end);
+
+    char *dest = (char *)sp - count;
+    memcpy(dest, data, count);
+    sp = (uint32_t *)ALIGN_DOWN((uintptr_t)dest, sizeof(*sp));
+    return dest;
+  }
+
   void rewind()
   {
     sp = base;
@@ -72,6 +83,8 @@ class process : p2::non_copyable {
 public:
   process(mem_space space_handle, uint32_t flags)
     : space_handle(space_handle), flags(flags) {}
+
+  const uintptr_t USER_SPACE_STACK_BASE = 0xB0000000;
 
   //
   // setup_stacks - allocates and initializes user and kernel stacks
@@ -103,7 +116,6 @@ public:
 
     assign_user_stack(nullptr, 0);
 
-    const uintptr_t user_space_stack_base = 0xB0000000;
     const size_t stack_area_size = 4096 * 1024;
 
     // The first page of the stack is in a kernel pool, this is an easy
@@ -111,14 +123,14 @@ public:
     // wasteful. The rest of the stack pages will be allocated on the
     // fly.
     mem_map_linear(space_handle,
-                   user_space_stack_base - 0x1000,
-                   user_space_stack_base,
+                   USER_SPACE_STACK_BASE - 0x1000,
+                   USER_SPACE_STACK_BASE,
                    KERNVIRT2PHYS((uintptr_t)user_stack.base) - 0x1000,
                    MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
 
     mem_map_alloc(space_handle,
-                  user_space_stack_base - stack_area_size,
-                  user_space_stack_base - 0x1000,
+                  USER_SPACE_STACK_BASE - stack_area_size,
+                  USER_SPACE_STACK_BASE - 0x1000,
                   MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
   }
 
@@ -141,11 +153,16 @@ public:
   //
   void assign_user_stack(const char *argv[], int argc)
   {
-    (void)argv;
-    (void)argc;
-    // TODO: handle argv
     us_rewind();
-    us_push(0); // argc
+
+    char **arg_ptrs = (char **)user_stack.push((const char *)argv, sizeof(argv[0]) * argc);
+
+    for (int i = 0; i < argc; ++i) {
+      arg_ptrs[i] = (char *)virt_user_sp(user_stack.push(argv[i], strlen(argv[i]) + 1));
+    }
+
+    us_push(virt_user_sp((char *)arg_ptrs));
+    us_push(argc); // argc
 
     // If the kernel is accessible, we'll add a cleanup function to make
     // sure the process is killed when its main function returns. User
@@ -227,9 +244,12 @@ private:
   {
     assert(kernel_stack.sp <= kernel_stack.base - 1);
     assert(kernel_stack.base[-1] == USER_DATA_SEL);
+    kernel_stack.base[-2] = USER_SPACE_STACK_BASE - user_stack.bytes_used();
+  }
 
-    const uintptr_t user_space_stack_base = 0xB0000000;
-    kernel_stack.base[-2] = user_space_stack_base - user_stack.bytes_used();
+  uintptr_t virt_user_sp(const char *sp)
+  {
+    return USER_SPACE_STACK_BASE - ((uintptr_t)user_stack.base - (uintptr_t)sp);
   }
 };
 
