@@ -79,6 +79,9 @@ static int open(vfs_device *device, const char *path, uint32_t flags)
 
 static void focus_terminal(uint16_t term_id)
 {
+  if (!terminals.valid(term_id))
+    return;
+
   terminals[term_id].focus();
   current_terminal = term_id;
 }

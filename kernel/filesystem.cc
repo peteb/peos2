@@ -319,6 +319,11 @@ void vfs_close_not_matching(vfs_context context_handle, uint32_t flags)
   }
 }
 
+p2::res<vfs_context> vfs_fork_context(vfs_context context_handle)
+{
+  return p2::success(context_handle);  // TODO!
+}
+
 static int syscall_open(const char *filename, uint32_t flags)
 {
   verify_ptr(vfs, filename);

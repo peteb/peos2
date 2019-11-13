@@ -28,6 +28,7 @@ static uint32_t    syscall_exit(int exit_code);
 static uint32_t    syscall_kill(uint32_t pid);
 static int         syscall_spawn(const char *filename);
 static int         syscall_exec(const char *filename, const char **argv);
+static int         syscall_fork(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, isr_registers *regs);
 
 static proc_handle decide_next_process();
 static void        destroy_process(proc_handle pid);
@@ -56,6 +57,7 @@ void proc_init()
   syscall_register(SYSCALL_NUM_KILL, (syscall_fun)syscall_kill);
   syscall_register(SYSCALL_NUM_SPAWN, (syscall_fun)syscall_spawn);
   syscall_register(SYSCALL_NUM_EXEC, (syscall_fun)syscall_exec);
+  syscall_register(SYSCALL_NUM_FORK, (syscall_fun)syscall_fork);
 
   // Timer for preemptive task switching
   pit_set_phase(10);
@@ -85,7 +87,7 @@ proc_handle proc_create(uint32_t flags)
   proc_handle pid = processes.emplace_back(space_handle,
                                            *vfs_create_context(),
                                            flags);
-  processes[pid].setup_stacks();
+  processes[pid].setup_stack();
   return pid;
 }
 
@@ -114,7 +116,7 @@ static void destroy_process(proc_handle pid)
   // Remove the process so it won't get picked for execution
   dequeue(pid, proc.suspended ? &suspended_head : &running_head);
 
-  proc.free_stacks();
+  proc.free_stack();
 
   // TODO: we might want to keep the PCB around for a while so we can
   // read the exit status, detect dangling PIDs, etc...
@@ -359,6 +361,22 @@ static int syscall_exec(const char *filename, const char *argv[])
   proc_assign_user_stack(*proc_current_pid(), argc, arg_ptrs);
 
   return 0;
+}
+
+static int syscall_fork(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, isr_registers *regs)
+{
+  proc_handle parent_pid = *proc_current_pid();
+  dbg_puts(proc, "forking process %d", parent_pid);
+
+  mem_space space_handle = *mem_fork_space(proc_get_space(parent_pid));
+  vfs_context file_context = *vfs_fork_context(proc_get_file_context(parent_pid));
+
+  proc_handle child_pid = processes.emplace_back(space_handle, file_context, 0);
+  dbg_puts(proc, "... forked child pid: %d", child_pid);
+
+  processes[child_pid].setup_fork_stack(regs);
+  proc_enqueue(child_pid);
+  return child_pid;
 }
 
 //

@@ -32,7 +32,7 @@ extern "C" void int_syscall(volatile isr_registers regs)
 
   syscall_fun handler = (syscall_fun)syscalls[syscall_num];
   assert(handler);
-  regs.eax = handler(regs.ebx, regs.ecx, regs.edx, regs.esi, regs.edi);
+  regs.eax = handler(regs.ebx, regs.ecx, regs.edx, regs.esi, regs.edi, &regs);
 }
 
 void syscall_register(int num, syscall_fun handler)

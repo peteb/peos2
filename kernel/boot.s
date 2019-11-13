@@ -154,14 +154,16 @@ switch_task:
         push %esi
         push %edi
         push %ebp
+        push %eax
 
         // Save old esp so we can return at this point
-        mov 20(%esp), %ebx
+        mov 24(%esp), %ebx
         mov %esp, (%ebx)
 
         // Change esp
-        mov 24(%esp), %esp
+        mov 28(%esp), %esp
 
+        pop %eax
         pop %ebp
         pop %edi
         pop %esi

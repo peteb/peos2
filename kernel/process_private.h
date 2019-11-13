@@ -92,7 +92,7 @@ public:
   //
   // setup_stacks - allocates and initializes user and kernel stacks
   //
-  void setup_stacks()
+  void setup_stack()
   {
     assert(!kernel_stack.base);
 
@@ -113,6 +113,7 @@ public:
     ks_push(0);                                            // ESI
     ks_push(0);                                            // EDI
     ks_push(0);                                            // EBP
+    ks_push(0);                                            // EAX
 
     const size_t stack_area_size = 4096 * 1024;
     mem_map_alloc(space_handle,
@@ -123,10 +124,34 @@ public:
     assign_user_stack(0, nullptr);
   }
 
+  void setup_fork_stack(isr_registers *regs)
+  {
+    assert(!kernel_stack.base);
+
+    kernel_stack_handle = kernel_stacks.emplace_back();
+    kernel_stack = {kernel_stacks[kernel_stack_handle]};
+
+    // We need a stack that can invoke iret as soon as possible, without
+    // invoking any gcc function epilogues or prologues.  First, we need
+    // a stack good for `switch_task`. As we set the return address to
+    // be `switch_task_iret`, we also need to push values for IRET.
+    ks_push(USER_DATA_SEL);                     // SS
+    ks_push(regs->user_esp);                    // ESP
+    ks_push(0x202);                             // EFLAGS, IF
+    ks_push(USER_CODE_SEL);                     // CS
+    ks_push(regs->eip);                         // Return EIP from switch_task_iret
+    ks_push((uint32_t)switch_task_iret);        // Return EIP from switch_task
+    ks_push(regs->ebx);                         // EBX
+    ks_push(regs->esi);                         // ESI
+    ks_push(regs->edi);                         // EDI
+    ks_push(regs->ebp);                         // EBP
+    ks_push(0);                                 // EAX
+  }
+
   //
-  // free_stacks - hands back storage for the kernel stack
+  // free_stack - hands back storage for the kernel stack
   //
-  void free_stacks()
+  void free_stack()
   {
     // Free up memory used by the process
     kernel_stacks.erase(kernel_stack_handle);

@@ -72,23 +72,33 @@ extern "C" int init_main(int argc, const char **argv)
 
   */
 
-  // Start process
-  const char *argv_out[] = {
-    "hello",
-    "param2",
-    nullptr
-  };
+  syscall3(write, stdout, "HEH\n", 4);
 
-  verify(syscall2(exec, "/ramfs/bin/first_program", argv_out));
+  if (syscall0(fork) != 0) {
+    syscall3(write, stdout, "HEJ IN PAREN\n", 13);
 
-  // Start I/O
-  int stdin = verify(syscall2(open, "/dev/term0", 0));
-  char input[240];
-  int read = verify(syscall3(read, stdin, input, sizeof(input) - 1));
-  input[read] = '\0';
+    // Start I/O
+    int stdin = verify(syscall2(open, "/dev/term0", 0));
+    char input[240];
+    int read = verify(syscall3(read, stdin, input, sizeof(input) - 1));
+    input[read] = '\0';
 
-  p2::format<sizeof(input) + 50> output("Read %d bytes: %s", read, input);
-  verify(syscall3(write, stdout, output.str().c_str(), output.str().size()));
+    p2::format<sizeof(input) + 50> output("Read %d bytes: %s", read, input);
+    verify(syscall3(write, stdout, output.str().c_str(), output.str().size()));
+
+  }
+  else {
+    syscall3(write, stdout, "HEJ IN CHILD\n", 13);
+
+    /*// Start process
+    const char *argv_out[] = {
+      "hello",
+      "param2",
+      nullptr
+    };
+
+    verify(syscall2(exec, "/ramfs/bin/first_program", argv_out));*/
+  }
 
   return 0;
 }

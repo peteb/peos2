@@ -101,42 +101,16 @@ void            vfs_set_driver(vfs_node_handle dev_node, vfs_device_driver *driv
 vfs_node_handle vfs_lookup(const char *path);
 void            *vfs_get_opaque(vfs_device *device);
 
-//
-// vfs_open - creates a file descriptor
-// @context: in which context the fd should be created
-// @filename: aboslute global path
-// @flags: defined in syscall_decls.h
-//
-// Opens a file just as how syscallN(open) would, but accessible to
-// the kernel.
-//
+// Syscall-like functions but for the kernel
 p2::res<vfs_fd> vfs_open(vfs_context context_handle, const char *filename, uint32_t flags);
-
-//
-// vfs_read - reads from a file
-//
 p2::res<size_t> vfs_read(vfs_context context_handle, vfs_fd fd, char *data, int length);
+int             vfs_seek(vfs_context context_handle, vfs_fd fd, int offset, int relative);
+int             vfs_close(vfs_context context_handle, vfs_fd fd);
+void            vfs_close_not_matching(vfs_context context_handle, uint32_t flags);
 
-//
-// vfs_seek - updates the position in the fd
-//
-int vfs_seek(vfs_context context_handle, vfs_fd fd, int offset, int relative);
-
-//
-// vfs_close - closes a handle
-//
-int vfs_close(vfs_context context_handle, vfs_fd fd);
-
-void vfs_close_not_matching(vfs_context context_handle, uint32_t flags);
-
-//
-// vfs_create_context - creates a new filesystem context
-//
+// Managing contexts
 p2::res<vfs_context> vfs_create_context();
-
-//
-// vfs_destroy_context - closes all fds and other resources
-//
-void vfs_destroy_context(vfs_context context_handle);
+void                 vfs_destroy_context(vfs_context context_handle);
+p2::res<vfs_context> vfs_fork_context(vfs_context context_handle);
 
 #endif // !PEOS2_FILESYSTEM_H

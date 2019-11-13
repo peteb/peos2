@@ -10,6 +10,7 @@
 #include <stddef.h>
 
 #include "support/optional.h"
+#include "support/result.h"
 
 #define ALIGN_UP(val, align) (((val) + (align) - 1) & ~((align) - 1))
 #define ALIGN_DOWN(val, align) ((val) & ~((align) - 1))
@@ -32,10 +33,11 @@ typedef uint16_t mem_area;
 void       mem_init(const region *phys_region);
 
 // Address space management
-mem_space  mem_create_space();
-void       mem_destroy_space(mem_space space);
-void       mem_activate_space(mem_space space);
-void       mem_unmap_not_matching(mem_space space, uint16_t flags);
+mem_space          mem_create_space();
+void               mem_destroy_space(mem_space space);
+void               mem_activate_space(mem_space space);
+void               mem_unmap_not_matching(mem_space space, uint16_t flags);
+p2::res<mem_space> mem_fork_space(mem_space space_handle);
 
 //
 // mem_map_kernel - directly maps the kernel's memory into the space.
@@ -45,7 +47,7 @@ void       mem_unmap_not_matching(mem_space space, uint16_t flags);
 // Will mask the READWRITE and EXECUTABLE flags appropriately for
 // different memory segments.
 //
-void mem_map_kernel(mem_space space, uint16_t flags);
+void     mem_map_kernel(mem_space space, uint16_t flags);
 mem_area mem_map_linear(mem_space space, uintptr_t start, uintptr_t end, uintptr_t phys_start, uint16_t flags);
 mem_area mem_map_linear_eager(mem_space space, uintptr_t start, uintptr_t end, uintptr_t phys_start, uint16_t flags);
 mem_area mem_map_alloc(mem_space space, uintptr_t start, uintptr_t end, uint16_t flags);

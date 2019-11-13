@@ -28,6 +28,9 @@ static void free_page(void *page);
 static void map_page(mem_space space, uint32_t virt, uint32_t phys, uint16_t flags);
 static int syscall_mmap(void *start, void *end, int fd, uint32_t offset, uint8_t flags);
 static p2::opt<mem_area> find_area(mem_space space_handle, uintptr_t address);
+static page_table_entry *find_pte(const space_info &space, uintptr_t virtual_address);
+static uintptr_t pte_frame(const page_table_entry *pte);
+static uint16_t page_flags(uint16_t mem_flags);
 
 // Global state
 static p2::internal_page_allocator<sizeof(page_dir_entry)   * 1024 * 100, 0x1000> page_dir_allocator;
@@ -119,6 +122,123 @@ void mem_unmap_not_matching(mem_space space_handle, uint16_t flags)
       unmap_area(space, i);
     }
   }
+}
+
+static void print_space(mem_space space_handle)
+{
+  space_info &space = spaces[space_handle];
+
+  for (int i = 0; i < space.areas.watermark(); ++i) {
+    if (!space.areas.valid(i))
+      continue;
+
+    area_info &area = space.areas[i];
+    dbg_puts(mem, "Area %x-%x (type %d flags %x)", area.start, area.end, area.type, area.flags);
+  }
+}
+
+static void copy_page_contents(uintptr_t source_phys, uintptr_t dest_phys)
+{
+  assert(!(source_phys & 0xFFF));
+  assert(!(dest_phys & 0xFFF));
+  mem_space current_space = proc_get_space(*proc_current_pid());
+
+  const uintptr_t source_virt = 0xFFFE0000;
+  const uintptr_t dest_virt =   0xFFFE1000;
+
+  // Map both pages in current space temporarily so we can copy
+  map_page(current_space, source_virt, source_phys, MEM_PE_P|MEM_PE_RW|MEM_PE_D);
+  map_page(current_space, dest_virt, dest_phys, MEM_PE_P|MEM_PE_RW|MEM_PE_D);
+
+  memcpy((void *)dest_virt, (void *)source_virt, 0x1000);
+
+  // Remove the mapping
+  map_page(current_space, source_virt, 0, 0);
+  map_page(current_space, dest_virt, 0, 0);
+}
+
+static void copy_area(area_info &source_area, space_info &source_space, mem_space dest_space_handle)
+{
+  // TODO: areas are contenders for polymorphism -- we've got a couple
+  // of places where we execute logic depending on the type
+  if (source_area.type == AREA_LINEAR_MAP) {
+    dbg_puts(mem, "copy linear %s", "");
+
+    linear_map_info &source_map_info = source_space.linear_maps[source_area.info_handle];
+    mem_map_linear(dest_space_handle,
+                   source_area.start,
+                   source_area.end,
+                   source_map_info.phys_start,
+                   source_area.flags);
+
+    // Copy existing mappings, needed to get kernel stuff like ISRs, otherwise we triple fault
+    for (uintptr_t page_address = source_area.start;
+         page_address < source_area.end;
+         page_address += 0x1000) {
+
+      if (auto *pte = find_pte(source_space, page_address); pte && pte->flags & MEM_PE_P) {
+        map_page(dest_space_handle, page_address, pte_frame(pte), pte->flags);
+      }
+    }
+  }
+  else if (source_area.type == AREA_FILE) {
+    dbg_puts(mem, "copy file %s", "");
+    file_map_info &source_map_info = source_space.file_maps[source_area.info_handle];
+
+    mem_map_fd(dest_space_handle,
+               source_area.start,
+               source_area.end,
+               source_map_info.fd,
+               source_map_info.offset,
+               source_map_info.size,
+               source_area.flags);
+  }
+  else if (source_area.type == AREA_ALLOC) {
+    // Copy all present pages
+    dbg_puts(mem, "copy alloc %s", "");
+
+    mem_map_alloc(dest_space_handle,
+                  source_area.start,
+                  source_area.end,
+                  source_area.flags);
+
+    // TODO: change this brute force method into something smarter
+    // that reads the paging structure
+    for (uintptr_t page_address = source_area.start;
+         page_address < source_area.end;
+         page_address += 0x1000) {
+
+      if (auto *pte = find_pte(source_space, page_address); pte && pte->flags & MEM_PE_P) {
+        dbg_puts(mem, "copying page %x", page_address);
+
+        uintptr_t phys_address = (uintptr_t)alloc_page();
+        map_page(dest_space_handle, page_address, phys_address, page_flags(source_area.flags));
+        copy_page_contents(pte_frame(pte), phys_address);
+      }
+    }
+  }
+}
+
+p2::res<mem_space> mem_fork_space(mem_space space_handle)
+{
+  space_info &source_space = spaces[space_handle];
+  mem_space new_space_handle = mem_create_space();
+
+  dbg_puts(mem, "forking space %d", space_handle);
+
+  // Copy all linear and file maps directly
+  // ALLOC needs to be copied page by page, immediately
+  // so we need to map both source and dest pages in current space
+  for (int i = 0; i < source_space.areas.watermark(); ++i) {
+    if (!source_space.areas.valid(i))
+      continue;
+
+    area_info &source_area = source_space.areas[i];
+    copy_area(source_area, source_space, new_space_handle);
+  }
+
+  print_space(new_space_handle);
+  return p2::success(new_space_handle);
 }
 
 void mem_activate_space(mem_space space_handle)
@@ -497,7 +617,12 @@ extern "C" void int_page_fault(isr_registers regs)
   p2::optional<mem_area> area_handle = find_area(current_space, faulted_address);
 
   if (!area_handle) {
-    dbg_puts(mem, "process tried to access un-mapped area at %x in space %d", faulted_address, current_space);
+    dbg_puts(mem, "process tried to access un-mapped area at %x in space %d (esp: %x, eip: %x)",
+             faulted_address,
+             current_space,
+             regs.user_esp,
+             regs.eip);
+
     kill_caller();
     return;
   }
