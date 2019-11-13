@@ -39,10 +39,11 @@ static void extract_tar(const char *filename);
 // The init process has full access to the kernel's memory so that it
 // can execute support functions.
 //
-extern "C" int init_main()
+extern "C" int init_main(int argc, const char **argv)
 {
   // Setup
   stdout = verify(syscall2(open, "/dev/term0", 0));
+  puts_sys(stdout, p2::format<64>("argc: %x %s", (uint32_t)argc, argv[0]));
 
   load_multiboot_modules();
 
@@ -72,13 +73,13 @@ extern "C" int init_main()
   */
 
   // Start process
-  const char *argv[] = {
+  const char *argv_out[] = {
     "hello",
     "param2",
     nullptr
   };
 
-  verify(syscall2(exec, "/ramfs/bin/first_program", argv));
+  verify(syscall2(exec, "/ramfs/bin/first_program", argv_out));
 
   // Start I/O
   int stdin = verify(syscall2(open, "/dev/term0", 0));

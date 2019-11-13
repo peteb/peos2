@@ -62,11 +62,11 @@ void proc_init()
   irq_enable(IRQ_SYSTEM_TIMER);
   int_register(IRQ_BASE_INTERRUPT + IRQ_SYSTEM_TIMER, isr_timer, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 
-  idle_process = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, "");
+  idle_process = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE);
   proc_set_syscall_ret(idle_process, (uintptr_t)idle_main);
 }
 
-proc_handle proc_create(uint32_t flags, const char *argument)
+proc_handle proc_create(uint32_t flags)
 {
   // TODO: support multiple arguments
   mem_space space_handle = mem_create_space();
@@ -86,16 +86,12 @@ proc_handle proc_create(uint32_t flags, const char *argument)
                                            *vfs_create_context(),
                                            flags);
   processes[pid].setup_stacks();
-
-  const char *args[] = {argument};
-  processes[pid].assign_user_stack(args, 1);
-
   return pid;
 }
 
-void proc_assign_user_stack(proc_handle pid, const char *argv[], int argc)
+void proc_assign_user_stack(proc_handle pid, int argc, const char *argv[])
 {
-  processes[pid].assign_user_stack(argv, argc);
+  processes[pid].assign_user_stack(argc, argv);
 }
 
 void proc_set_syscall_ret(proc_handle pid, uintptr_t ip)
@@ -312,43 +308,42 @@ static int syscall_spawn(const char *filename)
   verify_ptr(proc, filename);
   dbg_puts(proc, "spawning process with image '%s'", filename);
   // TODO: handle flags
-  proc_handle pid = proc_create(PROC_USER_SPACE, "");
+  proc_handle pid = proc_create(PROC_USER_SPACE);
   elf_map_process(pid, filename);
   proc_enqueue(pid);
   return pid;
 }
 
-static int syscall_exec(const char *filename, const char *us_argv[])
+template<int N>
+static int copy_argvs(const char *argv[], p2::string<N> &arena, const char *pointers[], size_t ptrs_size)
+{
+  const char **argument = argv;
+  size_t out_ptr_idx = 0;
+
+  while (*argument && out_ptr_idx < ptrs_size) {
+    verify_ptr(proc, *argument);
+    pointers[out_ptr_idx++] = &arena[arena.size()];
+    arena.append(*argument++);
+    arena.append('\0');
+  }
+
+  return argument - argv;
+}
+
+static int syscall_exec(const char *filename, const char *argv[])
 {
   verify_ptr(proc, filename);   // TODO: verify whole filename
-  verify_ptr(proc, us_argv);
+  verify_ptr(proc, argv);
 
   dbg_puts(proc, "execing process with image '%s'", filename);
 
-  // User space will be unmapped further down, and to skip copying
-  // arguments into the kernel we'll setup the new user stack
-  // first. The drawback is that if anything fails after assigning the
-  // stack, the process is broken.
-  // TODO: make this safer in the case of errors
-
-  const char *new_argv[32] = {};
-  const char **in_arg = us_argv, **out_arg = new_argv;
-
-  *out_arg++ = filename;
-
-  while (*in_arg) {
-    verify_ptr(proc, *in_arg);
-    // TODO: verify string
-    *out_arg++ = *in_arg++;
-  }
-
-  const int argc = out_arg - new_argv;
-
-  // Overwrite user stack with program arguments. This is the "point of no return"!
-  proc_assign_user_stack(*proc_current_pid(), new_argv, argc);
-
-  // Copy filename into the kernel stack so we can swap out user space
+  // Copy strings to the kernel stack so we can swap out user space
   p2::string<128> image_path{filename};
+  p2::string<1024> arg_arena;
+
+  const char *arg_ptrs[32];
+  arg_ptrs[0] = image_path.c_str();
+  const int argc = copy_argvs(argv, arg_arena, arg_ptrs + 1, ARRAY_SIZE(arg_ptrs) - 1) + 1;
 
   // Remove existing user space mappings so there won't be any collisions
   mem_unmap_not_matching(proc_get_space(*proc_current_pid()), MEM_AREA_RETAIN_EXEC);
@@ -359,6 +354,9 @@ static int syscall_exec(const char *filename, const char *us_argv[])
   if (int result = elf_map_process(*proc_current_pid(), image_path.c_str()); result < 0) {
     return result;
   }
+
+  // Overwrite user stack with program arguments
+  proc_assign_user_stack(*proc_current_pid(), argc, arg_ptrs);
 
   return 0;
 }

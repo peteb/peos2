@@ -27,6 +27,11 @@ public:
     // first decrements ESP before writing to [ESP].
   }
 
+  uint32_t *start()
+  {
+    return &_data[0];
+  }
+
   // User stacks need to be aligned on 4096 byte boundaries as we map
   // them into the process. They also need to be aligned on 16 bytes.
   uint32_t _data[N] alignas(0x1000);
@@ -72,9 +77,7 @@ public:
   uint32_t *sp, *base, *end;
 };
 
-static p2::pool<stack_storage<0x1000>, 16> user_stacks;
 static p2::pool<stack_storage<256>, 16> kernel_stacks;
-
 
 //
 // process - contains state and resources that belongs to a process.
@@ -91,13 +94,10 @@ public:
   //
   void setup_stacks()
   {
-    assert(!user_stack.base);
     assert(!kernel_stack.base);
 
     kernel_stack_handle = kernel_stacks.emplace_back();
     kernel_stack = {kernel_stacks[kernel_stack_handle]};
-    user_stack_handle = user_stacks.emplace_back();
-    user_stack = {user_stacks[user_stack_handle]};
 
     // We need a stack that can invoke iret as soon as possible, without
     // invoking any gcc function epilogues or prologues.  First, we need
@@ -114,63 +114,57 @@ public:
     ks_push(0);                                            // EDI
     ks_push(0);                                            // EBP
 
-    assign_user_stack(nullptr, 0);
-
     const size_t stack_area_size = 4096 * 1024;
-
-    // The first page of the stack is in a kernel pool, this is an easy
-    // way for the kernel to be able to populate the stack, albeit
-    // wasteful. The rest of the stack pages will be allocated on the
-    // fly.
-    mem_map_linear(space_handle,
-                   USER_SPACE_STACK_BASE - 0x1000,
-                   USER_SPACE_STACK_BASE,
-                   KERNVIRT2PHYS((uintptr_t)user_stack.base) - 0x1000,
-                   MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
-
     mem_map_alloc(space_handle,
                   USER_SPACE_STACK_BASE - stack_area_size,
-                  USER_SPACE_STACK_BASE - 0x1000,
+                  USER_SPACE_STACK_BASE,
                   MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
+
+    assign_user_stack(0, nullptr);
   }
 
   //
-  // free_stacks - hands back storage for user and kernel stacks
+  // free_stacks - hands back storage for the kernel stack
   //
   void free_stacks()
   {
     // Free up memory used by the process
-    user_stacks.erase(user_stack_handle);
     kernel_stacks.erase(kernel_stack_handle);
-    user_stack_handle = user_stacks.end();
     kernel_stack_handle = kernel_stacks.end();
-    user_stack = {};
     kernel_stack = {};
   }
 
   //
   // assign_user_stack - overwrites the user stack
   //
-  void assign_user_stack(const char *argv[], int argc)
+  void assign_user_stack(int argc, const char *argv[])
   {
-    us_rewind();
+    stack_storage<0x1000 / sizeof(uint32_t)> user_stack_storage; // TODO: shouldn't have to divide here
+    stack user_stack(user_stack_storage);
 
     char **arg_ptrs = (char **)user_stack.push((const char *)argv, sizeof(argv[0]) * argc);
 
     for (int i = 0; i < argc; ++i) {
-      arg_ptrs[i] = (char *)virt_user_sp(user_stack.push(argv[i], strlen(argv[i]) + 1));
+      arg_ptrs[i] = (char *)virt_user_sp(user_stack, user_stack.push(argv[i], strlen(argv[i]) + 1));
     }
 
-    us_push(virt_user_sp((char *)arg_ptrs));
-    us_push(argc); // argc
+    user_stack.push(virt_user_sp(user_stack, (char *)arg_ptrs));
+    user_stack.push(argc);
 
     // If the kernel is accessible, we'll add a cleanup function to make
     // sure the process is killed when its main function returns. User
     // space processes are on their own.
     if (flags & PROC_KERNEL_ACCESSIBLE)
-      us_push((uintptr_t)_user_proc_cleanup);
+      user_stack.push((uintptr_t)_user_proc_cleanup);
     else
-      us_push(0);
+      user_stack.push(0);
+
+    mem_write_page(space_handle,
+                   USER_SPACE_STACK_BASE - 0x1000,
+                   user_stack_storage.start(),
+                   0x1000);
+
+    update_ks_ret_sp(user_stack.bytes_used());
   }
 
   //
@@ -218,35 +212,21 @@ private:
   uint32_t flags;
 
   stack    kernel_stack;
-  stack    user_stack;
   uint16_t kernel_stack_handle;
-  uint16_t user_stack_handle;
 
   void ks_push(uint32_t value)
   {
     kernel_stack.push(value);
   }
 
-  void us_push(uint32_t value)
-  {
-    user_stack.push(value);
-    update_ks_ret_sp();
-  }
-
-  void us_rewind()
-  {
-    user_stack.rewind();
-    update_ks_ret_sp();
-  }
-
-  void update_ks_ret_sp()
+  void update_ks_ret_sp(size_t user_stack_size)
   {
     assert(kernel_stack.sp <= kernel_stack.base - 1);
     assert(kernel_stack.base[-1] == USER_DATA_SEL);
-    kernel_stack.base[-2] = USER_SPACE_STACK_BASE - user_stack.bytes_used();
+    kernel_stack.base[-2] = USER_SPACE_STACK_BASE - user_stack_size;
   }
 
-  uintptr_t virt_user_sp(const char *sp)
+  uintptr_t virt_user_sp(stack &user_stack, const char *sp)
   {
     return USER_SPACE_STACK_BASE - ((uintptr_t)user_stack.base - (uintptr_t)sp);
   }

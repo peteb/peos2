@@ -27,6 +27,7 @@ static void *alloc_page();
 static void free_page(void *page);
 static void map_page(mem_space space, uint32_t virt, uint32_t phys, uint16_t flags);
 static int syscall_mmap(void *start, void *end, int fd, uint32_t offset, uint8_t flags);
+static p2::opt<mem_area> find_area(mem_space space_handle, uintptr_t address);
 
 // Global state
 static p2::internal_page_allocator<sizeof(page_dir_entry)   * 1024 * 100, 0x1000> page_dir_allocator;
@@ -125,7 +126,7 @@ void mem_activate_space(mem_space space_handle)
   current_space = space_handle;
   space_info *space = &spaces[space_handle];
   uintptr_t page_dir_phys = KERNVIRT2PHYS((uintptr_t)space->page_dir);
-  asm volatile("mov cr3, %0" : : "a"(page_dir_phys) : "memory");
+  asm volatile("mov cr3, %0" :: "a"(page_dir_phys) : "memory");
   // TODO: fix all inline asm to have the same syntax (AT&T vs Intel) as *.s files
 }
 
@@ -170,6 +171,45 @@ static uintptr_t pte_frame(const page_table_entry *pte)
   return pte->frame_11_31 << 12;
 }
 
+//
+// mem_write_page - copies data from the kernel into the space
+//
+void mem_write_page(mem_space space_handle, uintptr_t virt_addr, const void *data, size_t size)
+{
+  assert(!(virt_addr & 0xFFF));
+
+  // We can only write to ALLOC areas for now
+  auto area_handle = find_area(space_handle, (uintptr_t)virt_addr);
+  space_info &dest_space = spaces[space_handle];
+  area_info &dest_area = dest_space.areas[*area_handle];
+  assert(dest_area.type == AREA_ALLOC);
+
+  auto *pte = find_pte(dest_space, virt_addr);
+
+  if (!pte || !(pte->flags & MEM_PE_P)) {
+    // Page isn't mapped yet, so do that
+    map_page(space_handle, virt_addr, (uintptr_t)alloc_page(), page_flags(dest_area.flags));
+    pte = find_pte(dest_space, virt_addr);
+    assert(pte && (pte->flags & MEM_PE_P));
+  }
+
+  dbg_puts(mem, "writing to virt address %x (%x) from %x (%d bytes)",
+           (uintptr_t)virt_addr,
+           (uintptr_t)pte_frame(pte),
+           (uintptr_t)data,
+           size);
+
+  const uintptr_t mapped_address = 0xFBFFF000;
+  map_page(current_space, mapped_address, pte_frame(pte), MEM_PE_P|MEM_PE_RW|MEM_PE_W|MEM_PE_D);
+  memcpy((void *)mapped_address, data, size);
+  map_page(current_space, mapped_address, 0, 0);
+}
+
+static inline void invlpg(uintptr_t addr)
+{
+  asm volatile("invlpg [%0]" :: "a"(addr) : "memory");
+}
+
 void map_page(mem_space space_handle, uint32_t virt, uint32_t phys, uint16_t flags)
 {
   assert((virt & 0xFFF) == 0 && "can only map on page boundaries");
@@ -181,10 +221,13 @@ void map_page(mem_space space_handle, uint32_t virt, uint32_t phys, uint16_t fla
   uint16_t pde_flags = flags & ~(MEM_PDE_S|MEM_PTE_D);
 
   if (!(page_dir[directory_idx].flags & MEM_PE_P)) {
+    // Don't create a page dir if we want to unmap the page
+    if (!(flags & MEM_PE_P))
+      return;
+
     page_table = (page_table_entry *)page_table_allocator.alloc_page_zero();
     page_dir[directory_idx].table_11_31 = KERNVIRT2PHYS((uintptr_t)page_table) >> 12;
     page_dir[directory_idx].flags = pde_flags;
-    dbg_puts(mem, "created page table %x", (uintptr_t)page_table);
   }
   else {
     //assert(page_dir[directory_idx].flags == pde_flags && "conflicting flags for pde");
@@ -197,7 +240,7 @@ void map_page(mem_space space_handle, uint32_t virt, uint32_t phys, uint16_t fla
   page_table[table_idx].flags = flags;
 
   if (space_handle == current_space) {
-    asm volatile("invlpg %0" : : "m"(virt) : "memory");
+    invlpg(virt);
   }
 }
 
