@@ -90,14 +90,14 @@ extern "C" int init_main(int argc, const char **argv)
   else {
     syscall3(write, stdout, "HEJ IN CHILD\n", 13);
 
-    /*// Start process
+    // Start process
     const char *argv_out[] = {
       "hello",
       "param2",
       nullptr
     };
 
-    verify(syscall2(exec, "/ramfs/bin/first_program", argv_out));*/
+    verify(syscall2(exec, "/ramfs/bin/first_program", argv_out));
   }
 
   return 0;

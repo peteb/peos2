@@ -26,9 +26,10 @@ static int syscall_mkdir(const char *path);
 static p2::pool<vfs_node, 256, vfs_node_handle> nodes;
 static p2::pool<vfs_dirent, 256, decltype(vfs_node::info_node)> directories;
 static p2::pool<vfs_device, 64, decltype(vfs_node::info_node)> drivers;
-static p2::pool<context, 32, vfs_context> contexts;
-
 static vfs_node_handle root_dir;
+
+static p2::pool<context, 32, vfs_context> contexts;
+static p2::pool<opened_file, 64, opened_file_handle> opened_files;
 
 // Definitions
 vfs_node_handle vfs_create_node(uint8_t type)
@@ -185,35 +186,61 @@ void *vfs_get_opaque(vfs_device *device)
 int vfs_close(vfs_context context_handle, vfs_fd local_fd)
 {
   context &context_ = contexts[context_handle];
-  filedesc &fd_info = context_.descriptors[local_fd];
+  opened_file_handle file_handle = context_.descriptors[local_fd];
+  opened_file &file_info = opened_files[file_handle];
 
-  assert(fd_info.device && fd_info.device->driver);
-
-  dbg_puts(vfs, "closing %d.%d", context_handle, local_fd);
+  assert(file_info.device && file_info.device->driver);
   context_.descriptors.erase(local_fd);
 
-  if (!fd_info.device->driver->close)
-    return ENOSUPPORT;
+  if (--file_info.ref_count == 0) {
+    dbg_puts(vfs, "closing global opened file %d", file_handle);
 
-  // TODO: what do we do if the driver fails to close the file? But
-  // we've already removed our local mapping?
-  return fd_info.device->driver->close(fd_info.device_local_handle);
+    if (!file_info.device->driver->close)
+      return ENOSUPPORT;
+
+    // TODO: what do we do if the driver fails to close the file? But
+    // we've already removed our local mapping?
+    return file_info.device->driver->close(file_info.device_local_handle);
+  }
+
+  return 0;
+}
+
+static p2::res<opened_file *> fetch_opened_file(vfs_context context_handle, vfs_fd fd)
+{
+  if (!contexts.valid(context_handle))
+    return p2::failure(ENOENT);
+
+  context &context_ = contexts[context_handle];
+
+  if (!context_.descriptors.valid(fd))
+    return p2::failure(ENOENT);
+
+  opened_file_handle file_handle = context_.descriptors[fd];
+
+  if (!opened_files.valid(file_handle))
+    return p2::failure(ENOENT);
+
+  opened_file &file = opened_files[file_handle];
+
+  if (!file.device || !file.device->driver)
+    return p2::failure(EINCONSTATE);
+
+  return p2::success(&file);
 }
 
 static int syscall_write(int fd, const char *data, int length)
 {
   verify_ptr(vfs, data);
 
-  vfs_context context_handle = proc_get_file_context(*proc_current_pid());
+  p2::res<opened_file *> file = fetch_opened_file(proc_get_file_context(*proc_current_pid()), fd);
+  if (!file)
+    return file.error();
 
-  context &context_ = contexts[context_handle];
-  filedesc &fd_info = context_.descriptors[fd];
-  assert(fd_info.device && fd_info.device->driver);
-
-  if (!fd_info.device->driver->write)
+  if (!(*file)->device->driver->write)
     return ENOSUPPORT;
 
-  return fd_info.device->driver->write(fd_info.device_local_handle, data, length);
+  return (*file)->device->driver->write((*file)->device_local_handle, data, length);
 }
 
 static int syscall_read(int fd, char *data, int length)
@@ -234,14 +261,15 @@ static int syscall_read(int fd, char *data, int length)
 
 p2::res<size_t> vfs_read(vfs_context context_handle, vfs_fd fd, char *data, int length)
 {
-  context &context_ = contexts[context_handle];
-  filedesc &fd_info = context_.descriptors[fd];
-  assert(fd_info.device && fd_info.device->driver);
+  p2::res<opened_file *> file = fetch_opened_file(context_handle, fd);
 
-  if (!fd_info.device->driver->read)
+  if (!file)
+    return p2::failure(file.error());
+
+  if (!(*file)->device->driver->read)
     return p2::failure(ENOSUPPORT);
 
-  int retval = fd_info.device->driver->read(fd_info.device_local_handle, data, length);
+  int retval = (*file)->device->driver->read((*file)->device_local_handle, data, length);
 
   if (retval < 0)
     return p2::failure(retval);
@@ -252,8 +280,8 @@ p2::res<size_t> vfs_read(vfs_context context_handle, vfs_fd fd, char *data, int 
 p2::res<vfs_fd> vfs_open(vfs_context context_handle, const char *filename, uint32_t flags)
 {
   context &context_ = contexts[context_handle];
-
   auto driver = find_first_driver(root_dir, filename);
+
   if (!driver)
     return p2::failure(ENODRIVER);
 
@@ -272,21 +300,23 @@ p2::res<vfs_fd> vfs_open(vfs_context context_handle, const char *filename, uint3
   if (device_local_handle < 0)
     return p2::failure(device_local_handle);
 
-  vfs_fd fd = context_.descriptors.emplace_back(&device_node, device_local_handle, flags);
+  opened_file_handle ofh = opened_files.emplace_back(&device_node, device_local_handle, flags);
+  vfs_fd fd = context_.descriptors.emplace_back(ofh);
   dbg_puts(vfs, "opened %s at %d.%d", filename, context_handle, fd);
   return p2::success(fd);
 }
 
 int vfs_seek(vfs_context context_handle, vfs_fd fd, int offset, int relative)
 {
-  context &context_ = contexts[context_handle];
-  filedesc &fd_info = context_.descriptors[fd];
-  assert(fd_info.device);
+  p2::res<opened_file *> file = fetch_opened_file(context_handle, fd);
 
-  if (!fd_info.device->driver->seek)
+  if (!file)
+    return file.error();
+
+  if (!(*file)->device->driver->seek)
     return ENOSUPPORT;
 
-  return fd_info.device->driver->seek(fd_info.device_local_handle, offset, relative);
+  return (*file)->device->driver->seek((*file)->device_local_handle, offset, relative);
 }
 
 p2::res<vfs_context> vfs_create_context()
@@ -314,14 +344,42 @@ void vfs_close_not_matching(vfs_context context_handle, uint32_t flags)
   context &context_ = contexts[context_handle];
 
   for (int i = 0; i < context_.descriptors.watermark(); ++i) {
-    if (context_.descriptors.valid(i) && !(context_.descriptors[i].flags & flags))
+    opened_file &file = opened_files[context_.descriptors[i]];
+    if (context_.descriptors.valid(i) && !(file.flags & flags))
       vfs_close(context_handle, i);
   }
 }
 
 p2::res<vfs_context> vfs_fork_context(vfs_context context_handle)
 {
-  return p2::success(context_handle);  // TODO!
+  auto new_context = vfs_create_context();
+  if (!new_context)
+    return p2::failure(new_context.error());
+
+  context &source_context = contexts[context_handle];
+  context &dest_context = contexts[*new_context];
+
+  for (int i = 0; i < source_context.descriptors.watermark(); ++i) {
+    if (source_context.descriptors.valid(i)) {
+      // Duplicate the fd
+      opened_file_handle ofh = source_context.descriptors[i];
+      ++opened_files[ofh].ref_count;
+      dest_context.descriptors.emplace_back(ofh);
+    }
+    else {
+      // We need to push invalid descriptors to retain fd numbering
+      dest_context.descriptors.emplace_back(0);
+    }
+  }
+
+  // Remove the invalid ones
+  for (int i = 0; i < dest_context.descriptors.watermark(); ++i) {
+    if (dest_context.descriptors.valid(i) && !source_context.descriptors.valid(i))
+      dest_context.descriptors.erase(i);
+  }
+
+
+  return p2::success(*new_context);
 }
 
 static int syscall_open(const char *filename, uint32_t flags)
@@ -377,26 +435,26 @@ static int syscall_tell(int fd, int *position)
   assert(position);
   verify_ptr(vfs, position);
 
-  vfs_context context_handle = proc_get_file_context(*proc_current_pid());
-  context &context_ = contexts[context_handle];
-  filedesc &fd_info = context_.descriptors[fd];
-  assert(fd_info.device && fd_info.device->driver);
+  p2::res<opened_file *> file = fetch_opened_file(proc_get_file_context(*proc_current_pid()), fd);
 
-  if (!fd_info.device->driver->tell)
+  if (!file)
+    return file.error();
+
+  if (!(*file)->device->driver->tell)
     return ENOSUPPORT;
 
-  return fd_info.device->driver->tell(fd_info.device_local_handle, position);
+  return (*file)->device->driver->tell((*file)->device_local_handle, position);
 }
 
 static int syscall_control(int fd, uint32_t function, uint32_t param1, uint32_t param2)
 {
-  vfs_context context_handle = proc_get_file_context(*proc_current_pid());
-  context &context_ = contexts[context_handle];
-  filedesc &fd_info = context_.descriptors[fd];
-  assert(fd_info.device && fd_info.device->driver);
+  p2::res<opened_file *> file = fetch_opened_file(proc_get_file_context(*proc_current_pid()), fd);
 
-  if (!fd_info.device->driver->control)
+  if (!file)
+    return file.error();
+
+  if (!(*file)->device->driver->control)
     return ENOSUPPORT;
 
-  return fd_info.device->driver->control(fd_info.device_local_handle, function, param1, param2);
+  return (*file)->device->driver->control((*file)->device_local_handle, function, param1, param2);
 }

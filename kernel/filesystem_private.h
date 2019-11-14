@@ -3,6 +3,8 @@
 #ifndef PEOS2_FILESYSTEM_PRIVATE_H
 #define PEOS2_FILESYSTEM_PRIVATE_H
 
+typedef uint16_t opened_file_handle;
+
 struct vfs_node {
   vfs_node(uint8_t type, vfs_node_handle info_node)
     : type(type),
@@ -36,17 +38,18 @@ struct vfs_device {
   void *opaque;
 };
 
-struct filedesc {
-  filedesc(vfs_device *device, int handle, uint32_t flags)
-    : device(device), device_local_handle(handle), flags(flags) {}
+struct opened_file {
+  opened_file(vfs_device *device, int handle, uint32_t flags, int ref_count = 1)
+    : device(device), device_local_handle(handle), flags(flags), ref_count(ref_count) {}
 
   vfs_device *device;
   int         device_local_handle;
   uint32_t    flags;
+  int         ref_count;
 };
 
 struct context {
-  p2::pool<filedesc, 16, vfs_fd> descriptors;
+  p2::pool<opened_file_handle, 16, vfs_fd> descriptors;
 };
 
 #endif // !PEOS2_FILESYSTEM_PRIVATE_H

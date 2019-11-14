@@ -42,6 +42,7 @@
 #define ENODIR       -201  // Path parent isn't a directory
 #define ENODRIVER    -202  // Path doesn't contain a mapped driver
 #define ENOSPACE     -203  // No space in structure or file
+#define EINCONSTATE  -204  // Internal state is inconsistent
 
 // Control numbers
 #define CTRL_RAMFS_SET_FILE_RANGE 0x0100      // (start_addr, size)
