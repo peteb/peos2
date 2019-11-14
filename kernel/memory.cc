@@ -1,5 +1,4 @@
 #include "memory.h"
-#include "assert.h"
 #include "screen.h"
 #include "x86.h"
 #include "protected_mode.h"
@@ -15,6 +14,7 @@
 #include "support/page_alloc.h"
 #include "support/pool.h"
 #include "support/optional.h"
+#include "support/assert.h"
 
 // Externs
 extern "C" void isr_page_fault(isr_registers);

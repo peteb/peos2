@@ -1,0 +1,22 @@
+# -*- makefile -*-
+
+CC=gcc
+CXX=g++
+AS=as
+CFLAGS=-std=gnu99 $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -I. -I.. -DNDEBUG
+CXXFLAGS=-std=c++17 $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -I. -I.. -DNDEBUG
+OBJDIR=.host
+
+-include Makefile
+
+TEST_SOURCES=$(wildcard unittests/test_*.cc)
+TEST_OBJECTS=$(TEST_SOURCES:.cc=.o) unittests/unittest.o
+OBJECT_PATHS=$(addprefix $(OBJDIR)/,$(TEST_OBJECTS)) $(addprefix $(OBJDIR)/,$(OBJECTS))
+
+all : unittest
+
+clean :
+	rm -rf $(OBJDIR) unittest
+
+unittest : $(OBJECT_PATHS)
+	$(CXX) -o unittest -Werror $(OPT_LEVEL) $(OBJECT_PATHS)

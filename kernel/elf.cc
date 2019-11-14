@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "syscall_decls.h"
-#include "assert.h"
+#include "support/assert.h"
 #include "debug.h"
 #include "filesystem.h"
 

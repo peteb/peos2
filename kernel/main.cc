@@ -1,10 +1,7 @@
 #include "screen.h"
 #include "x86.h"
-#include "support/string.h"
-#include "support/format.h"
 #include "protected_mode.h"
 #include "multiboot.h"
-#include "panic.h"
 #include "keyboard.h"
 #include "syscalls.h"
 #include "filesystem.h"
@@ -15,6 +12,10 @@
 #include "ramfs.h"
 
 #include "syscall_decls.h"
+
+#include "support/string.h"
+#include "support/format.h"
+#include "support/panic.h"
 
 extern int kernel_start, kernel_end;
 extern char stack_top;

@@ -1,0 +1,20 @@
+# -*- makefile -*-
+
+CC=i686-elf-gcc
+CXX=i686-elf-g++
+AS=i686-elf-as
+CFLAGS=-std=gnu99 -ffreestanding $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -DNDEBUG
+CXXFLAGS=-std=c++17 -ffreestanding $(OPT_LEVEL) -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fno-threadsafe-statics -mno-red-zone -mgeneral-regs-only -I. -DNDEBUG
+OBJDIR=.target
+
+-include Makefile
+
+OBJECT_PATHS=$(addprefix $(OBJDIR)/,$(OBJECTS))
+
+all : libsupport
+
+clean :
+	rm -rf $(OBJDIR) libsupport.a
+
+libsupport : $(OBJECT_PATHS)
+	ar rcs libsupport.a $(OBJECT_PATHS)

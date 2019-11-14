@@ -1,4 +1,4 @@
-#include "panic.h"
+#include "support/panic.h"
 #include "screen.h"
 #include "process.h"
 #include "syscall_utils.h"

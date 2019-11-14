@@ -1,7 +1,6 @@
 #include "process.h"
 #include "protected_mode.h"
 #include "screen.h"
-#include "assert.h"
 #include "syscalls.h"
 #include "x86.h"
 #include "memareas.h"
@@ -14,6 +13,7 @@
 #include "support/pool.h"
 #include "support/format.h"
 #include "support/limits.h"
+#include "support/assert.h"
 
 #include "process_private.h"
 

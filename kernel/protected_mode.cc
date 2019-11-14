@@ -1,6 +1,6 @@
 #include "protected_mode.h"
 #include "x86.h"
-#include "assert.h"
+#include "support/assert.h"
 
 static volatile tss_entry tss;
 

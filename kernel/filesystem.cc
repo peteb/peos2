@@ -1,6 +1,5 @@
 #include "filesystem.h"
 #include "screen.h"
-#include "assert.h"
 #include "syscalls.h"
 #include "process.h"
 #include "debug.h"
@@ -9,6 +8,7 @@
 #include "support/pool.h"
 #include "support/string.h"
 #include "support/utils.h"
+#include "support/assert.h"
 
 #include "filesystem_private.h"
 

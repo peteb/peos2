@@ -12,7 +12,7 @@ all : first_program
 
 .PHONY : clean
 clean :
-	rm first_program *.o *.d
+	rm -f first_program *.o *.d
 
 %.o : %.cc
 	@mkdir -p $(@D)

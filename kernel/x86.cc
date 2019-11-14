@@ -1,8 +1,9 @@
 #include "x86.h"
-#include "assert.h"
 #include "screen.h"
-#include "support/format.h"
 #include "protected_mode.h"
+
+#include "support/assert.h"
+#include "support/format.h"
 
 static idt_descriptor idt_descriptors[256] alignas(8);
 
@@ -11,8 +12,8 @@ static void pic_remap(uint8_t master_offset, uint8_t slave_offset);
 gdt_descriptor::gdt_descriptor(uint32_t base,
                                uint32_t limit,
                                uint8_t flags,
-                               uint8_t type) {
-
+                               uint8_t type)
+{
   assert(limit <= 0x000FFFFF && "limit can only be 20 bits");
 
   this->base_0_15 = base & 0xFFFF;
@@ -24,7 +25,8 @@ gdt_descriptor::gdt_descriptor(uint32_t base,
   this->type = type;
 }
 
-idt_descriptor::idt_descriptor(uint32_t offset, uint16_t segment, uint8_t type) {
+idt_descriptor::idt_descriptor(uint32_t offset, uint16_t segment, uint8_t type)
+{
   this->offset_0_15 = offset;
   this->offset_16_31 = offset >> 16;
   this->segment_selector = segment;
@@ -32,82 +34,101 @@ idt_descriptor::idt_descriptor(uint32_t offset, uint16_t segment, uint8_t type) 
   this->type = type;
 }
 
-extern "C" void int_divzero(isr_registers) {
+extern "C" void int_divzero(isr_registers)
+{
   panic("divison by zero");
 }
 
-extern "C" void int_debug(isr_registers) {
+extern "C" void int_debug(isr_registers)
+{
   panic("debug");
 }
 
-extern "C" void int_nmi(isr_registers) {
+extern "C" void int_nmi(isr_registers)
+{
   panic("NMI");
 }
 
-extern "C" void int_overflow(isr_registers) {
+extern "C" void int_overflow(isr_registers)
+{
   panic("overflow");
 }
 
-extern "C" void int_bre(isr_registers) {
+extern "C" void int_bre(isr_registers)
+{
   panic("bound-range exception");
 }
 
-extern "C" void int_invop(isr_registers) {
+extern "C" void int_invop(isr_registers)
+{
   panic("invalid opcode");
 }
 
-extern "C" void int_devnotavail(isr_registers) {
+extern "C" void int_devnotavail(isr_registers)
+{
   panic("device not available");
 }
 
-extern "C" void int_invtss(isr_registers) {
+extern "C" void int_invtss(isr_registers)
+{
   panic("invalid tss");
 }
 
-extern "C" void int_segnotpres(isr_registers) {
+extern "C" void int_segnotpres(isr_registers)
+{
   panic("segment not present");
 }
 
-extern "C" void int_stacksegfault(isr_registers) {
+extern "C" void int_stacksegfault(isr_registers)
+{
   panic("stack segment fault");
 }
 
-extern "C" void int_fpe(isr_registers) {
+extern "C" void int_fpe(isr_registers)
+{
   panic("x87 floating point exception");
 }
 
-extern "C" void int_align(isr_registers) {
+extern "C" void int_align(isr_registers)
+{
   panic("alignment");
 }
 
-extern "C" void int_machine(isr_registers) {
+extern "C" void int_machine(isr_registers)
+{
   panic("machine check");
 }
 
-extern "C" void int_simdfp(isr_registers) {
+extern "C" void int_simdfp(isr_registers)
+{
   panic("SIMD FP");
 }
 
-extern "C" void int_virt(isr_registers) {
+extern "C" void int_virt(isr_registers)
+{
   panic("virtualization");
 }
 
-extern "C" void int_sec(isr_registers) {
+extern "C" void int_sec(isr_registers)
+{
   panic("security exception");
 }
 
-extern "C" void int_breakpoint(isr_registers regs) {
+extern "C" void int_breakpoint(isr_registers regs)
+{
   puts("== BREAKPOINT =============================");
   p2::string<256> buf;
   regs.to_string(buf);
   puts(buf);
 }
 
-extern "C" void int_gpf(isr_registers regs) {
+extern "C" void int_gpf(isr_registers regs)
+{
   panic(p2::format<128>("general protection fault (%x)", regs.error_code).str().c_str());
 }
 
-extern "C" void int_doublefault(isr_registers regs) {
+extern "C" void int_doublefault(isr_registers regs)
+{
   panic(p2::format<128>("double fault (%x)", regs.error_code).str().c_str());
 }
 
@@ -131,7 +152,8 @@ extern "C" void isr_sec(isr_registers);
 extern "C" void isr_gpf(isr_registers);
 extern "C" void isr_doublefault(isr_registers);
 
-void int_init() {
+void int_init()
+{
   static const gdtr idt_ptr = {sizeof(idt_descriptors) - 1, reinterpret_cast<uint32_t>(idt_descriptors)};
   asm volatile("lidt [%0]" : : "m"(idt_ptr));
 
@@ -158,11 +180,13 @@ void int_init() {
   puts(p2::format<64>("IDT at %x", (uint32_t)idt_descriptors));
 }
 
-void int_register(int num, void (*handler)(isr_registers), uint16_t segment_selector, uint8_t type) {
+void int_register(int num, void (*handler)(isr_registers), uint16_t segment_selector, uint8_t type)
+{
   idt_descriptors[num] = {reinterpret_cast<uint32_t>(handler), segment_selector, type};
 }
 
-void pic_init() {
+void pic_init()
+{
   pic_remap(IRQ_BASE_INTERRUPT, IRQ_BASE_INTERRUPT + 8);
 
   // Mask all IRQs
@@ -172,7 +196,8 @@ void pic_init() {
   irq_enable(IRQ_CASCADE);
 }
 
-void pic_remap(uint8_t master_offset, uint8_t slave_offset) {
+void pic_remap(uint8_t master_offset, uint8_t slave_offset)
+{
   // First initialize PIC #1
   outb_wait(PIC_MASTER_CMD, PIC_CMD_INIT);
   outb_wait(PIC_MASTER_DATA, master_offset);  // ICW 2
@@ -186,7 +211,8 @@ void pic_remap(uint8_t master_offset, uint8_t slave_offset) {
   outb_wait(PIC_SLAVE_DATA, 0x01);            // ICW 4: 80x86 mode
 }
 
-void isr_registers::to_string(p2::string<256> &out) const volatile {
+void isr_registers::to_string(p2::string<256> &out) const volatile
+{
   p2::format<256> form("edi: %x esi: %x ebp: %x esp: %x\n"
                        "ebx: %x edx: %x ecx: %x eax: %x\n"
                        "eip: %x  cs: %x efl: %x ues: %x\n"
@@ -199,7 +225,8 @@ void isr_registers::to_string(p2::string<256> &out) const volatile {
   out = form.str();
 }
 
-void irq_disable(uint8_t irq_line) {
+void irq_disable(uint8_t irq_line)
+{
   uint16_t port;
 
   if (irq_line < 8) {
@@ -213,7 +240,8 @@ void irq_disable(uint8_t irq_line) {
   outb_wait(port, inb(port) | (1 << irq_line));
 }
 
-void irq_enable(uint8_t irq_line) {
+void irq_enable(uint8_t irq_line)
+{
   uint16_t port;
 
   if (irq_line < 8) {
@@ -227,7 +255,8 @@ void irq_enable(uint8_t irq_line) {
   outb_wait(port, inb(port) & ~(1 << irq_line));
 }
 
-void irq_eoi(uint8_t irq_line) {
+void irq_eoi(uint8_t irq_line)
+{
   if (irq_line >= 8) {
     outb(PIC_SLAVE_CMD, 0x20);
   }
@@ -235,7 +264,8 @@ void irq_eoi(uint8_t irq_line) {
   outb(PIC_MASTER_CMD, 0x20);
 }
 
-void pit_set_phase(int hz) {
+void pit_set_phase(int hz)
+{
   int divisor = 1193180 / hz;
   outb(0x43, 0x36);           // Command 0x36
   outb(0x40, divisor & 0xFF); // Low byte to data port
