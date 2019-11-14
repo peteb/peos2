@@ -97,7 +97,7 @@ extern "C" int init_main(int argc, const char **argv)
       nullptr
     };
 
-    verify(syscall2(exec, "/ramfs/bin/first_program", argv_out));
+    verify(syscall2(exec, "/ramfs/bin/shell", argv_out));
   }
 
   return 0;

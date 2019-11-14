@@ -11,10 +11,10 @@ OBJDIR=.target
 
 OBJECT_PATHS=$(addprefix $(OBJDIR)/,$(OBJECTS))
 
-all : libsupport
+all : libsupport.a
 
 clean :
 	rm -rf $(OBJDIR) libsupport.a
 
-libsupport : $(OBJECT_PATHS)
+libsupport.a : $(OBJECT_PATHS)
 	ar rcs libsupport.a $(OBJECT_PATHS)
