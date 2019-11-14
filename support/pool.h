@@ -26,13 +26,13 @@ namespace p2 {
     struct node {
       template<typename... _Args>
       node(_Args&&... args)
-        : next_free(END_SENTINEL)
+        : next_free(END_SENTINEL), prev_free(END_SENTINEL)
       {
         new (value()) T(forward<_Args>(args)...);
       }
 
       node(const T &o)
-        : next_free(END_SENTINEL)
+        : next_free(END_SENTINEL), prev_free(END_SENTINEL)
       {
         new (value()) T(o);
       }
@@ -43,7 +43,11 @@ namespace p2 {
       }
 
       char _value[sizeof(T)] alignas(T);
-      _IndexT next_free;
+      _IndexT next_free, prev_free;
+      // prev_free is needed for `emplace`, which might un-free an
+      // item in the middle of the free list. NB: _free_list_tail is
+      // still needed for other things and isn't related to the
+      // double-linked list.
     };
 
   public:
@@ -59,6 +63,8 @@ namespace p2 {
       return emplace_back(value);
     }
 
+    // TODO: rename this function: we're not necessarily pushing on
+    // the "back".
     template<typename... _Args>
     _IndexT emplace_back(_Args&&... args)
     {
@@ -67,19 +73,12 @@ namespace p2 {
       if (_free_list_head != END_SENTINEL) {
         // We've got items on the free list which we can use
         idx = _free_list_head;
-        _free_list_head = element(idx)->next_free;
-        if (_free_list_head == END_SENTINEL)
-          _free_list_tail = END_SENTINEL;
-
-        element(idx)->next_free = END_SENTINEL;
       }
       else {
-        idx = _watermark++;
+        idx = _watermark;
       }
 
-      assert(idx < _MaxLen && "buffer overrun");
-      new (element(idx)) node(forward<_Args>(args)...);
-      ++_count;
+      emplace(idx, forward<_Args>(args)...);
       return idx;
     }
 
@@ -95,13 +94,7 @@ namespace p2 {
         return;
       }
 
-      // Add the item to the free list
-      element(idx)->next_free = _free_list_head;
-      _free_list_head = idx;
-
-      if (_free_list_tail == END_SENTINEL)
-        _free_list_tail = idx;
-
+      free_list_prepend(idx);
       --_count;
     }
 
@@ -120,6 +113,45 @@ namespace p2 {
         return false;
 
       return true;
+    }
+
+    template<typename... _Args>
+    void emplace(_IndexT idx, _Args&&... args)
+    {
+      resize(idx);
+
+      if (valid(idx)) {
+        // Something's in there already, just write over
+        new (element(idx)) node(forward<_Args>(args)...);
+        return;
+      }
+
+      // element[idx] is either on the free list or == watermark
+      if (idx == _watermark) {
+        ++_watermark;
+      }
+      else {
+        // Remove element from the free list
+        _IndexT next_free = element(idx)->next_free;
+        _IndexT prev_free = element(idx)->prev_free;
+
+        if (prev_free != END_SENTINEL)
+          element(prev_free)->next_free = next_free;
+
+        if (next_free != END_SENTINEL)
+          element(next_free)->prev_free = prev_free;
+
+        if (_free_list_head == idx)
+          _free_list_head = next_free;
+
+        if (_free_list_tail == idx)
+          _free_list_tail = prev_free;
+
+        element(idx)->prev_free = element(idx)->next_free = END_SENTINEL;
+      }
+
+      new (element(idx)) node(forward<_Args>(args)...);
+      ++_count;
     }
 
     T &operator [](_IndexT idx)
@@ -171,9 +203,33 @@ namespace p2 {
     }
 
   private:
+    // Updates the watermark to `idx`, similar to calling `push_back`
+    // and then immediately erasing the items
+    void resize(_IndexT idx)
+    {
+      assert(idx < _MaxLen);
+
+      while (_watermark < idx) {
+        free_list_prepend(_watermark);
+        ++_watermark;
+      }
+    }
+
     node *element(_IndexT idx)
     {
       return (node *)_element_data + idx;
+    }
+
+    void free_list_prepend(_IndexT idx)
+    {
+      if (_free_list_head != END_SENTINEL)
+        element(_free_list_head)->prev_free = idx;
+
+      element(idx)->next_free = _free_list_head;
+      _free_list_head = idx;
+
+      if (_free_list_tail == END_SENTINEL)
+        _free_list_tail = idx;
     }
 
     _IndexT _watermark = 0,

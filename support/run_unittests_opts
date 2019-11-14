@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-OPTLEVEL="-O0 -g" make -f Makefile.unittest clean all && ./unittest
-OPTLEVEL=-O1 make -f Makefile.unittest clean all && ./unittest
-OPTLEVEL=-O2 make -f Makefile.unittest clean all && ./unittest
-OPTLEVEL=-O3 make -f Makefile.unittest clean all && ./unittest
+OPTLEVEL="-O0 -g" make -f Makefile.host clean all && ./unittest
+OPTLEVEL=-O1 make -f Makefile.host clean all && ./unittest
+OPTLEVEL=-O2 make -f Makefile.host clean all && ./unittest
+OPTLEVEL=-O3 make -f Makefile.host clean all && ./unittest

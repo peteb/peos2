@@ -218,4 +218,40 @@ TESTSUITE(p2::pool) {
     items.erase(0);
     ASSERT_EQ(items.valid(0), false);
   }
+
+  TESTCASE("emplace: writing over the end causes panic") {
+    p2::pool<int, 5> items;
+    ASSERT_PANIC(items.emplace(5, 12345));
+  }
+
+  TESTCASE("emplace: writing to the first element increases watermark and size") {
+    p2::pool<int, 5> items;
+    items.emplace(0, 4443);
+    ASSERT_EQ(items.size(), 1u);
+    ASSERT_EQ(items.watermark(), 1u);
+    ASSERT_EQ(items[0], 4443);
+  }
+
+  TESTCASE("emplace: pushing after emplacing retains both items") {
+    p2::pool<int, 5> items;
+    items.emplace(0, 214);
+    items.push_back(444);
+    ASSERT_EQ(items.size(), 2u);
+    ASSERT_EQ(items.watermark(), 2u);
+    ASSERT_EQ(items[0], 214);
+    ASSERT_EQ(items[1], 444);
+  }
+
+  TESTCASE("emplace: emplacing, push and erase scenario") {
+    p2::pool<int, 5> items;
+    items.emplace(0, 444);
+    items.push_back(555);
+    items.erase(0);
+    items.emplace(0, 333);
+    items.push_back(666);
+    ASSERT_EQ(items.size(), 3u);
+    ASSERT_EQ(items[0], 333);
+    ASSERT_EQ(items[1], 555);
+    ASSERT_EQ(items[2], 666);
+  }
 }
