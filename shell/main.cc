@@ -5,8 +5,18 @@
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
-  int stdout = syscall2(open, "/dev/term0", 0);
-  syscall3(write, stdout, "WELCOME TO SHELL\n", 17);
+  syscall3(write, 0, "WELCOME TO SHELL\n", 17);
+
+  while (true) {
+    syscall3(write, 0, "> ", 2);
+    char input[64];
+    int bytes_read = syscall3(read, 1, input, sizeof(input));
+
+    if (bytes_read < 0) {
+      syscall3(write, 0, "Failed to read\n", 15);
+    }
+  }
+
   return 0;
 }
 

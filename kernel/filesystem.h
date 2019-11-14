@@ -107,6 +107,7 @@ p2::res<size_t> vfs_read(vfs_context context_handle, vfs_fd fd, char *data, int 
 int             vfs_seek(vfs_context context_handle, vfs_fd fd, int offset, int relative);
 int             vfs_close(vfs_context context_handle, vfs_fd fd);
 void            vfs_close_not_matching(vfs_context context_handle, uint32_t flags);
+int             vfs_alias_fd(vfs_context src_ctx_handle, vfs_fd src_fd, vfs_context dst_ctx_handle, vfs_fd dst_fd);
 
 // Managing contexts
 p2::res<vfs_context> vfs_create_context();

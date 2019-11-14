@@ -77,7 +77,7 @@ public:
   uint32_t *sp, *base, *end;
 };
 
-static p2::pool<stack_storage<256>, 16> kernel_stacks;
+static p2::pool<stack_storage<256>, 128> kernel_stacks;
 
 //
 // process - contains state and resources that belongs to a process.

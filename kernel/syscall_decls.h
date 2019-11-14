@@ -17,6 +17,7 @@
 #define SYSCALL_NUM_SEEK         6
 #define SYSCALL_NUM_TELL         7
 #define SYSCALL_NUM_MKDIR        8
+#define SYSCALL_NUM_DUP2         9
 
 #define SYSCALL_NUM_YIELD       10
 #define SYSCALL_NUM_EXIT        11
@@ -57,6 +58,7 @@ SYSCALL_DEF4(control, SYSCALL_NUM_CONTROL, int, uint32_t, uint32_t, uint32_t);
 SYSCALL_DEF3(seek,    SYSCALL_NUM_SEEK, int, int, int);
 SYSCALL_DEF2(tell,    SYSCALL_NUM_TELL, int, int *);
 SYSCALL_DEF1(mkdir,   SYSCALL_NUM_MKDIR, const char *);
+SYSCALL_DEF2(dup2,    SYSCALL_NUM_DUP2, int, int);
 
 // Process definitions
 SYSCALL_DEF1(exit,    SYSCALL_NUM_EXIT, int);

@@ -40,7 +40,7 @@ static void        dequeue(proc_handle pid, proc_handle *head);
 static void        idle_main();
 
 // Global state
-static p2::pool<process, 16, proc_handle> processes;
+static p2::pool<process, 128, proc_handle> processes;
 
 static proc_handle current_pid = processes.end();
 static proc_handle running_head = processes.end(), suspended_head = processes.end();

@@ -9,7 +9,7 @@
 #include "support/format.h"
 
 extern multiboot_info *multiboot_header;
-static int stdout;
+static int kernout;
 
 template<int N>
 static void puts_sys(int fd, const p2::format<N> &fm)
@@ -23,7 +23,7 @@ static int verify(int retval)
     return retval;
 
   // TODO: support negative values in format
-  puts_sys(stdout, p2::format<32>("call failed with code %d", (uintptr_t)retval));
+  puts_sys(0, p2::format<128>("call failed with code %d", (uintptr_t)retval));
   syscall1(exit, 1);
   return 1;
 }
@@ -42,8 +42,8 @@ static void extract_tar(const char *filename);
 extern "C" int init_main(int argc, const char **argv)
 {
   // Setup
-  stdout = verify(syscall2(open, "/dev/term0", 0));
-  puts_sys(stdout, p2::format<64>("argc: %x %s", (uint32_t)argc, argv[0]));
+  kernout = verify(syscall2(open, "/dev/term0", 0));
+  puts_sys(kernout, p2::format<64>("argc: %x %s", (uint32_t)argc, argv[0]));
 
   load_multiboot_modules();
 
@@ -51,55 +51,50 @@ extern "C" int init_main(int argc, const char **argv)
   // on those ending with .tar
   extract_tar("/ramfs/modules/init.tar");
 
-  {
-    // Try to read a file
-    /*int read_fd = verify(syscall2(open, "/ramfs/bin/panic.h", 0));
-    char buf[2];
-    int bytes_read;
+  // TODO: enumerate terminals and spawn one shell for each
+  for (int i = 1; i < 5; ++i) {
+    p2::format<64> term_filename("/dev/term%d", i);
+    puts_sys(kernout, p2::format<64>("init: starting shell for %s", term_filename.str().c_str()));
 
-    while ((bytes_read = verify(syscall3(read, read_fd, buf, sizeof(buf)))) > 0) {
-      //verify(syscall3(write, 0, buf, bytes_read));
+    if (syscall0(fork) != 0)
+      continue;
+
+    int shell_stdout = verify(syscall2(open, term_filename.str().c_str(), OPEN_RETAIN_EXEC));
+    int shell_stdin = verify(syscall2(open, term_filename.str().c_str(), OPEN_RETAIN_EXEC));
+    int shell_stderr = kernout;
+
+    // TODO: how do we know that we're not closing the mmap elf?
+
+    verify(syscall2(dup2, shell_stdout, 3));
+    verify(syscall2(dup2, shell_stdin,  4));
+    verify(syscall2(dup2, shell_stderr, 5));
+
+    if (shell_stdout != 0) {
+      verify(syscall1(close, shell_stdout));
+      verify(syscall2(dup2, 3, 0));
+      shell_stdout = 0;
     }
 
-    verify(syscall1(close, read_fd));*/
+    if (shell_stdin != 0) {
+      verify(syscall1(close, shell_stdin));
+      verify(syscall2(dup2, 4, 1));
+      shell_stdin = 1;
+    }
+
+    if (shell_stderr != 0) {
+      verify(syscall1(close, shell_stderr));
+      verify(syscall2(dup2, 5, 1));
+      shell_stderr = 2;
+    }
+
+    const char *argv[] = {nullptr};
+    verify(syscall2(exec, "/ramfs/bin/shell", argv));
   }
 
-  /*int mmap_fd = verify(syscall2(open, "/ramfs/x86.cc", 0));
-  verify(syscall5(mmap, (void *)0xBEEF0000, (void *)0xBEEFF000, mmap_fd, 0, 0));
-
-  char *data = (char *)0xBEEF0000;
-  syscall3(write, stdout, data, 4100);
-
-  */
-
-  syscall3(write, stdout, "HEH\n", 4);
-
-  if (syscall0(fork) != 0) {
-    syscall3(write, stdout, "HEJ IN PAREN\n", 13);
-
-    // Start I/O
-    int stdin = verify(syscall2(open, "/dev/term0", 0));
-    char input[240];
-    int read = verify(syscall3(read, stdin, input, sizeof(input) - 1));
-    input[read] = '\0';
-
-    p2::format<sizeof(input) + 50> output("Read %d bytes: %s", read, input);
-    verify(syscall3(write, stdout, output.str().c_str(), output.str().size()));
-
-  }
-  else {
-    syscall3(write, stdout, "HEJ IN CHILD\n", 13);
-
-    // Start process
-    const char *argv_out[] = {
-      "hello",
-      "param2",
-      nullptr
-    };
-
-    verify(syscall2(exec, "/ramfs/bin/shell", argv_out));
-  }
-
+  // TODO: wait for all shells?
+  const char *msg = "*** Spawned a couple of shells. Try the F1-12 keys ***\n";
+  verify(syscall3(write, kernout, msg, strlen(msg)));
+  while (true) {}
   return 0;
 }
 

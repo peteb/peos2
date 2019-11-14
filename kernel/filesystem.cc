@@ -21,6 +21,7 @@ static int syscall_control(int fd, uint32_t function, uint32_t param1, uint32_t 
 static int syscall_seek(int fd, int offset, int relative);
 static int syscall_tell(int fd, int *position);
 static int syscall_mkdir(const char *path);
+static int syscall_dup2(int fd, int alias_fd);
 
 // Global state
 static p2::pool<vfs_node, 256, vfs_node_handle> nodes;
@@ -28,7 +29,7 @@ static p2::pool<vfs_dirent, 256, decltype(vfs_node::info_node)> directories;
 static p2::pool<vfs_device, 64, decltype(vfs_node::info_node)> drivers;
 static vfs_node_handle root_dir;
 
-static p2::pool<context, 32, vfs_context> contexts;
+static p2::pool<context, 64, vfs_context> contexts;
 static p2::pool<opened_file, 64, opened_file_handle> opened_files;
 
 // Definitions
@@ -62,6 +63,7 @@ void vfs_init()
   syscall_register(SYSCALL_NUM_SEEK, (syscall_fun)syscall_seek);
   syscall_register(SYSCALL_NUM_TELL, (syscall_fun)syscall_tell);
   syscall_register(SYSCALL_NUM_MKDIR, (syscall_fun)syscall_mkdir);
+  syscall_register(SYSCALL_NUM_DUP2, (syscall_fun)syscall_dup2);
 }
 
 static vfs_dirent *find_dirent(vfs_node_handle dir_node, const p2::string<32> &name)
@@ -195,12 +197,10 @@ int vfs_close(vfs_context context_handle, vfs_fd local_fd)
   if (--file_info.ref_count == 0) {
     dbg_puts(vfs, "closing global opened file %d", file_handle);
 
-    if (!file_info.device->driver->close)
-      return ENOSUPPORT;
-
     // TODO: what do we do if the driver fails to close the file? But
     // we've already removed our local mapping?
-    return file_info.device->driver->close(file_info.device_local_handle);
+    if (file_info.device->driver->close)
+      return file_info.device->driver->close(file_info.device_local_handle);
   }
 
   return 0;
@@ -263,8 +263,9 @@ p2::res<size_t> vfs_read(vfs_context context_handle, vfs_fd fd, char *data, int 
 {
   p2::res<opened_file *> file = fetch_opened_file(context_handle, fd);
 
-  if (!file)
+  if (!file) {
     return p2::failure(file.error());
+  }
 
   if (!(*file)->device->driver->read)
     return p2::failure(ENOSUPPORT);
@@ -344,8 +345,11 @@ void vfs_close_not_matching(vfs_context context_handle, uint32_t flags)
   context &context_ = contexts[context_handle];
 
   for (int i = 0; i < context_.descriptors.watermark(); ++i) {
+    if (!context_.descriptors.valid(i))
+      continue;
+
     opened_file &file = opened_files[context_.descriptors[i]];
-    if (context_.descriptors.valid(i) && !(file.flags & flags))
+    if (!(file.flags & flags))
       vfs_close(context_handle, i);
   }
 }
@@ -357,27 +361,12 @@ p2::res<vfs_context> vfs_fork_context(vfs_context context_handle)
     return p2::failure(new_context.error());
 
   context &source_context = contexts[context_handle];
-  context &dest_context = contexts[*new_context];
 
   for (int i = 0; i < source_context.descriptors.watermark(); ++i) {
     if (source_context.descriptors.valid(i)) {
-      // Duplicate the fd
-      opened_file_handle ofh = source_context.descriptors[i];
-      ++opened_files[ofh].ref_count;
-      dest_context.descriptors.emplace_back(ofh);
-    }
-    else {
-      // We need to push invalid descriptors to retain fd numbering
-      dest_context.descriptors.emplace_back(0);
+      vfs_alias_fd(context_handle, i, *new_context, i);
     }
   }
-
-  // Remove the invalid ones
-  for (int i = 0; i < dest_context.descriptors.watermark(); ++i) {
-    if (dest_context.descriptors.valid(i) && !source_context.descriptors.valid(i))
-      dest_context.descriptors.erase(i);
-  }
-
 
   return p2::success(*new_context);
 }
@@ -457,4 +446,34 @@ static int syscall_control(int fd, uint32_t function, uint32_t param1, uint32_t 
     return ENOSUPPORT;
 
   return (*file)->device->driver->control((*file)->device_local_handle, function, param1, param2);
+}
+
+int vfs_alias_fd(vfs_context src_ctx_handle, vfs_fd src_fd, vfs_context dst_ctx_handle, vfs_fd dst_fd)
+{
+  context &source_context = contexts[src_ctx_handle];
+  context &dest_context = contexts[dst_ctx_handle];
+
+  dbg_puts(vfs, "dup2: src_fd=%d, dest_fd=%d, src_ctx=%d, dest_ctx=%d", src_fd, dst_fd, src_ctx_handle, dst_ctx_handle);
+
+  if (!source_context.descriptors.valid(src_fd))
+    return ENOENT;
+
+  if (dest_context.descriptors.valid(dst_fd) &&
+      dest_context.descriptors[dst_fd] == source_context.descriptors[src_fd])
+    return 0;
+
+  if (dest_context.descriptors.valid(dst_fd)) {
+    // If the alias fd already exists, close it
+    vfs_close(dst_ctx_handle, dst_fd);
+  }
+
+  dest_context.descriptors.emplace(dst_fd, source_context.descriptors[src_fd]);
+  ++opened_files[source_context.descriptors[src_fd]].ref_count;
+  return 0;
+}
+
+static int syscall_dup2(int fd, int alias_fd)
+{
+  vfs_context current_context = proc_get_file_context(*proc_current_pid());
+  return vfs_alias_fd(current_context, fd, current_context, alias_fd);
 }
