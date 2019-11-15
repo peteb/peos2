@@ -21,7 +21,7 @@ public:
     char buf[2] = {(char)keycode, '\0'};
 
     if (keycode == '\n') {
-      if (_line_buffer.size() >= _line_buffer.capacity() - 1) {
+      if (_line_buffer.size() >= _line_buffer.capacity() - 1 || _input_queue.full()) {
         return;
       }
 
@@ -34,7 +34,7 @@ public:
                               _line_buffer.clear();
                             });
 
-      assert(bytes_pushed != 0);
+      assert(bytes_pushed);
     }
     else if (keycode == '\r') {
       if (_line_buffer.size() > 0) {
@@ -43,7 +43,7 @@ public:
       }
     }
     else {
-      if (_line_buffer.size() >= _line_buffer.capacity() - 2) {
+      if (_line_buffer.size() >= _line_buffer.capacity() - 2 || _input_queue.full()) {
         return;
       }
 

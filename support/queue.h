@@ -17,7 +17,8 @@ namespace p2 {
   class queue {
   public:
     // Returns false if the queue is full
-    bool push_back(const T &val) {
+    bool push_back(const T &val)
+    {
       if (_write_idx - _read_idx >= _MaxLen) {
         return false;
       }
@@ -28,16 +29,24 @@ namespace p2 {
     }
 
     // Don't call this if size() == 0
-    T pop_front() {
+    T pop_front()
+    {
       return _items[_read_idx++ % _MaxLen];
     }
 
-    int size() const {
+    int size() const
+    {
       return _write_idx - _read_idx;
     }
 
+    bool full() const
+    {
+      return size() == _MaxLen;
+    }
+
   private:
-    void normalize() {
+    void normalize()
+    {
       int smallest = _read_idx / _MaxLen;
       _read_idx -= smallest * _MaxLen;
       _write_idx -= smallest * _MaxLen;

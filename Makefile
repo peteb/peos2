@@ -2,10 +2,11 @@
 
 all : kernel/vmpeoz init.tar
 
-init.tar : programs/first_program shell
+init.tar : programs/first_program shell tester
 	@mkdir -p .initar/bin
 	cp programs/first_program .initar/bin/
 	cp shell/shell .initar/bin/
+	cp tester/tester .initar/bin/
 	cd .initar && tar cf ../init.tar *
 
 libsupport :
@@ -19,6 +20,9 @@ programs/first_program :
 
 shell : libsupport
 	$(MAKE) -C shell
+
+tester : libsupport
+	$(MAKE) -C tester
 
 .PHONY : clean kernel/vmpeoz programs/first_program
 clean :

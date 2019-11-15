@@ -91,6 +91,11 @@ namespace p2 {
       return bytes_read;
     }
 
+    bool full() const
+    {
+      return _queue.full();
+    }
+
   private:
     p2::queue<char, _MaxLen> _queue;
     proc_handle _waiting_process;

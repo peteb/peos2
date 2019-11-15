@@ -59,9 +59,10 @@ extern "C" void int_bre(isr_registers)
   panic("bound-range exception");
 }
 
-extern "C" void int_invop(isr_registers)
+extern "C" void int_invop(isr_registers regs)
 {
   panic("invalid opcode");
+  (void)regs;
 }
 
 extern "C" void int_devnotavail(isr_registers)

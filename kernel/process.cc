@@ -60,7 +60,7 @@ void proc_init()
   syscall_register(SYSCALL_NUM_FORK, (syscall_fun)syscall_fork);
 
   // Timer for preemptive task switching
-  pit_set_phase(10);
+  pit_set_phase(10);  // 9 is high freq, 10 is lower
   irq_enable(IRQ_SYSTEM_TIMER);
   int_register(IRQ_BASE_INTERRUPT + IRQ_SYSTEM_TIMER, isr_timer, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 
@@ -134,7 +134,6 @@ p2::opt<proc_handle> proc_current_pid()
 
 extern "C" void int_timer(isr_registers)
 {
-  ++tick_count;
   irq_eoi(IRQ_SYSTEM_TIMER);
   proc_yield();
 }
@@ -178,6 +177,13 @@ static void switch_process(proc_handle pid)
 
 void proc_yield()
 {
+  // TODO: pull this tick count out into another kind of tick
+  tick_count++;
+  // Increase tick count so we get more fair sharing
+
+  if (processes.valid(current_pid))
+    processes[current_pid].last_tick = tick_count;
+
   proc_switch(decide_next_process());
 }
 

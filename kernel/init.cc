@@ -31,6 +31,64 @@ static int verify(int retval)
 static void load_multiboot_modules();
 static void extract_tar(const char *filename);
 
+static void setup_std_fds(const char *stdout_filename) {
+  int shell_stdout = verify(syscall2(open, stdout_filename, OPEN_RETAIN_EXEC));
+  int shell_stdin = verify(syscall2(open, stdout_filename, OPEN_RETAIN_EXEC));
+  int shell_stderr = kernout;
+
+  // TODO: how do we know that we're not closing the mmap elf?
+
+  verify(syscall2(dup2, shell_stdout, 3));
+  verify(syscall2(dup2, shell_stdin,  4));
+  verify(syscall2(dup2, shell_stderr, 5));
+
+  if (shell_stdout != 0) {
+    verify(syscall1(close, shell_stdout));
+    verify(syscall2(dup2, 3, 0));
+    shell_stdout = 0;
+  }
+
+  if (shell_stdin != 0) {
+    verify(syscall1(close, shell_stdin));
+    verify(syscall2(dup2, 4, 1));
+    shell_stdin = 1;
+  }
+
+  if (shell_stderr != 0) {
+    verify(syscall1(close, shell_stderr));
+    verify(syscall2(dup2, 5, 1));
+    shell_stderr = 2;
+  }
+}
+
+static inline void launch_shells()
+{
+  // TODO: enumerate terminals and spawn one shell for each
+  for (int i = 1; i < 5; ++i) {
+    p2::format<64> term_filename("/dev/term%d", i);
+    puts_sys(kernout, p2::format<64>("init: starting shell for %s", term_filename.str().c_str()));
+
+    if (syscall0(fork) != 0)
+      continue;
+
+    setup_std_fds(term_filename.str().c_str());
+    const char *argv[] = {nullptr};
+    verify(syscall2(exec, "/ramfs/bin/shell", argv));
+  }
+}
+
+static inline void launch_tester()
+{
+  for (int i = 0; i < 10; ++i) {
+    if (syscall0(fork) == 0) {
+      setup_std_fds("/dev/term0");
+      char text[] = {char('A' + i), '\0'};
+      const char *argv[] = {text, nullptr};
+      verify(syscall2(exec, "/ramfs/bin/tester", argv));
+    }
+  }
+}
+
 //
 // Kernel kicks off execution of this user space program "as soon as
 // possible", which is after the kernel and all the drivers have been
@@ -51,45 +109,7 @@ extern "C" int init_main(int argc, const char **argv)
   // on those ending with .tar
   extract_tar("/ramfs/modules/init.tar");
 
-  // TODO: enumerate terminals and spawn one shell for each
-  for (int i = 1; i < 5; ++i) {
-    p2::format<64> term_filename("/dev/term%d", i);
-    puts_sys(kernout, p2::format<64>("init: starting shell for %s", term_filename.str().c_str()));
-
-    if (syscall0(fork) != 0)
-      continue;
-
-    int shell_stdout = verify(syscall2(open, term_filename.str().c_str(), OPEN_RETAIN_EXEC));
-    int shell_stdin = verify(syscall2(open, term_filename.str().c_str(), OPEN_RETAIN_EXEC));
-    int shell_stderr = kernout;
-
-    // TODO: how do we know that we're not closing the mmap elf?
-
-    verify(syscall2(dup2, shell_stdout, 3));
-    verify(syscall2(dup2, shell_stdin,  4));
-    verify(syscall2(dup2, shell_stderr, 5));
-
-    if (shell_stdout != 0) {
-      verify(syscall1(close, shell_stdout));
-      verify(syscall2(dup2, 3, 0));
-      shell_stdout = 0;
-    }
-
-    if (shell_stdin != 0) {
-      verify(syscall1(close, shell_stdin));
-      verify(syscall2(dup2, 4, 1));
-      shell_stdin = 1;
-    }
-
-    if (shell_stderr != 0) {
-      verify(syscall1(close, shell_stderr));
-      verify(syscall2(dup2, 5, 1));
-      shell_stderr = 2;
-    }
-
-    const char *argv[] = {nullptr};
-    verify(syscall2(exec, "/ramfs/bin/shell", argv));
-  }
+  launch_shells();
 
   // TODO: wait for all shells?
   const char *msg = "*** Spawned a couple of shells. Try the F1-12 keys ***\n";
