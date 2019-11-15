@@ -2,6 +2,13 @@
 
 all : kernel/vmpeoz init.tar
 
+image : kernel/vmpeoz init.tar
+	@mkdir -p .image/boot/grub
+	cp grub.cfg .image/boot/grub
+	cp kernel/vmpeoz .image/boot/
+	cp init.tar .image/boot/
+	grub-mkrescue -o peos2.img .image
+
 init.tar : programs/first_program shell tester
 	@mkdir -p .initar/bin
 	cp programs/first_program .initar/bin/
@@ -30,4 +37,4 @@ clean :
 	$(MAKE) -C programs clean
 	$(MAKE) -C shell clean
 	$(MAKE) -C support -f Makefile.target clean
-	rm -rf .initar init.tar
+	rm -rf .initar .image init.tar

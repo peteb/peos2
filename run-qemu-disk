@@ -1,0 +1,4 @@
+#!/bin/bash
+cd `dirname $0`
+
+qemu-system-i386 -s -drive format=raw,file=peos2.img -no-reboot -no-shutdown -d pcall,cpu_reset,guest_errors -monitor stdio
