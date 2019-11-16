@@ -109,13 +109,15 @@ extern "C" int init_main(int argc, const char **argv)
   // on those ending with .tar
   extract_tar("/ramfs/modules/init.tar");
 
+  // TODO: launch whatever's on the command line
   launch_shells();
 
   // TODO: wait for all shells?
   const char *msg = "*** Spawned a couple of shells. Try the F1-12 keys ***\n";
   verify(syscall3(write, kernout, msg, strlen(msg)));
-  // TODO: wait for the shells?
-  while (true) {}
+
+
+  syscall0(shutdown);
   return 0;
 }
 

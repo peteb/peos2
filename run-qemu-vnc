@@ -2,4 +2,3 @@
 cd `dirname $0`
 
 printf "change vnc password\n%s\n" password | qemu-system-i386 -s -vnc :0,password -kernel kernel/vmpeoz -no-reboot -no-shutdown -d pcall,cpu_reset,guest_errors -monitor stdio -initrd init.tar
-

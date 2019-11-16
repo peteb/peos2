@@ -29,6 +29,7 @@ static uint32_t    syscall_kill(uint32_t pid);
 static int         syscall_spawn(const char *filename);
 static int         syscall_exec(const char *filename, const char **argv);
 static int         syscall_fork(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, isr_registers *regs);
+static int         syscall_shutdown();
 
 static proc_handle decide_next_process();
 static void        destroy_process(proc_handle pid);
@@ -58,6 +59,7 @@ void proc_init()
   syscall_register(SYSCALL_NUM_SPAWN, (syscall_fun)syscall_spawn);
   syscall_register(SYSCALL_NUM_EXEC, (syscall_fun)syscall_exec);
   syscall_register(SYSCALL_NUM_FORK, (syscall_fun)syscall_fork);
+  syscall_register(SYSCALL_NUM_SHUTDOWN, (syscall_fun)syscall_shutdown);
 
   // Timer for preemptive task switching
   pit_set_phase(10);  // 9 is high freq, 10 is lower
@@ -130,6 +132,17 @@ p2::opt<proc_handle> proc_current_pid()
     return current_pid;
 
   return {};
+}
+
+void proc_run()
+{
+  // Let the mayhem begin
+  asm volatile("sti");
+  proc_yield();
+
+  // We'll never get here, but for good measure: a loop!
+  // The real idle loop is in `idle_main`
+  while (true) {}
 }
 
 extern "C" void int_timer(isr_registers)
@@ -385,15 +398,30 @@ static int syscall_fork(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, isr_re
   return child_pid;
 }
 
+static int syscall_shutdown()
+{
+  // TODO: destroy all processes
+  // TODO: correct ACPI, this just works for emulators...
+  dbg_puts(proc, "shutting down... %s", "");  // TODO: fix format
+  outw(0xB004, 0x2000); // Bochs and older versions of QEMU
+  outw(0x604, 0x2000);  // Newer versions of QEMU
+  outw(0x4004, 0x3400); // Virtualbox
+
+  while (true) {}
+}
+
 //
 // Idling process: when there's nothing else to do.
 //
 static void idle_main()
 {
   static int count = 0;
+
   while (true) {
     *(volatile char *)PHYS2KERNVIRT(0xB8000) = 'A' + count;
     count = (count + 1) % 26;
     __builtin_ia32_pause();
   }
+
+  // NB: this should *never* return -- the CPU will just continue and execute random stuff
 }

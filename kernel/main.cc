@@ -126,10 +126,5 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
 
   proc_assign_user_stack(init_pid, 1, args);
   proc_enqueue(init_pid);
-
-  // Let the mayhem begin
-  asm volatile("sti");
-  proc_yield();
-
-  while (true) {}
+  proc_run();
 }

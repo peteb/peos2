@@ -9,24 +9,25 @@
 #include "syscall_macros.h"
 
 // Syscall numbers
-#define SYSCALL_NUM_WRITE        1
-#define SYSCALL_NUM_READ         2
-#define SYSCALL_NUM_OPEN         3
-#define SYSCALL_NUM_CONTROL      4
-#define SYSCALL_NUM_CLOSE        5
-#define SYSCALL_NUM_SEEK         6
-#define SYSCALL_NUM_TELL         7
-#define SYSCALL_NUM_MKDIR        8
-#define SYSCALL_NUM_DUP2         9
+#define SYSCALL_NUM_WRITE       100
+#define SYSCALL_NUM_READ        101
+#define SYSCALL_NUM_OPEN        103
+#define SYSCALL_NUM_CONTROL     104
+#define SYSCALL_NUM_CLOSE       105
+#define SYSCALL_NUM_SEEK        106
+#define SYSCALL_NUM_TELL        107
+#define SYSCALL_NUM_MKDIR       108
+#define SYSCALL_NUM_DUP2        109
 
-#define SYSCALL_NUM_YIELD       10
-#define SYSCALL_NUM_EXIT        11
-#define SYSCALL_NUM_KILL        12
-#define SYSCALL_NUM_SPAWN       13
-#define SYSCALL_NUM_EXEC        14
-#define SYSCALL_NUM_FORK        15
+#define SYSCALL_NUM_YIELD       200
+#define SYSCALL_NUM_EXIT        201
+#define SYSCALL_NUM_KILL        202
+#define SYSCALL_NUM_SPAWN       203
+#define SYSCALL_NUM_EXEC        204
+#define SYSCALL_NUM_FORK        205
+#define SYSCALL_NUM_SHUTDOWN    206
 
-#define SYSCALL_NUM_MMAP        20
+#define SYSCALL_NUM_MMAP        300
 
 // Flags
 #define OPEN_READ             0x01
@@ -50,21 +51,22 @@
 #define CTRL_RAMFS_GET_FILE_RANGE 0x0200      // (*start_addr, *size)
 
 // Filesystem definitions
-SYSCALL_DEF3(write,   SYSCALL_NUM_WRITE, int, const char *, int);
-SYSCALL_DEF3(read,    SYSCALL_NUM_READ, int, char *, int);
-SYSCALL_DEF2(open,    SYSCALL_NUM_OPEN, const char *, uint32_t);
-SYSCALL_DEF1(close,   SYSCALL_NUM_CLOSE, int);
-SYSCALL_DEF4(control, SYSCALL_NUM_CONTROL, int, uint32_t, uint32_t, uint32_t);
-SYSCALL_DEF3(seek,    SYSCALL_NUM_SEEK, int, int, int);
-SYSCALL_DEF2(tell,    SYSCALL_NUM_TELL, int, int *);
-SYSCALL_DEF1(mkdir,   SYSCALL_NUM_MKDIR, const char *);
-SYSCALL_DEF2(dup2,    SYSCALL_NUM_DUP2, int, int);
+SYSCALL_DEF3(write,     SYSCALL_NUM_WRITE, int, const char *, int);
+SYSCALL_DEF3(read,      SYSCALL_NUM_READ, int, char *, int);
+SYSCALL_DEF2(open,      SYSCALL_NUM_OPEN, const char *, uint32_t);
+SYSCALL_DEF1(close,     SYSCALL_NUM_CLOSE, int);
+SYSCALL_DEF4(control,   SYSCALL_NUM_CONTROL, int, uint32_t, uint32_t, uint32_t);
+SYSCALL_DEF3(seek,      SYSCALL_NUM_SEEK, int, int, int);
+SYSCALL_DEF2(tell,      SYSCALL_NUM_TELL, int, int *);
+SYSCALL_DEF1(mkdir,     SYSCALL_NUM_MKDIR, const char *);
+SYSCALL_DEF2(dup2,      SYSCALL_NUM_DUP2, int, int);
 
 // Process definitions
-SYSCALL_DEF0(yield,   SYSCALL_NUM_YIELD);
-SYSCALL_DEF1(exit,    SYSCALL_NUM_EXIT, int);
-SYSCALL_DEF1(spawn,   SYSCALL_NUM_SPAWN, const char *);
-SYSCALL_DEF0(fork,    SYSCALL_NUM_FORK);
+SYSCALL_DEF0(yield,     SYSCALL_NUM_YIELD);
+SYSCALL_DEF1(exit,      SYSCALL_NUM_EXIT, int);
+SYSCALL_DEF1(spawn,     SYSCALL_NUM_SPAWN, const char *);
+SYSCALL_DEF0(fork,      SYSCALL_NUM_FORK);
+SYSCALL_DEF0(shutdown,  SYSCALL_NUM_SHUTDOWN);
 
 //
 // exec - rewrites the current process so that it'll run `filename`
