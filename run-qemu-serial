@@ -1,0 +1,2 @@
+#!/bin/bash
+qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot -d pcall,cpu_reset,guest_errors -initrd init.tar
