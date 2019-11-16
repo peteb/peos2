@@ -23,6 +23,10 @@ static int syscall_tell(int fd, int *position);
 static int syscall_mkdir(const char *path);
 static int syscall_dup2(int fd, int alias_fd);
 
+static int read_locally(int handle, char *data, int length);
+static int open_locally(vfs_device *device, const char *path, uint32_t flags);
+static int close_locally(int handle);
+
 // Global state
 static p2::pool<vfs_node, 256, vfs_node_handle> nodes;
 static p2::pool<vfs_dirent, 256, decltype(vfs_node::info_node)> directories;
@@ -31,6 +35,9 @@ static vfs_node_handle root_dir;
 
 static p2::pool<context, 64, vfs_context> contexts;
 static p2::pool<opened_file, 64, opened_file_handle> opened_files;
+static p2::pool<locally_opened_file, 64, opened_file_handle> locally_opened_files;
+
+static vfs_node_handle local_driver_handle;
 
 // Definitions
 vfs_node_handle vfs_create_node(uint8_t type)
@@ -64,6 +71,22 @@ void vfs_init()
   syscall_register(SYSCALL_NUM_TELL, (syscall_fun)syscall_tell);
   syscall_register(SYSCALL_NUM_MKDIR, (syscall_fun)syscall_mkdir);
   syscall_register(SYSCALL_NUM_DUP2, (syscall_fun)syscall_dup2);
+
+  // Setup the VFS driver so it's easy to manipulate and read the VFS
+  // TODO: set this on the root node instead, and change "find_first_driver" to "find_deepest_driver"
+  static vfs_device_driver local_driver = {
+    .write = nullptr,
+    .read = read_locally,
+    .open = open_locally,
+    .close = close_locally,
+    .control = nullptr,
+    .seek = nullptr,
+    .tell = nullptr,
+    .mkdir = nullptr
+  };
+
+  local_driver_handle = vfs_create_node(VFS_FILESYSTEM);
+  vfs_set_driver(local_driver_handle, &local_driver, nullptr);
 }
 
 static vfs_dirent *find_dirent(vfs_node_handle dir_node, const p2::string<32> &name)
@@ -151,7 +174,7 @@ struct ffd_retval {
   const char *rest_path;
 };
 
-static p2::opt<ffd_retval> find_first_driver(vfs_node_handle parent_idx, const char *path)
+static p2::opt<ffd_retval> find_first_driver_aux(vfs_node_handle parent_idx, const char *path)
 {
   if (nodes[parent_idx].type & VFS_DRIVER) {
     return {parent_idx, path};
@@ -159,7 +182,7 @@ static p2::opt<ffd_retval> find_first_driver(vfs_node_handle parent_idx, const c
 
   // Empty string or / references the parent
   if (!*path || (path[0] == '/' && path[1] == '\0')) {
-    return {nodes.end(), path};
+    return {};
   }
 
   assert(path[0] == '/');
@@ -174,10 +197,21 @@ static p2::opt<ffd_retval> find_first_driver(vfs_node_handle parent_idx, const c
 
   const p2::string<32> segment(seg_start, next_segment - seg_start);
   if (const vfs_dirent *dirent = find_dirent(parent_idx, segment)) {
-    return find_first_driver(dirent->node, next_segment);
+    return find_first_driver_aux(dirent->node, next_segment);
   }
 
+  // Fall back to the local driver for manipulating and reading the VFS
   return {};
+}
+
+static p2::opt<ffd_retval> find_first_driver(vfs_node_handle parent_idx, const char *path)
+{
+  if (auto ret = find_first_driver_aux(parent_idx, path)) {
+    return ret;
+  }
+  else {
+    return {local_driver_handle, path};
+  }
 }
 
 void *vfs_get_opaque(vfs_device *device)
@@ -277,6 +311,7 @@ p2::res<size_t> vfs_read(vfs_context context_handle, vfs_fd fd, char *data, int 
 
   return p2::success((size_t)retval);
 }
+
 
 p2::res<vfs_fd> vfs_open(vfs_context context_handle, const char *filename, uint32_t flags)
 {
@@ -475,4 +510,64 @@ static int syscall_dup2(int fd, int alias_fd)
 {
   vfs_context current_context = proc_get_file_context(*proc_current_pid());
   return vfs_alias_fd(current_context, fd, current_context, alias_fd);
+}
+
+static int read_locally(int handle, char *data, int length)
+{
+  locally_opened_file &opened_file = locally_opened_files[handle];
+
+  vfs_node &node_ = nodes[opened_file.node];
+  assert(node_.type & VFS_DIRECTORY);
+
+  if (node_.info_node == directories.end()) {
+    // No entries to read
+    return 0;
+  }
+
+  uint16_t dirent_idx = node_.info_node;
+  int byte_offset = 0;
+  int bytes_written = 0;
+
+  while (dirent_idx != directories.end() && length > 0) {
+    vfs_dirent &entry = directories[dirent_idx];
+
+    if (opened_file.position >= byte_offset &&
+        opened_file.position < byte_offset + (int)sizeof(dirent_t)) {
+
+      // Add this data
+      int block_offset = opened_file.position % sizeof(dirent_t);
+      int copy_length = p2::min((int)sizeof(dirent_t) - block_offset, length);
+
+      dirent_t block;
+      memcpy(block.name, entry.name.c_str(), p2::min(entry.name.size() + 1, (int)sizeof(block.name)));
+      memcpy(data, (char *)&block + block_offset, copy_length);
+
+      data += copy_length;
+      opened_file.position += copy_length;
+      length -= copy_length;
+      bytes_written += copy_length;
+    }
+
+    byte_offset += sizeof(dirent_t);
+    dirent_idx = entry.next_dirent;
+  }
+
+  return bytes_written;
+}
+
+static int open_locally(vfs_device */*device*/, const char *path, uint32_t /*flags*/)
+{
+  // TODO: rename these handles according to style, and use p2::opt
+  vfs_node_handle dir_handle = vfs_lookup(path);
+  assert(dir_handle != nodes.end());
+  dbg_puts(vfs, "opened %s (node %d)", path, dir_handle);
+
+  return locally_opened_files.emplace_back(dir_handle);
+}
+
+static int close_locally(int handle)
+{
+  // TODO: verify
+  locally_opened_files.erase(handle);
+  return 0;
 }

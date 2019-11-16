@@ -45,6 +45,12 @@ struct vfs_device_driver {
   // the filesystem driver, but generally 0 is only returned if
   // `length` is 0 or if the underlying stream has reached its end.
   //
+  // If the handle represents a directory, reads will return dirent
+  // binary data. Effects of concurrent modifications to the
+  // filesystem are undefined except that the output should be
+  // well-formed with respect to binary layout. There's no guarantee
+  // that a following `open` using a dirent will work.
+  //
   // Returns the number of bytes read (which can be less than
   // `length`, but greater than zero). A negative value represents
   // error.

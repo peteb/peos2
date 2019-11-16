@@ -48,6 +48,13 @@ struct opened_file {
   int         ref_count;
 };
 
+struct locally_opened_file {
+  locally_opened_file(vfs_node_handle node) : node(node), position(0) {}
+
+  vfs_node_handle node;
+  int position;
+};
+
 struct context {
   p2::pool<opened_file_handle, 16, vfs_fd> descriptors;
 };

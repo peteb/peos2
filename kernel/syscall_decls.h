@@ -87,4 +87,10 @@ SYSCALL_DEF2(exec, SYSCALL_NUM_EXEC, const char *, const char **);
 // Memory definitions
 SYSCALL_DEF5(mmap,    SYSCALL_NUM_MMAP, void *, void *, int, uint32_t, uint8_t);
 
+
+// Structs
+typedef struct {
+  char name[64];
+} dirent_t;
+
 #endif // !PEOS2_SYSCALL_DECLS_H
