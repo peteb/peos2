@@ -1,2 +1,2 @@
 #!/bin/bash
-docker run -it --privileged -e OPTLEVEL=-g -e PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cross/bin/ -v "`pwd`/../":/opt/src i686-elf-compiler make
+docker run -it --privileged -e OPTLEVEL="-g -O0" -e PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cross/bin/ -v "`pwd`/../":/opt/src i686-elf-compiler make

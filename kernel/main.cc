@@ -10,6 +10,7 @@
 #include "memory.h"
 #include "memareas.h"
 #include "ramfs.h"
+#include "debug.h"
 
 #include "syscall_decls.h"
 
@@ -23,6 +24,8 @@ extern "C" int init_main();
 
 static uint32_t interrupt_stack[1024] alignas(16);
 char debug_out_buffer[128];
+
+extern void idle_main();
 
 extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr)
 {
@@ -110,7 +113,6 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   mem_space space = mem_create_space();
   mem_map_kernel(space, MEM_AREA_READWRITE|MEM_AREA_RETAIN_EXEC);
   mem_activate_space(space);
-
 
   // Create process structures, this needs a working memory subsystem
   proc_init();

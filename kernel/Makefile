@@ -42,3 +42,6 @@ endif
 
 vmpeoz : $(OBJECTS) linker.ld
 	$(CC) -T linker.ld -o vmpeoz -ffreestanding $(OPT_LEVEL) -Werror -nostdlib $(OBJECTS) -L../support -lgcc -lsupport
+
+-include $(OBJDIR)/*.d
+-include $(OBJDIR)/*/*.d

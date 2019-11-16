@@ -605,11 +605,15 @@ extern "C" void int_page_fault(isr_registers regs)
 
   if (regs.error_code & 1) {
     const char *access_type = "read";
+    const char *cpl = "supervisor";
 
     if (regs.error_code & 0x2)
       access_type = "write";
 
-    dbg_puts(mem, "process tried to %s protected page at %x", access_type, faulted_address);
+    if (regs.error_code & 0x3)
+      cpl = "user";
+
+    dbg_puts(mem, "%s process tried to %s protected page at %x", cpl, access_type, faulted_address);
     kill_caller();
     return;
   }

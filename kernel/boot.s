@@ -150,39 +150,70 @@ load_gdt:
 //
 .global switch_task
 switch_task:
-        push %ebx
-        push %esi
-        push %edi
-        push %ebp
-        push %eax
+        pushal
 
-        // Save old esp so we can return at this point
-        mov 24(%esp), %ebx
+        // 36 = popad (32) + retval (4) = first argument to function
+        mov 36(%esp), %ebx
         mov %esp, (%ebx)
 
-        // Change esp
-        mov 28(%esp), %esp
-
-        pop %eax
-        pop %ebp
-        pop %edi
-        pop %esi
-        pop %ebx
+        // Change esp, 40 = argument after first
+        mov 40(%esp), %esp
+        popal
         ret
 
 .global switch_task_iret
 switch_task_iret:
+        // This function is special; return IP comes *after* arguments
+        push %eax
+        mov 4(%esp), %ax
+        mov %ax, %ds
+        mov %ax, %es
+        mov %ax, %fs
+        mov %ax, %gs
+        pop %eax
+
+        // Consume DS
+        add $4, %esp
+
         iret
 
 .macro isr_routine name,handler
 .extern \handler
 .global \name
 \name:
-        push $0  // Dummy error code
+        // Push dummy code
+        push $0x0
+
+        // Save GRPs and caller DS
         pushal
+        push %eax
+        push %eax
+
+        mov %ds, %ax
+        mov %eax, 4(%esp)
+
+        // Set the kernel data segment selector
+        mov $0x10, %ax
+        mov %ax, %ds
+        mov %ax, %es
+        mov %ax, %fs
+        mov %ax, %gs
+        pop %eax
+
         call \handler
+
+        // Restore caller DS and GPRs
+        pop %eax
+        mov %ax, %ds
+        mov %ax, %es
+        mov %ax, %fs
+        mov %ax, %gs
         popal
+
+        // Consume the error code
         add $4, %esp
+
+        // Return to user mode/caller
         iret
 .endm
 
@@ -190,11 +221,35 @@ switch_task_iret:
 .extern \handler
 .global \name
 \name:
+        // Save GRPs and caller DS
         pushal
+        mov %ds, %eax
+        push %eax
+
+        // Set the kernel data segment selector
+        mov $0x10, %ax
+        mov %ax, %ds
+        mov %ax, %es
+        mov %ax, %fs
+        mov %ax, %gs
+
         call \handler
+
+        // Restore caller DS and GPRs
+        pop %eax
+        mov %ax, %ds
+        mov %ax, %es
+        mov %ax, %fs
+        mov %ax, %gs
+
         popal
-        add $4, %esp  // Consume the error code
+
+        // Consume the error code
+        add $4, %esp
+
+        // Return to user mode/caller
         iret
+
 .endm
 
         isr_routine     isr_divzero,     int_divzero

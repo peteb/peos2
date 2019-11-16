@@ -1,0 +1,11 @@
+display_library: sdl2
+megs: 128
+ata0-master: type=cdrom, path=peos2.img, status=inserted
+boot: cdrom
+magic_break: enabled=1
+#gdbstub: enabled=1, port=1234, text_base=0, data_base=0, bss_base=0
+
+#debug: action=report
+info: action=report
+error: action=report
+panic: action=ask

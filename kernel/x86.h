@@ -39,7 +39,7 @@
 
 #define IDT_TYPE_D           0x08  // Size of gate; 1 = 32 bits, 0 = 16 bits
 #define IDT_TYPE_INTERRUPT   0x06  // Interrupt gate
-#define IDT_TYPE_DPL3        0x60  // Descriptor privilege level
+#define IDT_TYPE_DPL3        0x60  // Descriptor privilege level, mimimum level for EXPLICIT access
 #define IDT_TYPE_P           0x80  // Segment Present
 
 #define PIC_MASTER_CMD     0x20
@@ -109,6 +109,7 @@ struct idt_descriptor {
 } __attribute__((packed));
 
 struct isr_registers {
+  uint32_t ds;
   uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
   uint32_t error_code;
   uint32_t eip, cs, eflags;

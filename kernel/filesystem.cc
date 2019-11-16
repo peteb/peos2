@@ -324,7 +324,6 @@ p2::res<vfs_context> vfs_create_context()
 {
   if (contexts.full())
     return p2::failure(ENOSPACE);
-
   return p2::success(contexts.emplace_back());
 }
 

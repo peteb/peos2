@@ -5,6 +5,8 @@
 #include "debug.h"
 
 void panic(const char *explanation) {
+  asm volatile("xchg bx, bx");
+
   if (proc_current_pid()) {
     dbg_puts(sys, "panic: %s", explanation);
     kill_caller();
@@ -15,6 +17,7 @@ void panic(const char *explanation) {
   }
 
   while (true) {
-    asm volatile("cli\nhlt");
+    asm volatile("cli");
+    // NB: not HLTing; bochs freezes then
   }
 }

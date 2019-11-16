@@ -114,6 +114,7 @@ extern "C" int init_main(int argc, const char **argv)
   // TODO: wait for all shells?
   const char *msg = "*** Spawned a couple of shells. Try the F1-12 keys ***\n";
   verify(syscall3(write, kernout, msg, strlen(msg)));
+  // TODO: wait for the shells?
   while (true) {}
   return 0;
 }

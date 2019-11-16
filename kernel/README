@@ -94,3 +94,11 @@ Special keys from the terminal (such as "left arrow") also use escape
 sequences; no extra syscalls are needed to get the special keys.
 
 keyboard.h -> terminal.h -> {user application -> terminal.h ->} screen.h
+
+
+
+Bochs with GDB support
+======================
+* Download bochs source
+* ./configure --enable-gdb-stub --with-sdl2 --disable-docbook --enable-a20-pin --enable-alignment-check --enable-all-optimizations --enable-cdrom --enable-clgd54xx --enable-cpu-level=6 --enable-disasm --enable-fpu --enable-iodebug --enable-large-ramfile --enable-logging --enable-long-phy-address --enable-pci --enable-plugins --enable-readline --enable-show-ips --enable-usb
+* Note that bochs won't support SMP

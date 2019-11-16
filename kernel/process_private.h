@@ -108,12 +108,16 @@ public:
     ks_push(0x202);                                        // EFLAGS, IF
     ks_push(USER_CODE_SEL);                                // CS
     ks_push(0);                                            // Return EIP from switch_task_iret, should be filled in later
+    ks_push(USER_DATA_SEL);                                // DS, ES, FS, GS, SS
     ks_push((uint32_t)switch_task_iret);                   // Return EIP from switch_task
+    ks_push(0);                                            // EAX
+    ks_push(0);                                            // ECX
+    ks_push(0);                                            // EDX
     ks_push(0);                                            // EBX
+    ks_push(0);                                            // ESP temp
+    ks_push(0);                                            // EBP
     ks_push(0);                                            // ESI
     ks_push(0);                                            // EDI
-    ks_push(0);                                            // EBP
-    ks_push(0);                                            // EAX
 
     const size_t stack_area_size = 4096 * 1024;
     mem_map_alloc(space_handle,
@@ -135,17 +139,23 @@ public:
     // invoking any gcc function epilogues or prologues.  First, we need
     // a stack good for `switch_task`. As we set the return address to
     // be `switch_task_iret`, we also need to push values for IRET.
-    ks_push(USER_DATA_SEL);                     // SS
-    ks_push(regs->user_esp);                    // ESP
-    ks_push(0x202);                             // EFLAGS, IF
-    ks_push(USER_CODE_SEL);                     // CS
-    ks_push(regs->eip);                         // Return EIP from switch_task_iret
-    ks_push((uint32_t)switch_task_iret);        // Return EIP from switch_task
-    ks_push(regs->ebx);                         // EBX
-    ks_push(regs->esi);                         // ESI
-    ks_push(regs->edi);                         // EDI
-    ks_push(regs->ebp);                         // EBP
-    ks_push(0);                                 // EAX
+    ks_push(USER_DATA_SEL);                                // SS
+    ks_push(regs->user_esp);                               // ESP
+    ks_push(0x202);                                        // EFLAGS, IF
+    ks_push(USER_CODE_SEL);                                // CS
+    ks_push(regs->eip);                                    // Return EIP
+    ks_push(USER_DATA_SEL);                                // DS, ES, FS, GS, SS
+    ks_push((uint32_t)switch_task_iret);                   // Return EIP from switch_task
+    ks_push(0);                                            // EAX
+    ks_push(regs->ecx);                                    // ECX
+    ks_push(regs->edx);                                    // EDX
+    ks_push(regs->ebx);                                    // EBX
+    ks_push(0);                                            // ESP temp
+    ks_push(regs->ebp);                                    // EBP
+    ks_push(regs->esi);                                    // ESI
+    ks_push(regs->edi);                                    // EDI
+
+    // TODO: support for setting eax value?
   }
 
   //
@@ -219,6 +229,7 @@ public:
 
     tss_set_kernel_stack((uint32_t)kernel_stack.base);
     mem_activate_space(space_handle);
+
     switch_task((uint32_t *)current_task_esp_ptr, (uint32_t)kernel_stack.sp);
   }
 
