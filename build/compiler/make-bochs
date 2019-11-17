@@ -1,0 +1,20 @@
+#!/bin/bash
+
+set -e
+
+BOCHS_VERSION=2.6.9
+
+mkdir bochs && pushd bochs
+
+wget https://sourceforge.net/projects/bochs/files/bochs/2.6.9/bochs-$BOCHS_VERSION.tar.gz
+tar xzvf bochs-$BOCHS_VERSION.tar.gz
+
+# Build bochs
+pushd bochs-$BOCHS_VERSION
+./configure --with-nogui
+make && make install
+popd
+
+popd
+
+rm -rf bochs

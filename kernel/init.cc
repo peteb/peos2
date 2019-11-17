@@ -115,8 +115,9 @@ extern "C" int init_main(int argc, const char **argv)
 
   const char *init_command = strchr(command_line, ' ');
   assert(init_command);
-  init_command++;
 
+  init_command++;
+  puts_sys(kernout, p2::format<256>("executing '%s'...", init_command));
   //launch_shells();
 
   if (syscall0(fork) == 0) {

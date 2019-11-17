@@ -1,10 +1,12 @@
 # Sorry for recursive make!
 
+GRUB_CFG ?= grub.cfg
+
 all : kernel/vmpeoz init.tar
 
 image : kernel/vmpeoz init.tar
 	@mkdir -p .image/boot/grub
-	cp grub.cfg .image/boot/grub
+	cp $(GRUB_CFG) .image/boot/grub
 	cp kernel/vmpeoz .image/boot/
 	cp init.tar .image/boot/
 	grub-mkrescue -o peos2.img .image

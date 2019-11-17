@@ -60,7 +60,7 @@ class TestSuiteBuilder
 end
 
 #
-# Executes the given command within a TCL Except script (given as `script`)
+# Executes the given command within a Tcl Expect script (given as `script`)
 #
 class ExpectCommandRunner
   def initialize(command, script)

@@ -7,8 +7,11 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-in
 WORKDIR /opt/cross/
 
 COPY make-cross-compiler .
-
 RUN ./make-cross-compiler
+
+COPY make-bochs .
+RUN ./make-bochs
+
 RUN echo "export PATH=\$PATH:/opt/cross/bin/" >> ~/.bashrc
 
 WORKDIR /opt/src/

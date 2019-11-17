@@ -11,6 +11,7 @@
 #include "memareas.h"
 #include "ramfs.h"
 #include "debug.h"
+#include "serial.h"
 
 #include "syscall_decls.h"
 
@@ -29,6 +30,7 @@ extern void idle_main();
 
 extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr)
 {
+  com_init();
   multiboot_header = (multiboot_info *)PHYS2KERNVIRT((uintptr_t)multiboot_hdr);
   screen_init();
 
