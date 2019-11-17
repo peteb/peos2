@@ -7,21 +7,12 @@ scenario "qemu i386 multiboot startup" do
     %q(OPTLEVEL=-O3 make clean all)
   ]
 
-  command "qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot -d pcall,cpu_reset,guest_errors -initrd init.tar"
+  command "qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot -d pcall,cpu_reset,guest_errors -initrd init.tar -append /ramfs/bin/tester"
 
-  it "prints out 'Spawned'" do
+  it "runs the 'tester' program" do
     expect <<-EOS
-      expect {
-        "Spawned" { exit 0 }
-      }
-    EOS
-  end
-
-  it "prints fork somewhere" do
-    expect <<-EOS
-      expect {
-        "fork" { exit 0 }
-      }
+      expect "WELCOME TO TESTER" { exit 0 }
+      exit 1
     EOS
   end
 end

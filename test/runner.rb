@@ -1,9 +1,14 @@
 #!/usr/bin/env ruby
 
-# Tests are aggregated per build to minimize wasteful rebuilding.
-# Tests are grouped by a scenario and can verify that a certain
-# command succeeded. Tests can also interact with and verify a process
-# using Tcl Expect scripts.
+# runner.rb - executes integration tests
+#
+# Tests...
+#   - are aggregated per build to minimize wasteful rebuilding
+#   - are grouped by a shell command, forming a scenario or test suite
+#   - are declarative: imperative testing is outsourced to commands
+#   - can verify that the scenario command succeeded
+#   - can interact with and verify the scenario process using Tcl Expect scripts
+#
 # It's important that build names fully encapsulate the information
 # needed to create the build. Ie, the build shouldn't depend on any
 # "side effects".
@@ -38,5 +43,4 @@ suites_by_build.each do |build, suites|
     exit 1
     break
   end
-
 end

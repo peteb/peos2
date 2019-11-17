@@ -110,12 +110,23 @@ extern "C" int init_main(int argc, const char **argv)
   extract_tar("/ramfs/modules/init.tar");
 
   // TODO: launch whatever's on the command line
-  launch_shells();
+  const char *command_line = (const char *)PHYS2KERNVIRT(multiboot_header->cmd_line);
+  assert(command_line);
 
-  // TODO: wait for all shells?
-  const char *msg = "*** Spawned a couple of shells. Try the F1-12 keys ***\n";
-  verify(syscall3(write, kernout, msg, strlen(msg)));
+  const char *init_command = strchr(command_line, ' ');
+  assert(init_command);
+  init_command++;
 
+  //launch_shells();
+
+  if (syscall0(fork) == 0) {
+    setup_std_fds("/dev/term0");
+    const char *argv[] = {nullptr};
+    verify(syscall2(exec, init_command, argv));
+  }
+
+  // TODO: wait for the child
+  while (true) {}
 
   syscall0(shutdown);
   return 0;

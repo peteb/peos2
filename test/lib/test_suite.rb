@@ -65,7 +65,7 @@ end
 class ExpectCommandRunner
   def initialize(command, script)
     @script = <<-EOS
-      set timeout 30
+      set timeout 15
       log_user 0
       spawn #{command}
       #{script}
