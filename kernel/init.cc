@@ -113,10 +113,10 @@ extern "C" int init_main(int argc, const char **argv)
   const char *command_line = (const char *)PHYS2KERNVIRT(multiboot_header->cmd_line);
   assert(command_line);
 
-  const char *init_command = strchr(command_line, ' ');
+  puts_sys(kernout, p2::format<256>("cmdline: %s", command_line));
+  const char *init_command = command_line;
   assert(init_command);
 
-  init_command++;
   puts_sys(kernout, p2::format<256>("executing '%s'...", init_command));
   //launch_shells();
 

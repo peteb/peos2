@@ -79,6 +79,7 @@
 
 
 #define GDT_SEGSEL(rpl, index) (((rpl) & 0x3) | ((index) << 3))
+#define SEG_RPL(selector) ((selector) & 3)
 
 struct gdt_descriptor {
   gdt_descriptor(uint32_t base, uint32_t limit, uint8_t flags, uint8_t type);

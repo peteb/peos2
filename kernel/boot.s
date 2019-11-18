@@ -177,18 +177,13 @@ switch_task_iret:
 
         iret
 
-.macro isr_routine name,handler
-.extern \handler
-.global \name
-\name:
-        // Push dummy code
-        push $0x0
-
+.macro isr_routine_common handler
         // Save GRPs and caller DS
         pushal
-        push %eax
+        sub $4, %esp  // Make room for ds
         push %eax
 
+        xor %eax, %eax
         mov %ds, %ax
         mov %eax, 4(%esp)
 
@@ -217,39 +212,21 @@ switch_task_iret:
         iret
 .endm
 
+.macro isr_routine name,handler
+.extern \handler
+.global \name
+\name:
+        // Push dummy code
+        push $0x0
+
+        isr_routine_common \handler
+.endm
+
 .macro isr_routine_err name,handler
 .extern \handler
 .global \name
 \name:
-        // Save GRPs and caller DS
-        pushal
-        mov %ds, %eax
-        push %eax
-
-        // Set the kernel data segment selector
-        mov $0x10, %ax
-        mov %ax, %ds
-        mov %ax, %es
-        mov %ax, %fs
-        mov %ax, %gs
-
-        call \handler
-
-        // Restore caller DS and GPRs
-        pop %eax
-        mov %ax, %ds
-        mov %ax, %es
-        mov %ax, %fs
-        mov %ax, %gs
-
-        popal
-
-        // Consume the error code
-        add $4, %esp
-
-        // Return to user mode/caller
-        iret
-
+        isr_routine_common \handler
 .endm
 
         isr_routine     isr_divzero,     int_divzero
