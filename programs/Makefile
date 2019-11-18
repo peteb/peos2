@@ -1,22 +1,30 @@
-# Commands
+# -*- makefile -*-
+
 CC=i686-elf-gcc
 CXX=i686-elf-g++
 AS=i686-elf-as
-OPT_LEVEL=-g
-CFLAGS=-std=gnu99 -m32 -masm=intel -ffreestanding -I.. $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -DNDEBUG
-CXXFLAGS=-std=c++17 -m32 -masm=intel -ffreestanding -I.. $(OPT_LEVEL) -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fno-threadsafe-statics -mno-red-zone -mgeneral-regs-only -I. -DNDEBUG
-
-OBJECTS=first_program.o
-
-all : first_program
+CFLAGS=-std=gnu99 -m32 -masm=intel -nostdlib -ffreestanding $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -DNDEBUG
+CXXFLAGS=-std=c++17 -m32 -masm=intel -nostdlib -ffreestanding $(OPT_LEVEL) -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fno-threadsafe-statics -mno-red-zone -mgeneral-regs-only -I. -I.. -DNDEBUG
+LDFLAGS=-L../support  -lgcc
 
 .PHONY : clean
-clean :
-	rm -f first_program *.o *.d
+
+%.o : %.s
+	$(AS) $< -o $@
+
+%.o : %.c
+	$(CC) -c $< -o $@ $(CFLAGS) -MMD -MP
 
 %.o : %.cc
-	@mkdir -p $(@D)
 	$(CXX) -c $< -o $@ $(CXXFLAGS) -MMD -MP
 
-first_program : $(OBJECTS)
-	$(CC) -o first_program -m32 -ffreestanding -Werror -nostdlib $(OBJECTS) -lgcc
+all : shell tester
+
+clean :
+	rm -rf *.o *.d shell tester
+
+shell : shell.o
+	$(CC) -o $@ $(CXXFLAGS) shell.o $(LDFLAGS) -lsupport
+
+tester : tester.o
+	$(CC) -o $@ $(CXXFLAGS) tester.o $(LDFLAGS) -lsupport

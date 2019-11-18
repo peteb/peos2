@@ -11,11 +11,10 @@ image : kernel/vmpeoz init.tar
 	cp init.tar .image/boot/
 	grub-mkrescue -o peos2.img .image
 
-init.tar : programs/first_program shell tester
+init.tar : programs kernel/vmpeoz
 	@mkdir -p .initar/bin
-	cp programs/first_program .initar/bin/
-	cp shell/shell .initar/bin/
-	cp tester/tester .initar/bin/
+	cp programs/shell .initar/bin/
+	cp programs/tester .initar/bin/
 	cd .initar && tar cf ../init.tar *
 
 libsupport :
@@ -24,22 +23,16 @@ libsupport :
 kernel/vmpeoz : libsupport
 	$(MAKE) -C kernel
 
-programs/first_program :
+programs : libsupport kernel/vmpeoz
 	$(MAKE) -C programs
 
-shell : libsupport
-	$(MAKE) -C shell
-
-tester : libsupport
-	$(MAKE) -C tester
-
 .PHONY : clean kernel/vmpeoz programs/first_program check
+
 clean :
 	$(MAKE) -C kernel clean
 	$(MAKE) -C programs clean
-	$(MAKE) -C shell clean
 	$(MAKE) -C support -f Makefile.target clean
 	rm -rf .initar .image init.tar
 
-check :
+check : image
 	@test/runner.rb
