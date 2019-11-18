@@ -34,124 +34,124 @@ idt_descriptor::idt_descriptor(uint32_t offset, uint16_t segment, uint8_t type)
   this->type = type;
 }
 
-extern "C" void int_divzero(isr_registers)
+extern "C" void int_divzero(isr_registers *)
 {
   panic("divison by zero");
 }
 
-extern "C" void int_debug(isr_registers)
+extern "C" void int_debug(isr_registers *)
 {
   panic("debug");
 }
 
-extern "C" void int_nmi(isr_registers)
+extern "C" void int_nmi(isr_registers *)
 {
   panic("NMI");
 }
 
-extern "C" void int_overflow(isr_registers)
+extern "C" void int_overflow(isr_registers *)
 {
   panic("overflow");
 }
 
-extern "C" void int_bre(isr_registers)
+extern "C" void int_bre(isr_registers *)
 {
   panic("bound-range exception");
 }
 
-extern "C" void int_invop(isr_registers regs)
+extern "C" void int_invop(isr_registers *regs)
 {
   panic("invalid opcode");
   (void)regs;
 }
 
-extern "C" void int_devnotavail(isr_registers)
+extern "C" void int_devnotavail(isr_registers *)
 {
   panic("device not available");
 }
 
-extern "C" void int_invtss(isr_registers)
+extern "C" void int_invtss(isr_registers *)
 {
   panic("invalid tss");
 }
 
-extern "C" void int_segnotpres(isr_registers)
+extern "C" void int_segnotpres(isr_registers *)
 {
   panic("segment not present");
 }
 
-extern "C" void int_stacksegfault(isr_registers)
+extern "C" void int_stacksegfault(isr_registers *)
 {
   panic("stack segment fault");
 }
 
-extern "C" void int_fpe(isr_registers)
+extern "C" void int_fpe(isr_registers *)
 {
   panic("x87 floating point exception");
 }
 
-extern "C" void int_align(isr_registers)
+extern "C" void int_align(isr_registers *)
 {
   panic("alignment");
 }
 
-extern "C" void int_machine(isr_registers)
+extern "C" void int_machine(isr_registers *)
 {
   panic("machine check");
 }
 
-extern "C" void int_simdfp(isr_registers)
+extern "C" void int_simdfp(isr_registers *)
 {
   panic("SIMD FP");
 }
 
-extern "C" void int_virt(isr_registers)
+extern "C" void int_virt(isr_registers *)
 {
   panic("virtualization");
 }
 
-extern "C" void int_sec(isr_registers)
+extern "C" void int_sec(isr_registers *)
 {
   panic("security exception");
 }
 
-extern "C" void int_breakpoint(isr_registers regs)
+extern "C" void int_breakpoint(isr_registers *regs)
 {
   puts("== BREAKPOINT =============================");
   p2::string<256> buf;
-  regs.to_string(buf);
+  regs->to_string(buf);
   puts(buf);
 }
 
-extern "C" void int_gpf(isr_registers regs)
+extern "C" void int_gpf(isr_registers *regs)
 {
-  panic(p2::format<128>("general protection fault (%x)", regs.error_code).str().c_str());
+  panic(p2::format<128>("general protection fault (%x)", regs->error_code).str().c_str());
 }
 
-extern "C" void int_doublefault(isr_registers regs)
+extern "C" void int_doublefault(isr_registers *regs)
 {
-  panic(p2::format<128>("double fault (%x)", regs.error_code).str().c_str());
+  panic(p2::format<128>("double fault (%x)", regs->error_code).str().c_str());
 }
 
-extern "C" void isr_divzero(isr_registers);
-extern "C" void isr_debug(isr_registers);
-extern "C" void isr_nmi(isr_registers);
-extern "C" void isr_breakpoint(isr_registers);
-extern "C" void isr_overflow(isr_registers);
-extern "C" void isr_bre(isr_registers);
-extern "C" void isr_invop(isr_registers);
-extern "C" void isr_devnotavail(isr_registers);
-extern "C" void isr_invtss(isr_registers);
-extern "C" void isr_segnotpres(isr_registers);
-extern "C" void isr_stacksegfault(isr_registers);
-extern "C" void isr_fpe(isr_registers);
-extern "C" void isr_align(isr_registers);
-extern "C" void isr_machine(isr_registers);
-extern "C" void isr_simdfp(isr_registers);
-extern "C" void isr_virt(isr_registers);
-extern "C" void isr_sec(isr_registers);
-extern "C" void isr_gpf(isr_registers);
-extern "C" void isr_doublefault(isr_registers);
+extern "C" void isr_divzero(isr_registers *);
+extern "C" void isr_debug(isr_registers *);
+extern "C" void isr_nmi(isr_registers *);
+extern "C" void isr_breakpoint(isr_registers *);
+extern "C" void isr_overflow(isr_registers *);
+extern "C" void isr_bre(isr_registers *);
+extern "C" void isr_invop(isr_registers *);
+extern "C" void isr_devnotavail(isr_registers *);
+extern "C" void isr_invtss(isr_registers *);
+extern "C" void isr_segnotpres(isr_registers *);
+extern "C" void isr_stacksegfault(isr_registers *);
+extern "C" void isr_fpe(isr_registers *);
+extern "C" void isr_align(isr_registers *);
+extern "C" void isr_machine(isr_registers *);
+extern "C" void isr_simdfp(isr_registers *);
+extern "C" void isr_virt(isr_registers *);
+extern "C" void isr_sec(isr_registers *);
+extern "C" void isr_gpf(isr_registers *);
+extern "C" void isr_doublefault(isr_registers *);
 
 void int_init()
 {
@@ -181,7 +181,7 @@ void int_init()
   puts(p2::format<64>("IDT at %x", (uint32_t)idt_descriptors));
 }
 
-void int_register(int num, void (*handler)(isr_registers), uint16_t segment_selector, uint8_t type)
+void int_register(int num, void (*handler)(isr_registers *), uint16_t segment_selector, uint8_t type)
 {
   idt_descriptors[num] = {reinterpret_cast<uint32_t>(handler), segment_selector, type};
 }

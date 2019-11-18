@@ -175,7 +175,7 @@ inline uint8_t inb(uint16_t port) {
 }
 
 void int_init();
-void int_register(int num, void (*handler)(isr_registers), uint16_t segment_selector, uint8_t type);
+void int_register(int num, void (*handler)(isr_registers *), uint16_t segment_selector, uint8_t type);
 void pic_init();
 void irq_enable(uint8_t irq_line);
 void irq_disable(uint8_t irq_line);

@@ -10,8 +10,8 @@
 
 #include <stdint.h>
 
-extern "C" void int_syscall(volatile isr_registers);
-extern "C" void isr_syscall(isr_registers);
+extern "C" void int_syscall(volatile isr_registers *);
+extern "C" void isr_syscall(isr_registers *);
 
 static void *syscalls[0xFF];
 
@@ -20,9 +20,9 @@ void syscalls_init()
   int_register(0x90, isr_syscall, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
 }
 
-extern "C" void int_syscall(volatile isr_registers regs)
+extern "C" void int_syscall(volatile isr_registers *regs)
 {
-  uint32_t syscall_num = regs.eax;
+  uint32_t syscall_num = regs->eax;
 
   if (syscall_num >= ARRAY_SIZE(syscalls)) {
     // TODO: should we kill the process?
@@ -32,7 +32,7 @@ extern "C" void int_syscall(volatile isr_registers regs)
 
   syscall_fun handler = (syscall_fun)syscalls[syscall_num];
   assert(handler);
-  regs.eax = handler(regs.ebx, regs.ecx, regs.edx, regs.esi, regs.edi, &regs);
+  regs->eax = handler(regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs);
 }
 
 void syscall_register(int num, syscall_fun handler)

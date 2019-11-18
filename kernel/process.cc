@@ -20,7 +20,7 @@
 SYSCALL_DEF1(exit, SYSCALL_NUM_EXIT, uint32_t);
 
 // Externals
-extern "C" void isr_timer(isr_registers);
+extern "C" void isr_timer(isr_registers *);
 
 // Statics
 static uint32_t    syscall_yield();
@@ -145,7 +145,7 @@ void proc_run()
   while (true) {}
 }
 
-extern "C" void int_timer(isr_registers)
+extern "C" void int_timer(isr_registers *)
 {
   irq_eoi(IRQ_SYSTEM_TIMER);
   proc_yield();

@@ -102,7 +102,7 @@ static scancode_mapping scancode_set1_map[0xFF] =
 
 static bool shift_depressed = false, ctrl_depressed = false;
 
-extern "C" void int_kbd(isr_registers regs)
+extern "C" void int_kbd(isr_registers *regs)
 {
   bool gray_keys = false;
   (void)gray_keys;
@@ -171,7 +171,7 @@ extern "C" void int_kbd(isr_registers regs)
   irq_eoi(IRQ_KEYBOARD);
 }
 
-extern "C" void isr_kbd(isr_registers);
+extern "C" void isr_kbd(isr_registers *);
 
 void kbd_init()
 {

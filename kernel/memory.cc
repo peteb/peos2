@@ -17,7 +17,7 @@
 #include "support/assert.h"
 
 // Externs
-extern "C" void isr_page_fault(isr_registers);
+extern "C" void isr_page_fault(isr_registers *);
 extern int kernel_end;
 extern char __start_READONLY, __stop_READONLY;
 
@@ -598,19 +598,19 @@ static void unmap_area(space_info &space, mem_area area_handle)
   }
 }
 
-extern "C" void int_page_fault(isr_registers regs)
+extern "C" void int_page_fault(isr_registers *regs)
 {
   uint32_t faulted_address = 0;
   asm volatile("mov eax, cr2" : "=a"(faulted_address));
 
-  if (regs.error_code & 1) {
+  if (regs->error_code & 1) {
     const char *access_type = "read";
     const char *cpl = "supervisor";
 
-    if (regs.error_code & 0x2)
+    if (regs->error_code & 0x2)
       access_type = "write";
 
-    if (regs.error_code & 0x3)
+    if (regs->error_code & 0x3)
       cpl = "user";
 
     dbg_puts(mem, "%s process tried to %s protected page at %x", cpl, access_type, faulted_address);
@@ -624,13 +624,13 @@ extern "C" void int_page_fault(isr_registers regs)
     dbg_puts(mem, "process tried to access un-mapped area at %x in space %d (esp: %x, eip: %x)",
              faulted_address,
              current_space,
-             regs.user_esp,
-             regs.eip);
+             regs->user_esp,
+             regs->eip);
     kill_caller();
     return;
   }
 
-  dbg_puts(mem, "page fault (error %x) at %x, area %d", regs.error_code, faulted_address, *area_handle);
+  dbg_puts(mem, "page fault (error %x) at %x, area %d", regs->error_code, faulted_address, *area_handle);
 
   area_info &area = spaces[current_space].areas[*area_handle];
   page_fault_handler handler = nullptr;

@@ -180,12 +180,9 @@ switch_task_iret:
 .macro isr_routine_common handler
         // Save GRPs and caller DS
         pushal
-        sub $4, %esp  // Make room for ds
-        push %eax
-
         xor %eax, %eax
         mov %ds, %ax
-        mov %eax, 4(%esp)
+        push %eax
 
         // Set the kernel data segment selector
         mov $0x10, %ax
@@ -193,9 +190,10 @@ switch_task_iret:
         mov %ax, %es
         mov %ax, %fs
         mov %ax, %gs
-        pop %eax
 
+        push %esp  // isr_registers pointer
         call \handler
+        add $4, %esp
 
         // Restore caller DS and GPRs
         pop %eax
