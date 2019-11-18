@@ -4,7 +4,9 @@
 #define PEOS2_PROCESS_PRIVATE_H
 
 #include "memareas.h"
+#include "process.h"
 #include "support/utils.h"
+#include "support/optional.h"
 
 extern "C" void switch_task_iret();
 extern "C" void switch_task(uint32_t *old_esp, uint32_t new_esp);
@@ -161,6 +163,17 @@ public:
     kernel_stack = {};
   }
 
+  void destroy()
+  {
+    vfs_destroy_context(file_context);
+    mem_destroy_space(space_handle);
+    free_stack();
+
+    if (waiting_process) {
+      proc_resume(*waiting_process);
+    }
+  }
+
   //
   // setup_user_stack - overwrites the user stack
   //
@@ -235,6 +248,8 @@ public:
 
   proc_handle prev_process;
   proc_handle next_process;
+
+  p2::opt<proc_handle> waiting_process;
 
   uint64_t    last_tick = 0;
 

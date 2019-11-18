@@ -64,16 +64,18 @@ extern "C" int init_main(int argc, const char **argv)
 
   puts_sys(kernout, p2::format<256>("executing '%s'...\n", init_command));
 
-  if (syscall0(fork) == 0) {
+  int child_pid = syscall0(fork);
+
+  if (child_pid == 0) {
     setup_std_fds("/dev/term0");
     const char *argv[] = {nullptr};
     verify(syscall2(exec, init_command, argv));
   }
+  else {
+    syscall1(wait, child_pid);
+    syscall0(shutdown);
+  }
 
-  // TODO: wait for the child
-  while (true) {}
-
-  syscall0(shutdown);
   return 0;
 }
 

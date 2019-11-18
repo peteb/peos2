@@ -15,6 +15,8 @@ int main(int argc, char *argv[]) {
     if (bytes_read < 0) {
       syscall3(write, 0, "Failed to read\n", 15);
     }
+
+    syscall1(exit, 0);
   }
 
   return 0;

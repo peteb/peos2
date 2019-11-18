@@ -29,6 +29,7 @@ static uint32_t    syscall_kill(uint32_t pid);
 static int         syscall_exec(const char *filename, const char **argv);
 static int         syscall_fork(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, isr_registers *regs);
 static int         syscall_shutdown();
+static int         syscall_wait(int pid);
 
 static proc_handle decide_next_process();
 static void        destroy_process(proc_handle pid);
@@ -58,6 +59,7 @@ void proc_init()
   syscall_register(SYSCALL_NUM_EXEC, (syscall_fun)syscall_exec);
   syscall_register(SYSCALL_NUM_FORK, (syscall_fun)syscall_fork);
   syscall_register(SYSCALL_NUM_SHUTDOWN, (syscall_fun)syscall_shutdown);
+  syscall_register(SYSCALL_NUM_WAIT, (syscall_fun)syscall_wait);
 
   // Timer for preemptive task switching
   pit_set_phase(10);  // 9 is high freq, 10 is lower
@@ -65,6 +67,9 @@ void proc_init()
   int_register(IRQ_BASE_INTERRUPT + IRQ_SYSTEM_TIMER, isr_timer, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 
   idle_process = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE);
+
+  const char *args[] = {};
+  proc_setup_user_stack(idle_process, 0, args);
   proc_set_syscall_ret(idle_process, (uintptr_t)idle_main);
 }
 
@@ -110,13 +115,11 @@ void proc_enqueue(proc_handle pid)
 static void destroy_process(proc_handle pid)
 {
   process &proc = processes[pid];
-  vfs_destroy_context(proc.file_context);
-  mem_destroy_space(proc.space_handle);
 
   // Remove the process so it won't get picked for execution
   dequeue(pid, proc.suspended ? &suspended_head : &running_head);
 
-  proc.free_stack();
+  proc.destroy();
 
   // TODO: we might want to keep the PCB around for a while so we can
   // read the exit status, detect dangling PIDs, etc...
@@ -217,6 +220,7 @@ void proc_resume(proc_handle pid)
     return;
   }
 
+  dbg_puts(proc, "resuming %d", pid);
   dequeue(pid, &suspended_head);
   enqueue_front(pid, &running_head);
   proc.suspended = false;
@@ -400,6 +404,23 @@ static int syscall_shutdown()
   outw(0x4004, 0x3400); // Virtualbox
 
   while (true) {}
+}
+
+static int syscall_wait(int pid)
+{
+  // TODO: only allow waiting on children
+  if (!processes.valid(pid)) {
+    dbg_puts(proc, "wait: %d not valid", pid);
+    return 0;
+  }
+
+  if (auto parent_pid = proc_current_pid()) {
+    proc_suspend(*parent_pid);
+    processes[pid].waiting_process = *parent_pid;
+    proc_yield();
+  }
+
+  return 1;
 }
 
 //

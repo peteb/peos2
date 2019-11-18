@@ -25,6 +25,7 @@
 #define SYSCALL_NUM_EXEC        204
 #define SYSCALL_NUM_FORK        205
 #define SYSCALL_NUM_SHUTDOWN    206
+#define SYSCALL_NUM_WAIT        207
 
 #define SYSCALL_NUM_MMAP        300
 
@@ -65,6 +66,7 @@ SYSCALL_DEF0(yield,     SYSCALL_NUM_YIELD);
 SYSCALL_DEF1(exit,      SYSCALL_NUM_EXIT, int);
 SYSCALL_DEF0(fork,      SYSCALL_NUM_FORK);
 SYSCALL_DEF0(shutdown,  SYSCALL_NUM_SHUTDOWN);
+SYSCALL_DEF1(wait,      SYSCALL_NUM_WAIT, int);
 
 //
 // exec - rewrites the current process so that it'll run `filename`
