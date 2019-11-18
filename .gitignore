@@ -5,7 +5,4 @@ unittest
 *.tar
 .*
 *.d
-tester/tester
-shell/shell
-support/libsupport.a
 peos2.img

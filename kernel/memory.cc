@@ -22,7 +22,7 @@ extern int kernel_end;
 extern char __start_READONLY, __stop_READONLY;
 
 // Forward decls
-static void unmap_area(space_info &space, mem_area area_handle);
+static void unmap_area(mem_space space_handle, mem_area area_handle);
 static void *alloc_page();
 static void free_page(void *page);
 static void map_page(mem_space space, uint32_t virt, uint32_t phys, uint16_t flags);
@@ -31,7 +31,6 @@ static p2::opt<mem_area> find_area(mem_space space_handle, uintptr_t address);
 static page_table_entry *find_pte(const space_info &space, uintptr_t virtual_address);
 static uintptr_t pte_frame(const page_table_entry *pte);
 static uint16_t page_flags(uint16_t mem_flags);
-static void print_space(mem_space space_handle);
 
 // Global state
 static p2::internal_page_allocator<sizeof(page_dir_entry)   * 1024 * 100, 0x1000> page_dir_allocator;
@@ -87,7 +86,7 @@ void mem_destroy_space(mem_space space_handle)
 
     // This will remove from the area list and mark the PTE as
     // non-present, this isn't strictly necessary
-    unmap_area(*space, i);
+    unmap_area(space_handle, i);
   }
 
   for (int i = 0; i < 1024; ++i) {
@@ -121,14 +120,14 @@ void mem_unmap_not_matching(mem_space space_handle, uint16_t flags)
 
     if (!(space.areas[i].flags & flags)) {
       dbg_puts(mem, "unammping area %d", i);
-      unmap_area(space, i);
+      unmap_area(space_handle, i);
     }
   }
 
-  print_space(space_handle);
+  mem_print_space(space_handle);
 }
 
-static void print_space(mem_space space_handle)
+void mem_print_space(mem_space space_handle)
 {
   space_info &space = spaces[space_handle];
 
@@ -241,7 +240,7 @@ p2::res<mem_space> mem_fork_space(mem_space space_handle)
     copy_area(source_area, source_space, new_space_handle);
   }
 
-  print_space(new_space_handle);
+  mem_print_space(new_space_handle);
   return p2::success(new_space_handle);
 }
 
@@ -588,8 +587,9 @@ static void page_fault_file(area_info &area, uintptr_t faulted_address)
     map_page(current_space, page_address, phys_block, page_flags(area.flags & ~MEM_AREA_READWRITE));
 }
 
-static void unmap_area(space_info &space, mem_area area_handle)
+static void unmap_area(mem_space space_handle, mem_area area_handle)
 {
+  auto &space = spaces[space_handle];
   auto &area = space.areas[area_handle];
 
   for (uintptr_t page_address = area.start;
@@ -601,7 +601,7 @@ static void unmap_area(space_info &space, mem_area area_handle)
         free_page((void *)pte_frame(pte));
       }
 
-      pte->flags &= ~MEM_PE_P;
+      map_page(space_handle, page_address, 0xDEAD000, 0);
     }
   }
 

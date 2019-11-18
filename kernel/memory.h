@@ -38,6 +38,7 @@ void               mem_destroy_space(mem_space space);
 void               mem_activate_space(mem_space space);
 void               mem_unmap_not_matching(mem_space space, uint16_t flags);
 p2::res<mem_space> mem_fork_space(mem_space space_handle);
+void               mem_print_space(mem_space space_handle);
 
 //
 // mem_map_kernel - directly maps the kernel's memory into the space.

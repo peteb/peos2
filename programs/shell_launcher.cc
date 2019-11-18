@@ -18,7 +18,7 @@ int main(int, char *[])
 {
   // TODO: enumerate terminals and spawn one shell for each
 
-  for (int i = 1; i < 2; ++i) {
+  for (int i = 1; i < 5; ++i) {
     format<64> term_filename("/dev/term%d", i);
     puts(0, format<64>("starting shell for %s", term_filename.str().c_str()));
 
@@ -29,8 +29,6 @@ int main(int, char *[])
     const char *argv[] = {nullptr};
     verify(syscall2(exec, "/ramfs/bin/shell", argv));
   }
-
-  (void)setup_std_fds;
 
   while (true) {}
 

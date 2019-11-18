@@ -367,6 +367,8 @@ static int syscall_exec(const char *filename, const char *argv[])
   // Overwrite user stack with program arguments
   proc_setup_user_stack(*proc_current_pid(), argc, arg_ptrs);
 
+  mem_print_space(proc_get_file_context(*proc_current_pid()));
+
   dbg_puts(proc, "exec successful %s", "");
 
   return 0;
