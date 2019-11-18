@@ -165,7 +165,7 @@ static void copy_area(area_info &source_area, space_info &source_space, mem_spac
   // TODO: areas are contenders for polymorphism -- we've got a couple
   // of places where we execute logic depending on the type
   if (source_area.type == AREA_LINEAR_MAP) {
-    dbg_puts(mem, "copy linear %s", "");
+    dbg_puts(mem, "copy linear");
 
     linear_map_info &source_map_info = source_space.linear_maps[source_area.info_handle];
     mem_map_linear(dest_space_handle,
@@ -185,7 +185,7 @@ static void copy_area(area_info &source_area, space_info &source_space, mem_spac
     }
   }
   else if (source_area.type == AREA_FILE) {
-    dbg_puts(mem, "copy file %s", "");
+    dbg_puts(mem, "copy file");
     file_map_info &source_map_info = source_space.file_maps[source_area.info_handle];
 
     mem_map_fd(dest_space_handle,
@@ -198,7 +198,7 @@ static void copy_area(area_info &source_area, space_info &source_space, mem_spac
   }
   else if (source_area.type == AREA_ALLOC) {
     // Copy all present pages
-    dbg_puts(mem, "copy alloc %s", "");
+    dbg_puts(mem, "copy alloc");
 
     mem_map_alloc(dest_space_handle,
                   source_area.start,

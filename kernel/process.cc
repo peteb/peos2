@@ -369,7 +369,7 @@ static int syscall_exec(const char *filename, const char *argv[])
 
   mem_print_space(proc_get_file_context(*proc_current_pid()));
 
-  dbg_puts(proc, "exec successful %s", "");
+  dbg_puts(proc, "exec successful");
 
   return 0;
 }
@@ -394,7 +394,7 @@ static int syscall_shutdown()
 {
   // TODO: destroy all processes
   // TODO: correct ACPI, this just works for emulators...
-  dbg_puts(proc, "shutting down... %s", "");  // TODO: fix format
+  dbg_puts(proc, "shutting down...");
   outw(0xB004, 0x2000); // Bochs and older versions of QEMU
   outw(0x604, 0x2000);  // Newer versions of QEMU
   outw(0x4004, 0x3400); // Virtualbox

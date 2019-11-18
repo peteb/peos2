@@ -158,7 +158,7 @@ int elf_map_process(proc_handle pid, const char *filename)
     }
   }
 
-  dbg_puts(elf, "mapped segments %s", "");  // TODO: fix
+  dbg_puts(elf, "mapped segments");
   proc_set_syscall_ret(pid, hdr.e_entry);
   return 0;
 }

@@ -1,5 +1,5 @@
 # Peos2
-Peos2 is an operating system for i386 (so far).
+Peos2 is an operating system for i386 (so far). I'm not going to pretend it's free from Unix influences.
 
 ## Background
 Why build yet another operating system?
