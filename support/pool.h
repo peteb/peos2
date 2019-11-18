@@ -42,6 +42,11 @@ namespace p2 {
         return (T *)_value;
       }
 
+      const T *value() const
+      {
+        return (T *)_value;
+      }
+
       char _value[sizeof(T)] alignas(T);
       _IndexT next_free, prev_free;
       // prev_free is needed for `emplace`, which might un-free an
@@ -98,7 +103,7 @@ namespace p2 {
       --_count;
     }
 
-    bool valid(_IndexT idx)
+    bool valid(_IndexT idx) const
     {
       if (idx >= _watermark)
         return false;
@@ -192,7 +197,7 @@ namespace p2 {
       return _count >= _MaxLen - 1;
     }
 
-    _IndexT watermark()
+    _IndexT watermark() const
     {
       return _watermark;
     }
@@ -216,6 +221,11 @@ namespace p2 {
     }
 
     node *element(_IndexT idx)
+    {
+      return (node *)_element_data + idx;
+    }
+
+    const node *element(_IndexT idx) const
     {
       return (node *)_element_data + idx;
     }

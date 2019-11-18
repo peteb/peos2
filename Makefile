@@ -6,7 +6,7 @@ all : kernel/vmpeoz init.tar
 
 image : kernel/vmpeoz init.tar
 	@mkdir -p .image/boot/grub
-	cp $(GRUB_CFG) .image/boot/grub
+	cp $(GRUB_CFG) .image/boot/grub/grub.cfg
 	cp kernel/vmpeoz .image/boot/
 	cp init.tar .image/boot/
 	grub-mkrescue -o peos2.img .image

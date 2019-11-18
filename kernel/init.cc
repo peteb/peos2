@@ -7,6 +7,7 @@
 #include "process.h"
 #include "support/result.h"
 #include "support/format.h"
+#include "support/keyvalue.h"
 
 extern multiboot_info *multiboot_header;
 static int kernout;
@@ -16,6 +17,7 @@ static void puts_sys(int fd, const p2::format<N> &fm)
 {
   syscall3(write, fd, fm.str().c_str(), fm.str().size());
 }
+
 
 static int verify(int retval)
 {
@@ -113,11 +115,11 @@ extern "C" int init_main(int argc, const char **argv)
   const char *command_line = (const char *)PHYS2KERNVIRT(multiboot_header->cmd_line);
   assert(command_line);
 
-  puts_sys(kernout, p2::format<256>("cmdline: %s", command_line));
-  const char *init_command = command_line;
+  p2::keyvalue<256> attributes(command_line);
+  const char *init_command = attributes["init"];
   assert(init_command);
 
-  puts_sys(kernout, p2::format<256>("executing '%s'...", init_command));
+  puts_sys(kernout, p2::format<256>("executing '%s'...\n", init_command));
   //launch_shells();
 
   if (syscall0(fork) == 0) {

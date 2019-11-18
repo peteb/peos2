@@ -1,5 +1,6 @@
 #!/bin/bash
 cd `dirname $0`
 
-qemu-system-i386 -s -kernel kernel/vmpeoz -no-reboot -no-shutdown -d pcall,cpu_reset,guest_errors -monitor stdio -initrd init.tar
+qemu-system-i386 -s -kernel kernel/vmpeoz -no-reboot -no-shutdown -d pcall,cpu_reset,guest_errors -monitor stdio -initrd init.tar -append init=/ramfs/bin/tester
+
 

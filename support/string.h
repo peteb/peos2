@@ -161,6 +161,11 @@ namespace p2 {
       return _storage_ref[idx];
     }
 
+    char &operator [](int idx)
+    {
+      return _storage_ref[idx];
+    }
+
     void backspace()
     {
       if (_position > 0) {

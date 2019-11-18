@@ -9,7 +9,7 @@ KERNEL_BUILDS = [
 scenario "qemu i386 multiboot startup" do
   builds KERNEL_BUILDS
 
-  command "qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot -d pcall,cpu_reset,guest_errors -initrd init.tar -append /ramfs/bin/tester"
+  command "qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot -d pcall,cpu_reset,guest_errors -initrd init.tar -append init=/ramfs/bin/tester"
 
   it "runs the 'tester' program" do
     expect <<-EOS
@@ -44,4 +44,3 @@ scenario "bochs i386 image startup" do
     EOS
   end
 end
-

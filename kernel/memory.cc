@@ -626,7 +626,6 @@ extern "C" void int_page_fault(isr_registers regs)
              current_space,
              regs.user_esp,
              regs.eip);
-
     kill_caller();
     return;
   }

@@ -20,3 +20,7 @@ clean :
 
 unittest : $(OBJECT_PATHS)
 	$(CXX) -o unittest -Werror $(OPT_LEVEL) $(OBJECT_PATHS)
+
+-include *.d
+-include .host/*.d
+-include .host/*/*.d
