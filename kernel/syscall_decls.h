@@ -22,7 +22,6 @@
 #define SYSCALL_NUM_YIELD       200
 #define SYSCALL_NUM_EXIT        201
 #define SYSCALL_NUM_KILL        202
-#define SYSCALL_NUM_SPAWN       203
 #define SYSCALL_NUM_EXEC        204
 #define SYSCALL_NUM_FORK        205
 #define SYSCALL_NUM_SHUTDOWN    206
@@ -64,7 +63,6 @@ SYSCALL_DEF2(dup2,      SYSCALL_NUM_DUP2, int, int);
 // Process definitions
 SYSCALL_DEF0(yield,     SYSCALL_NUM_YIELD);
 SYSCALL_DEF1(exit,      SYSCALL_NUM_EXIT, int);
-SYSCALL_DEF1(spawn,     SYSCALL_NUM_SPAWN, const char *);
 SYSCALL_DEF0(fork,      SYSCALL_NUM_FORK);
 SYSCALL_DEF0(shutdown,  SYSCALL_NUM_SHUTDOWN);
 

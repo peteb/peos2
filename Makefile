@@ -14,6 +14,7 @@ image : kernel/vmpeoz init.tar
 init.tar : programs kernel/vmpeoz
 	@mkdir -p .initar/bin
 	cp programs/shell .initar/bin/
+	cp programs/shell_launcher .initar/bin/
 	cp programs/tester .initar/bin/
 	cd .initar && tar cf ../init.tar *
 

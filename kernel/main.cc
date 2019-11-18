@@ -126,7 +126,7 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
     "hellote"
   };
 
-  proc_assign_user_stack(init_pid, 1, args);
+  proc_setup_user_stack(init_pid, 1, args);
   proc_enqueue(init_pid);
   proc_run();
 }

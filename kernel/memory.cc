@@ -31,6 +31,7 @@ static p2::opt<mem_area> find_area(mem_space space_handle, uintptr_t address);
 static page_table_entry *find_pte(const space_info &space, uintptr_t virtual_address);
 static uintptr_t pte_frame(const page_table_entry *pte);
 static uint16_t page_flags(uint16_t mem_flags);
+static void print_space(mem_space space_handle);
 
 // Global state
 static p2::internal_page_allocator<sizeof(page_dir_entry)   * 1024 * 100, 0x1000> page_dir_allocator;
@@ -119,9 +120,12 @@ void mem_unmap_not_matching(mem_space space_handle, uint16_t flags)
       continue;
 
     if (!(space.areas[i].flags & flags)) {
+      dbg_puts(mem, "unammping area %d", i);
       unmap_area(space, i);
     }
   }
+
+  print_space(space_handle);
 }
 
 static void print_space(mem_space space_handle)
@@ -133,7 +137,7 @@ static void print_space(mem_space space_handle)
       continue;
 
     area_info &area = space.areas[i];
-    dbg_puts(mem, "Area %x-%x (type %d flags %x)", area.start, area.end, area.type, area.flags);
+    dbg_puts(mem, "%d: area %x-%x (type %d flags %x)", i, area.start, area.end, area.type, area.flags);
   }
 }
 
@@ -300,6 +304,8 @@ void mem_write_page(mem_space space_handle, uintptr_t virt_addr, const void *dat
 
   // We can only write to ALLOC areas for now
   auto area_handle = find_area(space_handle, (uintptr_t)virt_addr);
+  assert(area_handle && "address to map must be in a valid area");
+
   space_info &dest_space = spaces[space_handle];
   area_info &dest_area = dest_space.areas[*area_handle];
   assert(dest_area.type == AREA_ALLOC);
@@ -491,6 +497,7 @@ mem_area mem_map_fd(mem_space space_handle,
                     uint16_t flags)
 {
   assert(!overlaps_existing_area(space_handle, start, end));
+  assert(fd > 2 && "fd cannot be one of the standard fds");
 
   space_info &space = spaces[space_handle];
   // TODO: check reference
@@ -553,8 +560,6 @@ static void page_fault_file(area_info &area, uintptr_t faulted_address)
 {
   uintptr_t page_address = ALIGN_DOWN(faulted_address, 0x1000);
   uintptr_t phys_block = (uintptr_t)alloc_page();
-  dbg_puts(mem, "file map; allocated %x and mapping it at %x", phys_block, page_address);
-
   uint16_t writable = area.flags & MEM_AREA_READWRITE;
   map_page(current_space, page_address, phys_block, page_flags(area.flags | MEM_AREA_READWRITE));
   memset((void *)page_address, 0, 0x1000);
@@ -562,6 +567,9 @@ static void page_fault_file(area_info &area, uintptr_t faulted_address)
   file_map_info &fm_info = spaces[current_space].file_maps[area.info_handle];
   ptrdiff_t area_offset = page_address - area.start;
   uint32_t file_offset = area_offset + fm_info.offset;
+
+  dbg_puts(mem, "file map; allocated %x and mapping it at %x. fd is %d", phys_block, page_address, fm_info.fd);
+
 
   // TODO: syscall here is unnecessary; we're already in the kernel
   if (vfs_seek(proc_get_file_context(*proc_current_pid()), fm_info.fd, file_offset, SEEK_BEG) < 0) {
@@ -596,6 +604,8 @@ static void unmap_area(space_info &space, mem_area area_handle)
       pte->flags &= ~MEM_PE_P;
     }
   }
+
+  space.areas.erase(area_handle);
 }
 
 extern "C" void int_page_fault(isr_registers *regs)

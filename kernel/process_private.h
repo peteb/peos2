@@ -118,14 +118,6 @@ public:
     ks_push(0);                                            // EBP
     ks_push(0);                                            // ESI
     ks_push(0);                                            // EDI
-
-    const size_t stack_area_size = 4096 * 1024;
-    mem_map_alloc(space_handle,
-                  USER_SPACE_STACK_BASE - stack_area_size,
-                  USER_SPACE_STACK_BASE,
-                  MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
-
-    assign_user_stack(0, nullptr);
   }
 
   void setup_fork_stack(isr_registers *regs)
@@ -170,10 +162,12 @@ public:
   }
 
   //
-  // assign_user_stack - overwrites the user stack
+  // setup_user_stack - overwrites the user stack
   //
-  void assign_user_stack(int argc, const char *argv[])
+  void setup_user_stack(int argc, const char *argv[])
   {
+    map_user_stack();  // This can fail with a panic if the stack is mapped already
+
     stack_storage<0x1000 / sizeof(uint32_t)> user_stack_storage; // TODO: shouldn't have to divide here
     stack user_stack(user_stack_storage);
 
@@ -266,6 +260,16 @@ private:
   {
     return USER_SPACE_STACK_BASE - ((uintptr_t)user_stack.base - (uintptr_t)sp);
   }
+
+  void map_user_stack()
+  {
+    const size_t stack_area_size = 4096 * 1024;
+    mem_map_alloc(space_handle,
+                  USER_SPACE_STACK_BASE - stack_area_size,
+                  USER_SPACE_STACK_BASE,
+                  MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
+  }
+
 };
 
 

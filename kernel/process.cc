@@ -26,7 +26,6 @@ extern "C" void isr_timer(isr_registers *);
 static uint32_t    syscall_yield();
 static uint32_t    syscall_exit(int exit_code);
 static uint32_t    syscall_kill(uint32_t pid);
-static int         syscall_spawn(const char *filename);
 static int         syscall_exec(const char *filename, const char **argv);
 static int         syscall_fork(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, isr_registers *regs);
 static int         syscall_shutdown();
@@ -56,7 +55,6 @@ void proc_init()
   syscall_register(SYSCALL_NUM_YIELD, (syscall_fun)syscall_yield);
   syscall_register(SYSCALL_NUM_EXIT, (syscall_fun)syscall_exit);
   syscall_register(SYSCALL_NUM_KILL, (syscall_fun)syscall_kill);
-  syscall_register(SYSCALL_NUM_SPAWN, (syscall_fun)syscall_spawn);
   syscall_register(SYSCALL_NUM_EXEC, (syscall_fun)syscall_exec);
   syscall_register(SYSCALL_NUM_FORK, (syscall_fun)syscall_fork);
   syscall_register(SYSCALL_NUM_SHUTDOWN, (syscall_fun)syscall_shutdown);
@@ -93,9 +91,9 @@ proc_handle proc_create(uint32_t flags)
   return pid;
 }
 
-void proc_assign_user_stack(proc_handle pid, int argc, const char *argv[])
+void proc_setup_user_stack(proc_handle pid, int argc, const char *argv[])
 {
-  processes[pid].assign_user_stack(argc, argv);
+  processes[pid].setup_user_stack(argc, argv);
 }
 
 void proc_set_syscall_ret(proc_handle pid, uintptr_t ip)
@@ -324,17 +322,6 @@ static uint32_t syscall_kill(uint32_t pid)
   return 1;
 }
 
-static int syscall_spawn(const char *filename)
-{
-  verify_ptr(proc, filename);
-  dbg_puts(proc, "spawning process with image '%s'", filename);
-  // TODO: handle flags
-  proc_handle pid = proc_create(PROC_USER_SPACE);
-  elf_map_process(pid, filename);
-  proc_enqueue(pid);
-  return pid;
-}
-
 template<int N>
 static int copy_argvs(const char *argv[], p2::string<N> &arena, const char *pointers[], size_t ptrs_size)
 {
@@ -366,10 +353,11 @@ static int syscall_exec(const char *filename, const char *argv[])
   arg_ptrs[0] = image_path.c_str();
   const int argc = copy_argvs(argv, arg_arena, arg_ptrs + 1, ARRAY_SIZE(arg_ptrs) - 1) + 1;
 
-  // Remove existing user space mappings so there won't be any collisions
+  // Remove existing user space mappings so there won't be any
+  // collisions. This is where the old stack goes away.
   mem_unmap_not_matching(proc_get_space(*proc_current_pid()), MEM_AREA_RETAIN_EXEC);
 
-  // Keep files like stdout and mmap'd elf files
+  // Keep files like stdout and mmap'd binaries
   vfs_close_not_matching(proc_get_file_context(*proc_current_pid()), OPEN_RETAIN_EXEC);
 
   if (int result = elf_map_process(*proc_current_pid(), image_path.c_str()); result < 0) {
@@ -377,7 +365,9 @@ static int syscall_exec(const char *filename, const char *argv[])
   }
 
   // Overwrite user stack with program arguments
-  proc_assign_user_stack(*proc_current_pid(), argc, arg_ptrs);
+  proc_setup_user_stack(*proc_current_pid(), argc, arg_ptrs);
+
+  dbg_puts(proc, "exec successful %s", "");
 
   return 0;
 }

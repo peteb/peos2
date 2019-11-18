@@ -19,13 +19,16 @@ LDFLAGS=-L../support  -lgcc
 %.o : %.cc
 	$(CXX) -c $< -o $@ $(CXXFLAGS) -MMD -MP
 
-all : shell tester
+all : shell shell_launcher tester
 
 clean :
-	rm -rf *.o *.d shell tester
+	rm -rf *.o *.d shell shell_launcher tester
 
 shell : shell.o
 	$(CC) -o $@ $(CXXFLAGS) shell.o $(LDFLAGS) -lsupport
+
+shell_launcher : shell_launcher.o
+	$(CC) -o $@ $(CXXFLAGS) shell_launcher.o $(LDFLAGS) -lsupport
 
 tester : tester.o
 	$(CC) -o $@ $(CXXFLAGS) tester.o $(LDFLAGS) -lsupport
