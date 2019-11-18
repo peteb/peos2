@@ -1,9 +1,9 @@
 KERNEL_BUILDS = [
-  %q(OPTLEVEL=-O0 GRUB_CFG=grub-test.cfg make clean all image),
-  %q(OPTLEVEL="-O0 -g" GRUB_CFG=grub-test.cfg make clean all image),
-  %q(OPTLEVEL=-O1 GRUB_CFG=grub-test.cfg make clean all image),
-  %q(OPTLEVEL=-O2 GRUB_CFG=grub-test.cfg make clean all image),
-  %q(OPTLEVEL=-O3 GRUB_CFG=grub-test.cfg make clean all image)
+  %q(OPT_FLAGS=-O0 GRUB_CFG=grub-test.cfg make clean all image),
+  %q(OPT_FLAGS="-O0 -g" GRUB_CFG=grub-test.cfg make clean all image),
+  %q(OPT_FLAGS=-O1 GRUB_CFG=grub-test.cfg make clean all image),
+  %q(OPT_FLAGS=-O2 GRUB_CFG=grub-test.cfg make clean all image),
+  %q(OPT_FLAGS=-O3 GRUB_CFG=grub-test.cfg make clean all image)
 ]
 
 scenario "qemu i386 multiboot startup" do

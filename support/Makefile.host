@@ -1,10 +1,11 @@
 # -*- makefile -*-
 
+OPT_FLAGS ?= -O3
 CC=gcc
 CXX=g++
 AS=as
-CFLAGS=-std=gnu99 $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -I. -I.. -DNDEBUG
-CXXFLAGS=-std=c++17 $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -I. -I.. -DNDEBUG
+CFLAGS=-std=gnu99 $(OPT_FLAGS) -Wall -Wextra -Werror -fno-threadsafe-statics -I. -I.. -DNDEBUG
+CXXFLAGS=-std=c++17 $(OPT_FLAGS) -Wall -Wextra -Werror -fno-threadsafe-statics -I. -I.. -DNDEBUG
 OBJDIR=.host
 
 -include Makefile
@@ -19,7 +20,7 @@ clean :
 	rm -rf $(OBJDIR) unittest
 
 unittest : $(OBJECT_PATHS)
-	$(CXX) -o unittest -Werror $(OPT_LEVEL) $(OBJECT_PATHS)
+	$(CXX) -o unittest -Werror $(OPT_FLAGS) $(OBJECT_PATHS)
 
 -include *.d
 -include .host/*.d

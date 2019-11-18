@@ -1,11 +1,11 @@
 # -*- makefile -*-
 
-# Commands
+OPT_FLAGS ?= -O3
 CC=i686-elf-gcc
 CXX=i686-elf-g++
 AS=i686-elf-as
-CFLAGS=-std=gnu99 -masm=intel -ffreestanding $(OPT_LEVEL) -Wall -Wextra -Werror -fno-threadsafe-statics -DNDEBUG
-CXXFLAGS=-std=c++17 -masm=intel -ffreestanding $(OPT_LEVEL) -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fno-threadsafe-statics -mno-red-zone -mgeneral-regs-only -I. -I.. -DNDEBUG
+CFLAGS=-std=gnu99 -masm=intel -ffreestanding $(OPT_FLAGS) -Wall -Wextra -Werror -fno-threadsafe-statics -DNDEBUG
+CXXFLAGS=-std=c++17 -masm=intel -ffreestanding $(OPT_FLAGS) -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fno-threadsafe-statics -mno-red-zone -mgeneral-regs-only -I. -I.. -DNDEBUG
 OBJDIR=.target
 
 # Code
@@ -16,7 +16,6 @@ INTERNAL_OBJECTS=boot.o main.o screen.o panic.o x86.o protected_mode.o multiboot
 		 ramfs.o init.o tar.o elf.o serial.o
 
 OBJECTS=$(OBJDIR)/crti.o $(CRTBEGIN_OBJECT) $(addprefix $(OBJDIR)/,$(INTERNAL_OBJECTS)) $(CRTEND_OBJECT) $(OBJDIR)/crtn.o
-OPT_LEVEL=-O3
 
 all : vmpeoz
 
@@ -36,12 +35,8 @@ $(OBJDIR)/%.o : %.cc
 	@mkdir -p $(@D)
 	$(CXX) -c $< -o $@ $(CXXFLAGS) -MMD -MP
 
-ifneq ($(OPTLEVEL),)
-OPT_LEVEL=$(OPTLEVEL)
-endif
-
 vmpeoz : $(OBJECTS) linker.ld
-	$(CC) -T linker.ld -o vmpeoz -ffreestanding $(OPT_LEVEL) -Werror -nostdlib $(OBJECTS) -L../support -lgcc -lsupport
+	$(CC) -T linker.ld -o vmpeoz -ffreestanding $(OPT_FLAGS) -Werror -nostdlib $(OBJECTS) -L../support -lgcc -lsupport
 
 -include $(OBJDIR)/*.d
 -include $(OBJDIR)/*/*.d

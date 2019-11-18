@@ -34,5 +34,5 @@ clean :
 	$(MAKE) -C support -f Makefile.target clean
 	rm -rf .initar .image init.tar
 
-check : image
+check :
 	@test/runner.rb
