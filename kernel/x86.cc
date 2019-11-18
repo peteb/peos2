@@ -152,6 +152,7 @@ extern "C" void isr_virt(isr_registers *);
 extern "C" void isr_sec(isr_registers *);
 extern "C" void isr_gpf(isr_registers *);
 extern "C" void isr_doublefault(isr_registers *);
+extern "C" void isr_muted(isr_registers *);
 
 void int_init()
 {
@@ -177,6 +178,9 @@ void int_init()
   int_register(INT_SIMDFP,         isr_simdfp,        KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
   int_register(INT_VIRT,           isr_virt,          KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
   int_register(INT_SEC,            isr_sec,           KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+
+  // Getting spurious interrupts on 0x27, and we don't use it now so just mute it
+  int_register(0x27,               isr_muted,         KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
 
   puts(p2::format<64>("IDT at %x", (uint32_t)idt_descriptors));
 }

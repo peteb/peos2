@@ -177,6 +177,9 @@ switch_task_iret:
 
         iret
 
+int_muted:
+        ret
+
 .macro isr_routine_common handler
         // Save GRPs and caller DS
         pushal
@@ -251,3 +254,5 @@ switch_task_iret:
         isr_routine     isr_syscall,     int_syscall
         isr_routine     isr_kbd,         int_kbd
         isr_routine     isr_timer,       int_timer
+
+        isr_routine     isr_muted,       int_muted
