@@ -116,11 +116,14 @@ static int execute(const command_line &line)
 
   argv[i] = nullptr;
 
-  // TODO: exec shouldn't populate argv with exec binary
-  int retval = syscall2(exec, line.argument(0), argv);
+  if (int retval = syscall2(exec, line.argument(0), argv); retval < 0) {
+    char message_buf[128];
 
-  if (retval == ENOENT) {
-    puts("Command not found");
+    if (int ret = syscall3(strerror, retval, message_buf, sizeof(message_buf) - 1); ret >= 0) {
+      message_buf[sizeof(message_buf) - 1] = '\0';
+      puts(message_buf);
+    }
+
     return 127;
   }
 

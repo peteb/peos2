@@ -63,3 +63,18 @@ int strncmp(const char *s1, const char *s2, size_t len)
 
   return 0;
 }
+
+char *strncpy(char *dest, const char *src, size_t len)
+{
+  char *ret = dest;
+
+  do {
+    if (!len--)
+      return ret;
+  } while ((*dest++ = *src++));
+
+  while (len--)
+    *dest++ = '\0';
+
+  return ret;
+}

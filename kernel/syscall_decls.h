@@ -9,6 +9,8 @@
 #include "syscall_macros.h"
 
 // Syscall numbers
+#define SYSCALL_NUM_STRERROR     50
+
 #define SYSCALL_NUM_WRITE       100
 #define SYSCALL_NUM_READ        101
 #define SYSCALL_NUM_OPEN        103
@@ -29,6 +31,8 @@
 
 #define SYSCALL_NUM_MMAP        300
 
+#define SYSCALL_NUM_MAX         999
+
 // Flags
 #define OPEN_READ             0x01
 #define OPEN_READWRITE        0x02
@@ -45,10 +49,14 @@
 #define ENODRIVER    -202  // Path doesn't contain a mapped driver
 #define ENOSPACE     -203  // No space in structure or file
 #define EINCONSTATE  -204  // Internal state is inconsistent
+#define EINVVAL      -205  // Invalid value
 
 // Control numbers
 #define CTRL_RAMFS_SET_FILE_RANGE 0x0100      // (start_addr, size)
 #define CTRL_RAMFS_GET_FILE_RANGE 0x0200      // (*start_addr, *size)
+
+// System definitions
+SYSCALL_DEF3(strerror,  SYSCALL_NUM_STRERROR, int, char *, int);
 
 // Filesystem definitions
 SYSCALL_DEF3(write,     SYSCALL_NUM_WRITE, int, const char *, int);
