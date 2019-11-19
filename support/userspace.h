@@ -2,11 +2,18 @@
 #define PEOS2_SUPPORT_USERSPACE_H
 
 #include <kernel/syscall_decls.h>
+#include <support/utils.h>
 
 #define START(fun) extern "C" void _start(int argc, char *argv[])    \
   {                                                                  \
     syscall1(exit, fun(argc, argv));                                 \
   }
+
+static inline void puts(const char *message)
+{
+  syscall3(write, 0, message, strlen(message));
+  syscall3(write, 0, "\n", 1);
+}
 
 
 #ifdef __cplusplus
@@ -32,9 +39,6 @@ namespace p2 {
   {
     verify(syscall3(write, fd, fm.str().c_str(), fm.str().size()));
   }
-
-
-
 }
 #endif
 

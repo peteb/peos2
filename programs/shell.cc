@@ -2,63 +2,80 @@
 #include <support/userspace.h>
 #include <kernel/syscall_decls.h>
 
-void panic(const char *explanation) {
-  syscall3(write, 0, explanation, strlen(explanation));
-  while (true);
-}
+using namespace p2;
 
-static inline int list_dir(const char *filename, dirent_t *dirents, size_t count)
-{
-  int fd = syscall2(open, filename, 0);
+static int read_line(char *out, size_t length);
 
-  if (fd < 0)
-    return fd;
+static char input_buffer[512];
+static size_t input_buffer_size;
 
-  int bytes_read = 0;
-  char *out = (char *)dirents;
-  size_t bytes_left = count * sizeof(*dirents);
-
-  while ((bytes_read = syscall3(read, fd, out, bytes_left)) > 0) {
-    bytes_left -= bytes_read;
-    out += bytes_read;
-  }
-
-  if (bytes_read < 0)
-    return bytes_read;
-
-  if (int retval = syscall1(close, fd); retval < 0)
-    return retval;
-
-  return (out - (char *)dirents) / sizeof(*dirents);
-}
-
-
-int main(int argc, char *argv[]) {
-  (void)argc;
-  (void)argv;
+int main(int /*argc*/, char */*argv*/[]) {
   syscall3(write, 0, "WELCOME TO SHELL\n", 17);
-
-  dirent_t entries[16];
-  int num_entries = list_dir("/dev/", entries, ARRAY_SIZE(entries));
-
-  for (int i = 0; i < num_entries; ++i) {
-    syscall3(write, 0, entries[i].name, strlen(entries[i].name));
-    syscall3(write, 0, "\n", 1);
-  }
 
   while (true) {
     syscall3(write, 0, "> ", 2);
-    char input[64];
-    int bytes_read = syscall3(read, 1, input, sizeof(input));
 
-    if (bytes_read < 0) {
-      syscall3(write, 0, "Failed to read\n", 15);
+    char line[128];
+    int bytes_read = verify(read_line(line, sizeof(line) - 1));
+
+    if (bytes_read == 0 || line[bytes_read - 1] != '\n') {
+      puts("Malformed line, ignoring");
+      continue;
     }
 
-    syscall1(exit, 0);
+    line[bytes_read - 1] = '\0';
+
+    puts(0, p2::format<128>("read %d bytes: '%s'", bytes_read, line));
   }
 
   return 0;
 }
 
 START(main);
+
+void panic(const char *explanation) {
+  syscall3(write, 0, explanation, strlen(explanation));
+  while (true);
+}
+
+static int consume_line_from_buffer(char *out, size_t length)
+{
+  const char *nl = strnchr(input_buffer, '\n', input_buffer_size);
+
+  if (!nl)
+    return 0;
+
+  ++nl; // Move one past \n
+
+  size_t rest = (input_buffer + input_buffer_size) - nl;
+  size_t bytes_to_copy = p2::min<size_t>(length, nl - input_buffer);
+  memcpy(out, input_buffer, bytes_to_copy);
+
+  // Move rest of data to top of buffer. Should be fine, even though
+  // it's an overlapping memcpy (for now ...)  Note also that if `length` is
+  // less than what we need for the full line, the rest of the line
+  // will be discarded.
+  // TODO: use memmove
+  memcpy(input_buffer, nl, rest);
+  input_buffer_size -= (nl - input_buffer);
+  return bytes_to_copy;
+}
+
+static int read_line(char *out, size_t length)
+{
+  while (true) {
+    if (int bytes_read = consume_line_from_buffer(out, length); bytes_read != 0)
+      return bytes_read;
+
+    int bytes_read = syscall3(read,
+                              0,
+                              input_buffer + input_buffer_size,
+                              sizeof(input_buffer) - input_buffer_size);
+    if (bytes_read <= 0)
+      return bytes_read;
+
+    input_buffer_size += bytes_read;
+  }
+
+  return 0;
+}

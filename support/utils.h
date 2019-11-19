@@ -50,7 +50,10 @@ namespace p2 {
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 const char *strchr(const char *str, char c);
+const char *strnchr(const char *str, char c, size_t len);
 size_t strlen(const char *str);
+int strncmp(const char *s1, const char *s2, size_t len);
+
 
 // Functions used by the compiler sometimes for optimization
 extern "C" void *memset(void *dest, int value, size_t len);

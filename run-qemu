@@ -11,6 +11,11 @@ case $1 in
       -monitor stdio -initrd init.tar -append init=/ramfs/bin/shell_launcher
     ;;
 
+  debug)
+    qemu-system-i386 -s -S -kernel kernel/vmpeoz -no-reboot -no-shutdown -d pcall,cpu_reset,guest_errors \
+      -monitor stdio -initrd init.tar -append init=/ramfs/bin/shell_launcher
+    ;;
+
   vnc)
     printf "change vnc password\n%s\n" password | qemu-system-i386 -s -vnc :0,password -kernel kernel/vmpeoz \
       -no-reboot -no-shutdown -d pcall,cpu_reset,guest_errors -monitor stdio -initrd init.tar -append init=/ramfs/bin/shell_launcher

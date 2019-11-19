@@ -34,6 +34,17 @@ const char *strchr(const char *str, char c)
   return str;
 }
 
+const char *strnchr(const char *str, char c, size_t len)
+{
+  while (*str != c) {
+    if (!*str++ || !len--) {
+      return 0;
+    }
+  }
+
+  return len ? str : nullptr;
+}
+
 size_t strlen(const char *str)
 {
   size_t length = 0;
@@ -41,4 +52,14 @@ size_t strlen(const char *str)
     ++length;
   }
   return length;
+}
+
+int strncmp(const char *s1, const char *s2, size_t len)
+{
+  while (len--) {
+    if (*s1++ != *s2++)
+      return *(unsigned char *)(s1 - 1) - *(unsigned char *)(s2 - 1);
+  }
+
+  return 0;
 }
