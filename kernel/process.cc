@@ -349,13 +349,16 @@ static int syscall_exec(const char *filename, const char *argv[])
 
   dbg_puts(proc, "execing process with image '%s'", filename);
 
+  vfs_context file_context = proc_get_file_context(*proc_current_pid());
+  mem_space space = proc_get_space(*proc_current_pid());
+
   {
     // TODO: open the file but keep it open and send it to elf_map_process! Then remove RETAIN_EXEC
-    p2::res<vfs_fd> result = vfs_open(proc_get_file_context(*proc_current_pid()), filename, 0);
+    p2::res<vfs_fd> result = vfs_open(file_context, filename, 0);
     if (!result)
       return result.error();
     else
-      vfs_close(proc_get_file_context(*proc_current_pid()), *result);
+      vfs_close(file_context, *result);
   }
 
   // Copy strings to the kernel stack so we can swap out user space
@@ -368,10 +371,10 @@ static int syscall_exec(const char *filename, const char *argv[])
 
   // Remove existing user space mappings so there won't be any
   // collisions. This is where the old stack goes away.
-  mem_unmap_not_matching(proc_get_space(*proc_current_pid()), MEM_AREA_RETAIN_EXEC);
+  mem_unmap_not_matching(space, MEM_AREA_RETAIN_EXEC);
 
   // Keep files like stdout and mmap'd binaries
-  vfs_close_not_matching(proc_get_file_context(*proc_current_pid()), OPEN_RETAIN_EXEC);
+  vfs_close_not_matching(file_context, OPEN_RETAIN_EXEC);
 
   if (int result = elf_map_process(*proc_current_pid(), image_path.c_str()); result < 0) {
     return result;
@@ -380,7 +383,7 @@ static int syscall_exec(const char *filename, const char *argv[])
   // Overwrite user stack with program arguments
   proc_setup_user_stack(*proc_current_pid(), argc, arg_ptrs);
 
-  mem_print_space(proc_get_file_context(*proc_current_pid()));
+  mem_print_space(space);
 
   dbg_puts(proc, "exec successful");
 
