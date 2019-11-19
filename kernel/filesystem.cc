@@ -116,13 +116,14 @@ static vfs_node_handle vfs_lookup_aux(vfs_node_handle parent, const char *path)
     return parent;
   }
 
-  assert(path[0] == '/');
+  if (path[0] != '/')
+    return nodes.end();
 
   // TODO: cleanup string handling using string_view or similar
   const char *seg_start = path + 1;
-  const char *next_segment = strchr(seg_start, '/');
+  const char *next_segment = strchr((char *)seg_start, '/');
   if (!next_segment) {
-    next_segment = strchr(path, '\0');
+    next_segment = strchr((char *)path, '\0');
   }
 
   const p2::string<32> segment(seg_start, next_segment - seg_start);
@@ -181,18 +182,16 @@ static p2::opt<ffd_retval> find_first_driver_aux(vfs_node_handle parent_idx, con
   }
 
   // Empty string or / references the parent
-  if (!*path || (path[0] == '/' && path[1] == '\0')) {
+  if (!*path || (path[0] == '/' && path[1] == '\0') || path[0] != '/') {
     return {};
   }
 
-  assert(path[0] == '/');
-
   // TODO: cleanup string handling using string_view or similar
   const char *seg_start = path + 1;
-  const char *next_segment = strchr(seg_start, '/');
+  const char *next_segment = strchr((char *)seg_start, '/');
 
   if (!next_segment) {
-    next_segment = strchr(path, '\0');
+    next_segment = strchr((char *)path, '\0');
   }
 
   const p2::string<32> segment(seg_start, next_segment - seg_start);
@@ -559,7 +558,9 @@ static int open_locally(vfs_device */*device*/, const char *path, uint32_t /*fla
 {
   // TODO: rename these handles according to style, and use p2::opt
   vfs_node_handle dir_handle = vfs_lookup(path);
-  assert(dir_handle != nodes.end());
+  if (dir_handle == nodes.end())
+    return ENOENT;
+
   dbg_puts(vfs, "opened %s (node %d)", path, dir_handle);
 
   return locally_opened_files.emplace_back(dir_handle);

@@ -349,6 +349,15 @@ static int syscall_exec(const char *filename, const char *argv[])
 
   dbg_puts(proc, "execing process with image '%s'", filename);
 
+  {
+    // TODO: open the file but keep it open and send it to elf_map_process! Then remove RETAIN_EXEC
+    p2::res<vfs_fd> result = vfs_open(proc_get_file_context(*proc_current_pid()), filename, 0);
+    if (!result)
+      return result.error();
+    else
+      vfs_close(proc_get_file_context(*proc_current_pid()), *result);
+  }
+
   // Copy strings to the kernel stack so we can swap out user space
   p2::string<128> image_path{filename};
   p2::string<1024> arg_arena;

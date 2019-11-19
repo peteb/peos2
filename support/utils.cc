@@ -23,7 +23,7 @@ extern "C" void *memcpy(void *dest, const void *src, size_t length)
   return dest;
 }
 
-const char *strchr(const char *str, char c)
+char *strchr(char *str, char c)
 {
   while (*str != c) {
     if (!*str++) {
@@ -34,7 +34,7 @@ const char *strchr(const char *str, char c)
   return str;
 }
 
-const char *strnchr(const char *str, char c, size_t len)
+char *strnchr(char *str, char c, size_t len)
 {
   while (*str != c) {
     if (!*str++ || !len--) {

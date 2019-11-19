@@ -26,7 +26,7 @@ int main(int, char *[])
       continue;
 
     const char *filename = terminals[i].c_str();
-    puts(0, format<64>("starting shell for %s", filename));
+    puts(0, format<64>("starting shell for %s\n", filename));
 
     int child_pid = syscall0(fork);
 

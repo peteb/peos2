@@ -2,9 +2,13 @@
 #include <support/userspace.h>
 #include <kernel/syscall_decls.h>
 
+#include "command_line.h"
+
 using namespace p2;
 
 static int read_line(char *out, size_t length);
+static void parse_command(char *command);
+static int execute(const command_line &line);
 
 static char input_buffer[512];
 static size_t input_buffer_size;
@@ -24,8 +28,7 @@ int main(int /*argc*/, char */*argv*/[]) {
     }
 
     line[bytes_read - 1] = '\0';
-
-    puts(0, p2::format<128>("read %d bytes: '%s'", bytes_read, line));
+    parse_command(line);
   }
 
   return 0;
@@ -75,6 +78,48 @@ static int read_line(char *out, size_t length)
       return bytes_read;
 
     input_buffer_size += bytes_read;
+  }
+
+  return 0;
+}
+
+static void parse_command(char *command)
+{
+  command_line line;
+  line.parse(command);
+
+  if (line.num_arguments() == 0)
+    return;
+
+
+  int child_pid = syscall0(fork);
+
+  if (child_pid == 0) {
+    execute(line);
+  }
+  else {
+    // TODO: read exit code
+    syscall1(wait, child_pid);
+  }
+
+}
+
+static int execute(const command_line &line)
+{
+  const char *argv[32];
+  size_t i;
+  for (i = 1; i < line.num_arguments(); ++i) {
+    argv[i - 1] = line.argument(i);
+  }
+
+  argv[i - 1] = nullptr;
+
+  // TODO: exec shouldn't populate argv with exec binary
+  int retval = syscall2(exec, line.argument(0), argv);
+
+  if (retval == ENOENT) {
+    puts("Command not found");
+    return 127;
   }
 
   return 0;

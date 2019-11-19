@@ -82,10 +82,10 @@ static node_handle lookup(node_handle parent, const char *path)
 
   // TODO: cleanup string handling using string_view or similar
   const char *seg_start = path + 1;
-  const char *next_segment = strchr(seg_start, '/');
+  const char *next_segment = strchr((char *)seg_start, '/');
 
   if (!next_segment)
-    next_segment = strchr(path, '\0');
+    next_segment = strchr((char *)path, '\0');
 
   const p2::string<16> segment(seg_start, next_segment - seg_start);
 
