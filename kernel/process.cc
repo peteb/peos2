@@ -363,8 +363,8 @@ static int syscall_exec(const char *filename, const char *argv[])
   p2::string<1024> arg_arena;
 
   const char *arg_ptrs[32];
-  arg_ptrs[0] = image_path.c_str();
-  const int argc = copy_argvs(argv, arg_arena, arg_ptrs + 1, ARRAY_SIZE(arg_ptrs) - 1) + 1;
+  int argc = copy_argvs(argv, arg_arena, arg_ptrs, ARRAY_SIZE(arg_ptrs));
+  arg_ptrs[argc + 1] = nullptr;
 
   // Remove existing user space mappings so there won't be any
   // collisions. This is where the old stack goes away.

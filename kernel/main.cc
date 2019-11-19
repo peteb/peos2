@@ -123,7 +123,8 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   proc_set_syscall_ret(init_pid, (uintptr_t)init_main);
 
   const char *args[] = {
-    "hellote"
+    "init",
+    nullptr
   };
 
   proc_setup_user_stack(init_pid, 1, args);

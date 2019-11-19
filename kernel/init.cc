@@ -68,7 +68,7 @@ extern "C" int init_main(int argc, const char **argv)
 
   if (child_pid == 0) {
     setup_std_fds("/dev/term0");
-    const char *argv[] = {nullptr};
+    const char *argv[] = {init_command, nullptr};
     verify(syscall2(exec, init_command, argv));
   }
   else {

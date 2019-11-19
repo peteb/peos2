@@ -15,6 +15,11 @@ static inline void puts(const char *message)
   syscall3(write, 0, "\n", 1);
 }
 
+static inline void print(const char *message)
+{
+  syscall3(write, 0, message, strlen(message));
+}
+
 
 #ifdef __cplusplus
 
@@ -41,5 +46,23 @@ namespace p2 {
   }
 }
 #endif
+
+
+static inline int list_dir(int fd, dirent_t *dirents, size_t count)
+{
+  int bytes_read = 0;
+  char *out = (char *)dirents;
+  size_t bytes_left = count * sizeof(*dirents);
+
+  while ((bytes_read = syscall3(read, fd, out, bytes_left)) > 0) {
+    bytes_left -= bytes_read;
+    out += bytes_read;
+  }
+
+  if (bytes_read < 0)
+    return bytes_read;
+
+  return (out - (char *)dirents) / sizeof(*dirents);
+}
 
 #endif // !PEOS2_SUPPORT_USERSPACE_H

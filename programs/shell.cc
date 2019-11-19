@@ -13,7 +13,8 @@ static int execute(const command_line &line);
 static char input_buffer[512];
 static size_t input_buffer_size;
 
-int main(int /*argc*/, char */*argv*/[]) {
+int main(int /*argc*/, char */*argv*/[])
+{
   syscall3(write, 0, "WELCOME TO SHELL\n", 17);
 
   while (true) {
@@ -36,7 +37,8 @@ int main(int /*argc*/, char */*argv*/[]) {
 
 START(main);
 
-void panic(const char *explanation) {
+void panic(const char *explanation)
+{
   syscall3(write, 0, explanation, strlen(explanation));
   while (true);
 }
@@ -107,12 +109,12 @@ static void parse_command(char *command)
 static int execute(const command_line &line)
 {
   const char *argv[32];
-  size_t i;
-  for (i = 1; i < line.num_arguments(); ++i) {
-    argv[i - 1] = line.argument(i);
+  size_t i = 0;
+  for (; i < line.num_arguments(); ++i) {
+    argv[i] = line.argument(i);
   }
 
-  argv[i - 1] = nullptr;
+  argv[i] = nullptr;
 
   // TODO: exec shouldn't populate argv with exec binary
   int retval = syscall2(exec, line.argument(0), argv);

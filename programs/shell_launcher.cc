@@ -10,7 +10,6 @@
 using namespace p2;
 
 static void setup_std_fds(const char *terminal_filename);
-static int list_dir(const char *filename, dirent_t *dirents, size_t count);
 static void list_terminals(pool<string<32>, 16> *terminals);
 
 int main(int, char *[])
@@ -35,7 +34,7 @@ int main(int, char *[])
     }
     else {
       setup_std_fds(filename);
-      const char *argv[] = {nullptr};
+      const char *argv[] = {"/ramfs/bin/shell", nullptr};
       verify(syscall2(exec, "/ramfs/bin/shell", argv));
     }
   }
@@ -69,31 +68,6 @@ static void setup_std_fds(const char *terminal_filename)
   setup_term_at(terminal_filename, 2);
 }
 
-static int list_dir(const char *filename, dirent_t *dirents, size_t count)
-{
-  int fd = syscall2(open, filename, 0);
-
-  if (fd < 0)
-    return fd;
-
-  int bytes_read = 0;
-  char *out = (char *)dirents;
-  size_t bytes_left = count * sizeof(*dirents);
-
-  while ((bytes_read = syscall3(read, fd, out, bytes_left)) > 0) {
-    bytes_left -= bytes_read;
-    out += bytes_read;
-  }
-
-  if (bytes_read < 0)
-    return bytes_read;
-
-  if (int retval = syscall1(close, fd); retval < 0)
-    return retval;
-
-  return (out - (char *)dirents) / sizeof(*dirents);
-}
-
 void panic(const char *explanation) {
   syscall3(write, 0, explanation, strlen(explanation));
   while (true);
@@ -104,7 +78,9 @@ static void list_terminals(pool<string<32>, 16> *terminals)
   assert(terminals);
 
   dirent_t entries[16];
-  int num_entries = verify(list_dir("/dev/", entries, ARRAY_SIZE(entries)));
+  int dir_fd = verify(syscall2(open, "/dev/", 0));
+  int num_entries = verify(list_dir(dir_fd, entries, ARRAY_SIZE(entries)));
+  verify(syscall1(close, dir_fd));
 
   for (int i = 0; i < num_entries; ++i) {
     if (strncmp(entries[i].name, "term", 4) == 0 &&
