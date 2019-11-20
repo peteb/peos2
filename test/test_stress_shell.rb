@@ -3,7 +3,8 @@ KERNEL_BUILDS = [
   %q(OPT_FLAGS="-O0 -g" GRUB_CFG=grub-shell.cfg make clean all image),
   %q(OPT_FLAGS=-O1 GRUB_CFG=grub-shell.cfg make clean all image),
   %q(OPT_FLAGS=-O2 GRUB_CFG=grub-shell.cfg make clean all image),
-  %q(OPT_FLAGS=-O3 GRUB_CFG=grub-shell.cfg make clean all image)
+  %q(OPT_FLAGS=-O3 GRUB_CFG=grub-shell.cfg make clean all image),
+  %q(OPT_FLAGS=-O3 GRUB_CFG=grub-shell.cfg NODEBUG=true make clean all image)
 ]
 
 # TODO: don't use global variables here
@@ -20,8 +21,10 @@ EOS
 $STRESS_TEST = <<~'EOS'
 expect "WELCOME TO SHELL"
 
-for {set i 1} {\$i < 100} {incr i 1} {
-  expect ">" { send "/ramfs/bin/tester\r" }
+for {set i 1} {$i < 200} {incr i 1} {
+  expect ">" {
+    send "/ramfs/bin/tester\r"
+  }
 
   expect {
     "WELCOME TO TESTER" {}
@@ -63,7 +66,7 @@ end
 scenario "bochs i386 image shell stress" do
   builds KERNEL_BUILDS
 
-  command "bochs -q -f bochsrc.test"
+  command "./run-bochs"
 
   it "starts the shell" do
     expect $STARUP_TEST

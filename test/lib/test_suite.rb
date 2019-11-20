@@ -80,13 +80,13 @@ class ExpectCommandRunner
   end
 
   def run
-    IO.popen("expect", "w+", err: File::NULL) { |io| io.write(@script) }
+    IO.popen("expect", "w+") { |io| io.write(@script) }
     $?.to_i == 0
   end
 
   def explain
     puts "expect <<EOF"
-    puts @script
+    puts @script.gsub('$', '\$')
     puts "EOF"
   end
 end
@@ -100,7 +100,7 @@ class ExecuteCommandRunner
   end
 
   def run
-    system(@command, err: File::NULL, out: File::NULL)
+    system(@command, out: File::NULL)
     $? == 0
   end
 

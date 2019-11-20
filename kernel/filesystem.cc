@@ -232,8 +232,13 @@ int vfs_close(vfs_context context_handle, vfs_fd local_fd)
 
     // TODO: what do we do if the driver fails to close the file? But
     // we've already removed our local mapping?
+    int retval = 0;
+
     if (file_info.device->driver->close)
-      return file_info.device->driver->close(file_info.device_local_handle);
+      retval = file_info.device->driver->close(file_info.device_local_handle);
+
+    opened_files.erase(file_handle);
+    return retval;
   }
 
   return 0;
@@ -371,6 +376,8 @@ void vfs_destroy_context(vfs_context context_handle)
     if (context_.descriptors.valid(i))
       vfs_close(context_handle, i);
   }
+
+  contexts.erase(context_handle);
 }
 
 void vfs_close_not_matching(vfs_context context_handle, uint32_t flags)

@@ -79,7 +79,7 @@ public:
   uint32_t *sp, *base, *end;
 };
 
-static p2::pool<stack_storage<256>, 128> kernel_stacks;
+static p2::pool<stack_storage<512>, 128> kernel_stacks;
 
 //
 // process - contains state and resources that belongs to a process.
@@ -234,10 +234,9 @@ public:
       current_task_esp_ptr = &previous_proc->kernel_stack.sp;
     }
 
-    tss_set_kernel_stack((uint32_t)kernel_stack.base);
+    tss_set_kernel_stack((uintptr_t)kernel_stack.base);
     mem_activate_space(space_handle);
-
-    switch_task((uint32_t *)current_task_esp_ptr, (uint32_t)kernel_stack.sp);
+    switch_task((uint32_t *)current_task_esp_ptr, (uintptr_t)kernel_stack.sp);
   }
 
   mem_space space_handle;

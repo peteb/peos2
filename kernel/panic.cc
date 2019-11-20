@@ -7,7 +7,7 @@
 #include "x86.h"
 
 void panic(const char *explanation) {
-  asm volatile("xchg bx, bx");  // "magical breakpoint"
+  dbg_break();
 
   uint32_t cs = 0;
   asm volatile("xor eax, eax\n"

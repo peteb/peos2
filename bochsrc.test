@@ -4,7 +4,7 @@ ata0-master: type=cdrom, path=peos2.img, status=inserted
 boot: cdrom
 magic_break: enabled=0
 #gdbstub: enabled=1, port=1234, text_base=0, data_base=0, bss_base=0
-com1: enabled=1, mode=term, dev=/dev/pts/1
+com1: enabled=1, mode=socket-server, dev=localhost:4455
 
 debugger_log: /dev/null
 #debug: action=report

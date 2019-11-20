@@ -148,6 +148,7 @@ void proc_run()
 
 extern "C" void int_timer(isr_registers *)
 {
+  asm volatile("cli");
   irq_eoi(IRQ_SYSTEM_TIMER);
   proc_yield();
 }
@@ -171,6 +172,9 @@ void proc_switch(proc_handle pid)
 
 static void switch_process(proc_handle pid)
 {
+  if (proc_current_pid() && *proc_current_pid() == pid)
+    return;
+
   // Receiving an interrupt between updating TSS.ESP0 and IRET is not
   // something we want, so disable interrupts.
   asm volatile("cli");
@@ -288,6 +292,14 @@ static uint32_t syscall_yield()
 
 void proc_kill(proc_handle pid, uint32_t exit_status)
 {
+  (void)exit_status;
+  assert(pid != idle_process && "trying to kill the idle process");
+
+  if (!processes.valid(pid)) {
+    dbg_puts(proc, "pid %d is invalid", pid);
+    return;
+  }
+
   process &proc = processes[pid];
 
   if (proc.suspended) {

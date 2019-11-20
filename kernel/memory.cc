@@ -119,7 +119,7 @@ void mem_unmap_not_matching(mem_space space_handle, uint16_t flags)
       continue;
 
     if (!(space.areas[i].flags & flags)) {
-      dbg_puts(mem, "unammping area %d", i);
+      dbg_puts(mem, "unmapping area %d", i);
       unmap_area(space_handle, i);
     }
   }
@@ -136,6 +136,7 @@ void mem_print_space(mem_space space_handle)
       continue;
 
     area_info &area = space.areas[i];
+    (void)area;
     dbg_puts(mem, "%d: area %x-%x (type %d flags %x)", i, area.start, area.end, area.type, area.flags);
   }
 }
@@ -623,6 +624,8 @@ extern "C" void int_page_fault(isr_registers *regs)
     if (regs->error_code & 0x3)
       cpl = "user";
 
+    (void)cpl;
+    (void)access_type;
     dbg_puts(mem, "%s process tried to %s protected page at %x", cpl, access_type, faulted_address);
     kill_caller();
     return;
@@ -636,6 +639,7 @@ extern "C" void int_page_fault(isr_registers *regs)
              current_space,
              regs->user_esp,
              regs->eip);
+    dbg_break();
     kill_caller();
     return;
   }
