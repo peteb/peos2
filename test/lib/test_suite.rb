@@ -64,18 +64,24 @@ end
 #
 class ExpectCommandRunner
   def initialize(command, script)
-    @script = <<-EOS
-      set timeout 15
+    @script = <<~EOS
+      set timeout 5
       log_user 0
+
       spawn #{command}
+
+      expect_before {
+        timeout { exit 1 }
+        eof { exit 1 }
+      }
+
       #{script}
-      expect eof
     EOS
   end
 
   def run
     IO.popen("expect", "w+", err: File::NULL) { |io| io.write(@script) }
-    $? == 0
+    $?.to_i == 0
   end
 
   def explain

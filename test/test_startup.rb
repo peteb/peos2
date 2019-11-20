@@ -12,9 +12,8 @@ scenario "qemu i386 multiboot startup" do
   command "qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot -d pcall,cpu_reset,guest_errors -initrd init.tar -append init=/ramfs/bin/tester"
 
   it "runs the 'tester' program" do
-    expect <<-EOS
+    expect <<~'EOS'
       expect "WELCOME TO TESTER" { exit 0 }
-      exit 1
     EOS
   end
 end
@@ -25,9 +24,8 @@ scenario "qemu i386 image startup" do
   command "qemu-system-i386 -cdrom peos2.img -nographic -no-reboot -d pcall,cpu_reset,guest_errors"
 
   it "runs the 'tester' program" do
-    expect <<-EOS
+    expect <<~'EOS'
       expect "WELCOME TO TESTER" { exit 0 }
-      exit 1
     EOS
   end
 end
@@ -38,9 +36,8 @@ scenario "bochs i386 image startup" do
   command "bochs -q -f bochsrc.test"
 
   it "runs the 'tester' program" do
-    expect <<-EOS
+    expect <<~'EOS'
       expect "WELCOME TO TESTER" { exit 0 }
-      exit 1
     EOS
   end
 end
