@@ -6,6 +6,7 @@
 #include "support/format.h"
 
 static idt_descriptor idt_descriptors[256] alignas(8);
+static uint32_t interrupt_stack[1024] alignas(16);
 
 static void pic_remap(uint8_t master_offset, uint8_t slave_offset);
 
@@ -183,6 +184,10 @@ void int_init()
   int_register(0x27,               isr_muted,         KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
 
   puts(p2::format<64>("IDT at %x", (uint32_t)idt_descriptors));
+
+  // Prepare for any interrupts that might happen before we start multitasking
+  size_t interrupt_stack_length = sizeof(interrupt_stack) / sizeof(interrupt_stack[0]);
+  tss_set_kernel_stack((uint32_t)&interrupt_stack[interrupt_stack_length - 1]);
 }
 
 void int_register(int num, void (*handler)(isr_registers *), uint16_t segment_selector, uint8_t type)

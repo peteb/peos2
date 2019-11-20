@@ -36,9 +36,9 @@ public:
 
       assert(bytes_pushed);
     }
-    else if (keycode == '\r') {
+    else if (keycode == '\b') {
       if (_line_buffer.size() > 0) {
-        screen_print(_screen_buf, "\r");
+        screen_print(_screen_buf, "\b");
         _line_buffer.backspace();
       }
     }

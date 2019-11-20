@@ -52,6 +52,7 @@
 #define IRQ_SYSTEM_TIMER   0
 #define IRQ_KEYBOARD       1
 #define IRQ_CASCADE        2
+#define IRQ_COM1           4
 
 #define IRQ_BASE_INTERRUPT 0x20
 

@@ -45,6 +45,11 @@ char *strnchr(char *str, char c, size_t len)
   return len ? str : nullptr;
 }
 
+const char *strnchr(const char *str, char c, size_t len)
+{
+  return strnchr((char *)str, c, len);
+}
+
 size_t strlen(const char *str)
 {
   size_t length = 0;

@@ -48,6 +48,9 @@ void screen_switch_buffer(screen_buffer buffer_handle)
 
 void screen_print(screen_buffer buffer_handle, const char *message, int count)
 {
+  if (count == -1)
+    count = strlen(message);
+
   // TODO: remove hardcoded 0
   if (buffer_handle == 0) {
     com_send(message, count);

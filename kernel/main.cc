@@ -23,7 +23,6 @@ extern int kernel_start, kernel_end;
 extern char stack_top;
 extern "C" int init_main();
 
-static uint32_t interrupt_stack[1024] alignas(16);
 char debug_out_buffer[128];
 
 extern void idle_main();
@@ -31,8 +30,9 @@ extern void idle_main();
 extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_hdr)
 {
   com_init();
-  multiboot_header = (multiboot_info *)PHYS2KERNVIRT((uintptr_t)multiboot_hdr);
   screen_init();
+
+  multiboot_header = (multiboot_info *)PHYS2KERNVIRT((uintptr_t)multiboot_hdr);
 
   if (multiboot_magic != MULTIBOOT_MAGIC) {
     panic(p2::format<32>("Incorrect mb magic: %x", multiboot_magic).str().c_str());
@@ -81,11 +81,13 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   puts("Entering protected mode...");
   enter_protected_mode();
   int_init();
+  pic_init();
+
   asm volatile("int 3");  // Test debug int
 
-  pic_init();
   kbd_init();
   syscalls_init();
+  com_setup_rx();
 
   // Setup filesystem
   vfs_init();
@@ -98,10 +100,6 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
 
   ramfs_init();
   vfs_print();
-
-  // Prepare for any interrupts that might happen before we start multitasking
-  size_t interrupt_stack_length = sizeof(interrupt_stack) / sizeof(interrupt_stack[0]);
-  tss_set_kernel_stack((uint32_t)&interrupt_stack[interrupt_stack_length - 1]);
 
   // Adjust the memory region from which we'll allocate pages
   largest_region.start = p2::max(largest_region.start, KERNVIRT2PHYS((uintptr_t)&kernel_end));

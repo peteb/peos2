@@ -256,3 +256,5 @@ int_muted:
         isr_routine     isr_timer,       int_timer
 
         isr_routine     isr_muted,       int_muted
+
+        isr_routine     isr_com1,        int_com1

@@ -23,7 +23,7 @@ case $1 in
 
   serial)
     qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot -d pcall,cpu_reset,guest_errors \
-      -initrd init.tar -append init=/ramfs/bin/shell_launcher
+      -initrd init.tar -append init=/ramfs/bin/shell
     ;;
 
   *)

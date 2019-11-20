@@ -41,7 +41,7 @@ public:
     while (*message && (count == -1 || count--)) {
       const bool newline = *message == '\n';
 
-      if (*message == '\r') {
+      if (*message == '\b') {
         if (position > 0) {
           _buffer[--position] = entry(0x0, 0xF, ' ');
         }
