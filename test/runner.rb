@@ -13,7 +13,11 @@
 # needed to create the build. Ie, the build shouldn't depend on any
 # "side effects".
 
-require_relative "lib/test_suite.rb"
+require_relative "lib/scenario.rb"
+require_relative "lib/scenario_builder.rb"
+require_relative "lib/scenario_collection_builder.rb"
+require_relative "lib/test_case_builder.rb"
+require_relative "lib/command_runners.rb"
 require_relative "lib/utils.rb"
 
 # All paths are relative to the top of the repository
