@@ -1,40 +1,46 @@
+def make_all(env)
+  env = {'GRUB_CFG' => 'grub-shell.cfg'}.merge(env)
+  joined_env = env.map { |k, v| "#{k}=\"#{v}\"" }.join(' ')
+  "#{joined_env} make clean all image"
+end
+
 KERNEL_BUILDS = [
-  %q(OPT_FLAGS=-O0 GRUB_CFG=grub-shell.cfg make clean all image),
-  %q(OPT_FLAGS="-O0 -g" GRUB_CFG=grub-shell.cfg make clean all image),
-  %q(OPT_FLAGS=-O1 GRUB_CFG=grub-shell.cfg make clean all image),
-  %q(OPT_FLAGS=-O2 GRUB_CFG=grub-shell.cfg make clean all image),
-  %q(OPT_FLAGS=-O3 GRUB_CFG=grub-shell.cfg make clean all image),
-  %q(OPT_FLAGS=-O3 GRUB_CFG=grub-shell.cfg NODEBUG=true make clean all image)
+  make_all('OPT_FLAGS' => '-O0'),
+  make_all('OPT_FLAGS' => '-O0 -g'),
+  make_all('OPT_FLAGS' => '-O1'),
+  make_all('OPT_FLAGS' => '-O2'),
+  make_all('OPT_FLAGS' => '-O3'),
+  make_all('OPT_FLAGS' => '-O3', 'NODEBUG' => 'true')
 ]
 
 # TODO: don't use global variables here
 
 $STARTUP_TEST = <<~'EOS'
-expect {
-  "WELCOME TO SHELL"
-  timeout { exit 1 }
-}
+  expect {
+    "WELCOME TO SHELL"
+    timeout { exit 1 }
+  }
 
-expect "> " { exit 1 }
+  expect "> " { exit 1 }
 EOS
 
 $STRESS_TEST = <<~'EOS'
-expect "WELCOME TO SHELL"
+  expect "WELCOME TO SHELL"
 
-for {set i 1} {$i < 200} {incr i 1} {
-  expect "> " {
-    sleep 0.001
-    # TODO: I haven't yet been able to find out why this sleep is necessary
-    send "/ramfs/bin/tester\r"
+  for {set i 1} {$i < 200} {incr i 1} {
+    expect "> " {
+      sleep 0.001
+      # TODO: I haven't yet been able to find out why this sleep is necessary
+      send "/ramfs/bin/tester\r"
+    }
+
+    expect {
+      "WELCOME TO TESTER" {}
+      "panic: ASSERT" { exit 1 }
+    }
   }
 
-  expect {
-    "WELCOME TO TESTER" {}
-    "panic: ASSERT" { exit 1 }
-  }
-}
-
-exit 0
+  exit 0
 EOS
 
 scenario "qemu i386 multiboot shell stress" do
