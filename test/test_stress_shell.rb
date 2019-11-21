@@ -1,5 +1,5 @@
 def make_all(env)
-  env = {'GRUB_CFG' => 'grub-shell.cfg'}.merge(env)
+  env = {'GRUB_CFG' => 'grub-shell.cfg', 'DEFS' => '-DNODEBUG'}.merge(env)
   joined_env = env.map { |k, v| "#{k}=\"#{v}\"" }.join(' ')
   "#{joined_env} make clean all image"
 end
@@ -10,7 +10,7 @@ KERNEL_BUILDS = [
   make_all('OPT_FLAGS' => '-O1'),
   make_all('OPT_FLAGS' => '-O2'),
   make_all('OPT_FLAGS' => '-O3'),
-  make_all('OPT_FLAGS' => '-O3', 'NODEBUG' => 'true')
+  make_all('OPT_FLAGS' => '-O3', 'DEFS' => '')
 ]
 
 # TODO: don't use global variables here
