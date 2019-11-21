@@ -46,7 +46,12 @@ extern "C" int init_main(int argc, const char **argv)
 {
   // Setup
   kernout = verify(syscall2(open, "/dev/term0", 0));
-  puts_sys(kernout, p2::format<64>("argc: %x %s", (uint32_t)argc, argv[0]));
+  //  puts_sys(kernout, p2::format<64>("argc: %x %s", (uint32_t)argc, argv[0]));
+  //while (true) {}
+
+
+  (void)argc;
+  (void)argv;
 
   load_multiboot_modules();
 

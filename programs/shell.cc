@@ -97,7 +97,7 @@ static void parse_command(char *command)
   int child_pid = syscall0(fork);
 
   if (child_pid == 0) {
-    execute(line);
+    syscall1(exit, execute(line));
   }
   else {
     // TODO: read exit code

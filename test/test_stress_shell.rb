@@ -15,14 +15,16 @@ expect {
   timeout { exit 1 }
 }
 
-expect ">" { exit 1 }
+expect "> " { exit 1 }
 EOS
 
 $STRESS_TEST = <<~'EOS'
 expect "WELCOME TO SHELL"
 
 for {set i 1} {$i < 200} {incr i 1} {
-  expect ">" {
+  expect "> " {
+    sleep 0.001
+    # TODO: I haven't yet been able to find out why this sleep is necessary
     send "/ramfs/bin/tester\r"
   }
 

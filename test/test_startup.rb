@@ -33,7 +33,7 @@ end
 scenario "bochs i386 image startup" do
   builds KERNEL_BUILDS
 
-  command "bochs -q -f bochsrc.test"
+  command "./run-bochs"
 
   it "runs the 'tester' program" do
     expect <<~'EOS'

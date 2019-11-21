@@ -152,12 +152,16 @@ load_gdt:
 switch_task:
         pushal
 
-        // 36 = popad (32) + retval (4) = first argument to function
+        // 36 = popad (32) + retval (4) = 1st argument to function
         mov 36(%esp), %ebx
         mov %esp, (%ebx)
 
-        // Change esp, 40 = argument after first
-        mov 40(%esp), %esp
+        // Change esp and cr3, 40 = 2nd argument
+        mov 40(%esp), %eax
+        mov 44(%esp), %ebx
+        mov %ebx, %cr3
+        mov %eax, %esp
+
         popal
         ret
 
@@ -217,6 +221,7 @@ int_muted:
 .extern \handler
 .global \name
 \name:
+        cli
         // Push dummy code
         push $0x0
 
@@ -227,6 +232,7 @@ int_muted:
 .extern \handler
 .global \name
 \name:
+        cli
         isr_routine_common \handler
 .endm
 

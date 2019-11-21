@@ -108,24 +108,14 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   largest_region.end = ALIGN_DOWN(largest_region.end, 0x1000);
   mem_init(&largest_region);
 
-  // Overwrite the current mappings for the kernel to only include the
-  // relevant parts and only at KERNEL_VIRT_BASE.
-  mem_space space = mem_create_space();
-  mem_map_kernel(space, MEM_AREA_READWRITE|MEM_AREA_RETAIN_EXEC);
-  mem_activate_space(space);
-
   // Create process structures, this needs a working memory subsystem
   proc_init();
 
   proc_handle init_pid = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE);
   proc_set_syscall_ret(init_pid, (uintptr_t)init_main);
 
-  const char *args[] = {
-    "init",
-    nullptr
-  };
-
-  proc_setup_user_stack(init_pid, 1, args);
+  const char *args[] = {nullptr};
+  proc_setup_user_stack(init_pid, 0, args);
   proc_enqueue(init_pid);
   proc_run();
 }

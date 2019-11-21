@@ -40,6 +40,7 @@ static p2::page_allocator *user_space_allocator;
 
 static p2::pool<space_info, 128, mem_space> spaces;
 static mem_space current_space = spaces.end();
+static mem_space start_space;
 
 
 void mem_init(const region *phys_region)
@@ -52,6 +53,10 @@ void mem_init(const region *phys_region)
   // TODO: fix this hackery
   static p2::page_allocator alloc{{phys_region->start, phys_region->end}, KERNEL_VIRTUAL_BASE};
   user_space_allocator = &alloc;
+
+  start_space = mem_create_space();
+  mem_map_kernel(start_space, MEM_AREA_READWRITE);
+  mem_activate_space(start_space);
 
   // Interrupts
   int_register(INT_PAGEFAULT, isr_page_fault, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
@@ -68,16 +73,10 @@ mem_space mem_create_space()
   return space_handle;
 }
 
+
 void mem_destroy_space(mem_space space_handle)
 {
-  if (space_handle == current_space) {
-    // We assume that the kernel fallback space (0) is compatible with
-    // the current space.
-
-    // TODO: don't use a magic 0 constant
-    mem_activate_space(0);
-  }
-
+  assert(space_handle != current_space && "cannot destroy current space");
   space_info *space = &spaces[space_handle];
 
   for (size_t i = 0; i < space->areas.watermark(); ++i) {
@@ -136,7 +135,6 @@ void mem_print_space(mem_space space_handle)
       continue;
 
     area_info &area = space.areas[i];
-    (void)area;
     dbg_puts(mem, "%d: area %x-%x (type %d flags %x)", i, area.start, area.end, area.type, area.flags);
   }
 }
@@ -238,6 +236,10 @@ p2::res<mem_space> mem_fork_space(mem_space space_handle)
       continue;
 
     area_info &source_area = source_space.areas[i];
+
+    if (source_area.flags & MEM_AREA_NO_FORK)
+      continue;
+
     copy_area(source_area, source_space, new_space_handle);
   }
 
@@ -247,11 +249,24 @@ p2::res<mem_space> mem_fork_space(mem_space space_handle)
 
 void mem_activate_space(mem_space space_handle)
 {
+  // TODO: get rid of this function! it shouldn't be used now when we
+  // don't have all kernel stacks mapped in all spaces
+
   current_space = space_handle;
   space_info *space = &spaces[space_handle];
   uintptr_t page_dir_phys = KERNVIRT2PHYS((uintptr_t)space->page_dir);
   asm volatile("mov cr3, %0" :: "a"(page_dir_phys) : "memory");
   // TODO: fix all inline asm to have the same syntax (AT&T vs Intel) as *.s files
+}
+
+void mem_set_current_space(mem_space space_handle)
+{
+  current_space = space_handle;
+}
+
+uintptr_t mem_page_dir(mem_space space_handle)
+{
+  return KERNVIRT2PHYS((uintptr_t)spaces[space_handle].page_dir);
 }
 
 static uint16_t page_flags(uint16_t mem_flags)
@@ -325,7 +340,8 @@ void mem_write_page(mem_space space_handle, uintptr_t virt_addr, const void *dat
            (uintptr_t)data,
            size);
 
-  const uintptr_t mapped_address = 0xFBFFF000;
+  assert(size <= 0x1000);
+  const uintptr_t mapped_address = KERNEL_SCRATCH_BASE;
   map_page(current_space, mapped_address, pte_frame(pte), MEM_PE_P|MEM_PE_RW|MEM_PE_W|MEM_PE_D);
   memcpy((void *)mapped_address, data, size);
   map_page(current_space, mapped_address, 0, 0);
@@ -333,7 +349,6 @@ void mem_write_page(mem_space space_handle, uintptr_t virt_addr, const void *dat
 
 int mem_map_portal(uintptr_t virt_address, size_t length, mem_space dest_space, uintptr_t dest_virt_address, uint16_t flags)
 {
-  uint16_t paging_flags = page_flags(flags);
   space_info &dest_space_ = spaces[dest_space];
 
   auto start_area = find_area(dest_space, dest_virt_address);
@@ -344,17 +359,22 @@ int mem_map_portal(uintptr_t virt_address, size_t length, mem_space dest_space, 
   assert(dest_space_.areas[*start_area].type == AREA_ALLOC && "area must be an alloc area");
   assert(*start_area == *end_area && "start and end area must be the same");
 
+  area_info &dest_area = dest_space_.areas[*start_area];
+
   for (uintptr_t offset = 0; offset < length; offset += 0x1000) {
     if (auto *pte = find_pte(dest_space_, dest_virt_address + offset); pte && pte->flags & MEM_PE_P) {
-      assert(pte->flags == paging_flags);
-      map_page(current_space, virt_address + offset, pte_frame(pte), pte->flags);
+      // Page already exists, so let's point to its address
+      map_page(current_space, virt_address + offset, pte_frame(pte), page_flags(flags));
     }
     else {
+      // Page doesn't exist. Map it in source using the area's flags
+      // and in the calling process using @flags
+
       // TODO: maybe we should call the page fault handler instead of
       // just assuming it's an ALLOC area?
       uintptr_t phys_address = (uintptr_t)alloc_page();
-      map_page(current_space, virt_address + offset, phys_address, paging_flags);
-      map_page(dest_space, dest_virt_address + offset, phys_address, paging_flags);
+      map_page(current_space, virt_address + offset, phys_address, page_flags(flags));
+      map_page(dest_space, dest_virt_address + offset, phys_address, page_flags(dest_area.flags));
     }
   }
 
@@ -509,6 +529,7 @@ mem_area mem_map_linear_eager(mem_space space_handle,
 
 mem_area mem_map_alloc(mem_space space_handle, uintptr_t start, uintptr_t end, uint16_t flags)
 {
+  dbg_puts(mem, "mapping alloc in %d: %x - %x", space_handle, start, end);
   assert(!overlaps_existing_area(space_handle, start, end));
 
   // Another nifty way of doing allocations would be to get rid of
@@ -661,8 +682,6 @@ extern "C" void int_page_fault(isr_registers *regs)
     if (regs->error_code & 0x3)
       cpl = "user";
 
-    (void)cpl;
-    (void)access_type;
     dbg_puts(mem, "%s process tried to %s protected page at %x", cpl, access_type, faulted_address);
     kill_caller();
     return;

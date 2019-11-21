@@ -22,6 +22,7 @@
 #define MEM_AREA_GLOBAL          0x0010  // Area will be mapped "globally"
 #define MEM_AREA_SYSCALL         0x0100  // Area is good for syscall pointers
 #define MEM_AREA_RETAIN_EXEC     0x0200  // Keep the area through exec
+#define MEM_AREA_NO_FORK         0x0400  // Don't fork this area
 
 struct region {
   uintptr_t start, end;
@@ -39,6 +40,8 @@ void               mem_activate_space(mem_space space);
 void               mem_unmap_not_matching(mem_space space, uint16_t flags);
 p2::res<mem_space> mem_fork_space(mem_space space_handle);
 void               mem_print_space(mem_space space_handle);
+uintptr_t          mem_page_dir(mem_space space_handle);
+void               mem_set_current_space(mem_space space_handle);
 
 //
 // mem_map_kernel - directly maps the kernel's memory into the space.
@@ -65,6 +68,7 @@ void     mem_write_page(mem_space space_handle, uintptr_t virt_addr, const void 
 // space using mem_unmap_portal when done. It's a good idea to map
 // an address covered by an ALLOC area so the page is free'd when the
 // process exits.
+// A portal overrides the access permissions locally.
 //
 int mem_map_portal(uintptr_t virt_address,
                    size_t length,

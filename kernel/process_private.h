@@ -9,7 +9,7 @@
 #include "support/optional.h"
 
 extern "C" void switch_task_iret();
-extern "C" void switch_task(uint32_t *old_esp, uint32_t new_esp);
+extern "C" void switch_task(uint32_t *old_esp, uint32_t new_esp, uintptr_t page_dir);
 extern "C" void _user_proc_cleanup();
 
 
@@ -87,6 +87,8 @@ public:
 };
 
 static p2::pool<stack_storage<512>, 128> kernel_stacks;
+static const uint16_t kernel_stack_flags = MEM_AREA_READWRITE|MEM_AREA_NO_FORK|MEM_AREA_RETAIN_EXEC;
+static const uint16_t user_stack_flags = MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL;
 
 //
 // process - contains state and resources that belongs to a process.
@@ -97,88 +99,114 @@ public:
     : space_handle(space_handle), file_context(file_context), flags(flags) {}
 
   //
-  // setup_stacks - allocates and initializes user and kernel stacks
+  // setup_stacks - allocates and initializes kernel stack
   //
   void setup_stack()
   {
-    assert(!kernel_stack.base);
+    map_kernel_stack();
 
-    kernel_stack_handle = kernel_stacks.emplace_back();
-    kernel_stack = {kernel_stacks[kernel_stack_handle]};
+    // Map the first page of the user stack -- we shouldn't need much
+    // more for initialization unless there's a ton of arguments
+    const size_t initial_stack_size = 0x1000;
 
-    dbg_puts(proc, "alloc kernel stack %d, starts at %x", kernel_stack_handle, (uintptr_t)kernel_stack.base);
+    int retval = mem_map_portal(KERNEL_SCRATCH_BASE,
+                                initial_stack_size,
+                                space_handle,
+                                PROC_KERNEL_STACK_BASE - initial_stack_size,
+                                kernel_stack_flags);
+    assert(retval >= 0 && "failed to map portal");
+
+    // KERNEL_SCRATCH_BASE + 0x1000 is where the stack starts at and grows down
+    stack kernel_stack((uint32_t *)KERNEL_SCRATCH_BASE, (uint32_t *)(KERNEL_SCRATCH_BASE + initial_stack_size));
 
     // We need a stack that can invoke iret as soon as possible, without
     // invoking any gcc function epilogues or prologues.  First, we need
     // a stack good for `switch_task`. As we set the return address to
     // be `switch_task_iret`, we also need to push values for IRET.
-    ks_push(USER_DATA_SEL);                                // SS
-    ks_push(0);                                            // ESP, should be filled in later
-    ks_push(0x202);                                        // EFLAGS, IF
-    ks_push(USER_CODE_SEL);                                // CS
-    ks_push(0);                                            // Return EIP from switch_task_iret, should be filled in later
-    ks_push(USER_DATA_SEL);                                // DS, ES, FS, GS, SS
-    ks_push((uint32_t)switch_task_iret);                   // Return EIP from switch_task
-    ks_push(0);                                            // EAX
-    ks_push(0);                                            // ECX
-    ks_push(0);                                            // EDX
-    ks_push(0);                                            // EBX
-    ks_push(0);                                            // ESP temp
-    ks_push(0);                                            // EBP
-    ks_push(0);                                            // ESI
-    ks_push(0);                                            // EDI
+    kernel_stack.push(USER_DATA_SEL);                                // SS
+    kernel_stack.push(0);                                            // ESP, should be filled in later
+    kernel_stack.push(0x202);                                        // EFLAGS, IF
+    kernel_stack.push(USER_CODE_SEL);                                // CS
+    kernel_stack.push(0);                                            // Return EIP from switch_task_iret, should be filled in later
+    kernel_stack.push(USER_DATA_SEL);                                // DS, ES, FS, GS, SS
+    kernel_stack.push((uint32_t)switch_task_iret);                   // Return EIP from switch_task
+    kernel_stack.push(0);                                            // EAX
+    kernel_stack.push(0);                                            // ECX
+    kernel_stack.push(0);                                            // EDX
+    kernel_stack.push(0);                                            // EBX
+    kernel_stack.push(0);                                            // ESP temp
+    kernel_stack.push(0);                                            // EBP
+    kernel_stack.push(0);                                            // ESI
+    kernel_stack.push(0);                                            // EDI
+
+    kernel_stack_sp = PROC_KERNEL_STACK_BASE - kernel_stack.bytes_used();
+
+    mem_unmap_portal(KERNEL_SCRATCH_BASE, initial_stack_size);
   }
 
   void setup_fork_stack(isr_registers *regs)
   {
-    assert(!kernel_stack.base);
+    map_kernel_stack();
 
-    kernel_stack_handle = kernel_stacks.emplace_back();
-    kernel_stack = {kernel_stacks[kernel_stack_handle]};
+    // Map the first page of the user stack -- we shouldn't need much
+    // more for initialization unless there's a ton of arguments, but
+    // we need to reserve space due to not being able to grow using
+    // page faults
+    const size_t initial_stack_size = 0x1000 * 10;
 
+    int retval = mem_map_portal(KERNEL_SCRATCH_BASE,
+                                initial_stack_size,
+                                space_handle,
+                                PROC_KERNEL_STACK_BASE - initial_stack_size,
+                                kernel_stack_flags);
+    assert(retval >= 0 && "failed to map portal");
+
+    // KERNEL_SCRATCH_BASE + 0x1000 is where the stack starts at and grows down
+    stack kernel_stack((uint32_t *)KERNEL_SCRATCH_BASE, (uint32_t *)(KERNEL_SCRATCH_BASE + initial_stack_size));
     // We need a stack that can invoke iret as soon as possible, without
     // invoking any gcc function epilogues or prologues.  First, we need
     // a stack good for `switch_task`. As we set the return address to
     // be `switch_task_iret`, we also need to push values for IRET.
-    ks_push(USER_DATA_SEL);                                // SS
-    ks_push(regs->user_esp);                               // ESP
-    ks_push(0x202);                                        // EFLAGS, IF
-    ks_push(USER_CODE_SEL);                                // CS
-    ks_push(regs->eip);                                    // Return EIP
-    ks_push(USER_DATA_SEL);                                // DS, ES, FS, GS, SS
-    ks_push((uint32_t)switch_task_iret);                   // Return EIP from switch_task
-    ks_push(0);                                            // EAX
-    ks_push(regs->ecx);                                    // ECX
-    ks_push(regs->edx);                                    // EDX
-    ks_push(regs->ebx);                                    // EBX
-    ks_push(0);                                            // ESP temp
-    ks_push(regs->ebp);                                    // EBP
-    ks_push(regs->esi);                                    // ESI
-    ks_push(regs->edi);                                    // EDI
+    kernel_stack.push(USER_DATA_SEL);                                // SS
+    kernel_stack.push(regs->user_esp);                               // ESP
+    kernel_stack.push(0x202);                                        // EFLAGS, IF
+    kernel_stack.push(USER_CODE_SEL);                                // CS
+    kernel_stack.push(regs->eip);                                    // Return EIP
+    kernel_stack.push(USER_DATA_SEL);                                // DS, ES, FS, GS, SS
+    kernel_stack.push((uint32_t)switch_task_iret);                   // Return EIP from switch_task
+    kernel_stack.push(0);                                            // EAX
+    kernel_stack.push(regs->ecx);                                    // ECX
+    kernel_stack.push(regs->edx);                                    // EDX
+    kernel_stack.push(regs->ebx);                                    // EBX
+    kernel_stack.push(0);                                            // ESP temp
+    kernel_stack.push(regs->ebp);                                    // EBP
+    kernel_stack.push(regs->esi);                                    // ESI
+    kernel_stack.push(regs->edi);                                    // EDI
 
+    kernel_stack_sp = PROC_KERNEL_STACK_BASE - kernel_stack.bytes_used();
+
+    mem_unmap_portal(KERNEL_SCRATCH_BASE, initial_stack_size);
     // TODO: support for setting eax value?
   }
 
   //
-  // free_stack - hands back storage for the kernel stack
+  // The process has exited
   //
-  void free_stack()
+  void exit(int status)
   {
-    // Free up memory used by the process
-    kernel_stacks.erase(kernel_stack_handle);
-    kernel_stack_handle = kernel_stacks.end();
-    kernel_stack = {};
-  }
-
-  void destroy()
-  {
-    vfs_destroy_context(file_context);
-    mem_destroy_space(space_handle);
-    free_stack();
+    terminating = true;
+    exit_status = status;
 
     if (waiting_process) {
       proc_resume(*waiting_process);
     }
+  }
+
+  void destroy()
+  {
+    dbg_puts(proc, "destroying process");
+    vfs_destroy_context(file_context);
+    mem_destroy_space(space_handle);
   }
 
   //
@@ -196,7 +224,7 @@ public:
                                 initial_stack_size,
                                 space_handle,
                                 USER_SPACE_STACK_BASE - initial_stack_size,
-                                MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
+                                user_stack_flags);
     assert(retval >= 0 && "failed to map portal");
 
     // KERNEL_SCRATCH_BASE + 0x1000 is where the stack starts at and grows down
@@ -219,19 +247,8 @@ public:
     else
       user_stack.push(0);
 
-    update_ks_ret_sp(user_stack.bytes_used());
+    update_userspace_sp(user_stack.bytes_used());
     mem_unmap_portal(KERNEL_SCRATCH_BASE, initial_stack_size);
-  }
-
-  //
-  // set_syscall_ret_ip - which address in user space the current syscall should return to
-  //
-  void set_syscall_ret_ip(uintptr_t ip)
-  {
-    assert(kernel_stack.sp <= kernel_stack.base - 5);
-    assert(kernel_stack.base[-1] == USER_DATA_SEL);
-    assert(kernel_stack.base[-4] == USER_CODE_SEL);
-    kernel_stack.base[-5] = ip;
   }
 
   //
@@ -245,16 +262,38 @@ public:
     // Save the old process' kernel stack pointer. But only if the old
     // process still exists.
     if (previous_proc) {
-      current_task_esp_ptr = &previous_proc->kernel_stack.sp;
+      current_task_esp_ptr = (uint32_t **)&previous_proc->kernel_stack_sp;
     }
 
     /*dbg_puts(proc, "switching to (KSB: %x, SP: %x)",
              (uintptr_t)kernel_stack.base,
              (uintptr_t)kernel_stack.sp);*/
 
-    tss_set_kernel_stack((uintptr_t)kernel_stack.base);
-    mem_activate_space(space_handle);
-    switch_task((uint32_t *)current_task_esp_ptr, (uintptr_t)kernel_stack.sp);
+    tss_set_kernel_stack((uintptr_t)PROC_KERNEL_STACK_BASE);
+    uintptr_t page_dir = mem_page_dir(space_handle);
+    mem_set_current_space(space_handle);
+    switch_task((uint32_t *)current_task_esp_ptr, kernel_stack_sp, page_dir);
+  }
+
+  //
+  // set_syscall_ret_ip - which address in user space the current syscall should return to
+  //
+  void set_syscall_ret_ip(uintptr_t ip)
+  {
+    int ret = mem_map_portal(KERNEL_SCRATCH_BASE,
+                             0x1000,
+                             space_handle,
+                             PROC_KERNEL_STACK_BASE - 0x1000,
+                             kernel_stack_flags);
+    assert(ret >= 0);
+
+    uint32_t *stack_base = (uint32_t *)(KERNEL_SCRATCH_BASE + 0x1000);
+    assert((uint32_t *)kernel_stack_sp <= &stack_base[-5]);
+    assert(stack_base[-1] == USER_DATA_SEL);
+    assert(stack_base[-4] == USER_CODE_SEL);
+    stack_base[-5] = ip;
+
+    mem_unmap_portal(KERNEL_SCRATCH_BASE, 0x1000);
   }
 
   mem_space space_handle;
@@ -262,6 +301,7 @@ public:
 
   bool        suspended = false;
   bool        terminating = false;
+  int         exit_status;
 
   proc_handle prev_process;
   proc_handle next_process;
@@ -273,19 +313,22 @@ public:
 private:
   uint32_t flags;
 
-  stack    kernel_stack;
-  uint16_t kernel_stack_handle;
+  uintptr_t kernel_stack_sp;
 
-  void ks_push(uint32_t value)
+  void update_userspace_sp(size_t user_stack_size)
   {
-    kernel_stack.push(value);
-  }
+    int ret = mem_map_portal(KERNEL_SCRATCH_BASE,
+                             0x1000,
+                             space_handle,
+                             PROC_KERNEL_STACK_BASE - 0x1000,
+                             kernel_stack_flags);
+    assert(ret >= 0);
 
-  void update_ks_ret_sp(size_t user_stack_size)
-  {
-    assert(kernel_stack.sp <= kernel_stack.base - 1);
-    assert(kernel_stack.base[-1] == USER_DATA_SEL);
-    kernel_stack.base[-2] = USER_SPACE_STACK_BASE - user_stack_size;
+    uint32_t *stack_base = (uint32_t *)(KERNEL_SCRATCH_BASE + 0x1000);
+    assert(stack_base[-1] == USER_DATA_SEL);
+    stack_base[-2] = USER_SPACE_STACK_BASE - user_stack_size;
+
+    mem_unmap_portal(KERNEL_SCRATCH_BASE, 0x1000);
   }
 
   uintptr_t virt_user_sp(stack &user_stack, const char *sp)
@@ -295,11 +338,22 @@ private:
 
   void map_user_stack()
   {
-    const size_t stack_area_size = 4096 * 1024;
+    const size_t stack_area_size = 0x1000 * 1024;
     mem_map_alloc(space_handle,
                   USER_SPACE_STACK_BASE - stack_area_size,
                   USER_SPACE_STACK_BASE,
-                  MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
+                  user_stack_flags);
+  }
+
+  void map_kernel_stack()
+  {
+    const size_t stack_area_size = 0x1000 * 10;
+    // TODO: kernel stack cannot actually grow using page faults, because the page fault will be
+    // pushed on the kernel stack, causing another page fault, then the tripple fault is a fact
+    mem_map_alloc(space_handle,
+                  PROC_KERNEL_STACK_BASE - stack_area_size,
+                  PROC_KERNEL_STACK_BASE,
+                  kernel_stack_flags);
   }
 
 };

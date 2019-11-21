@@ -15,18 +15,21 @@
 
 extern char debug_out_buffer[128];
 
+#define NODEBUG
+
 //
 // dbg_puts - writes a line to the console
 // Can only be used in interrupt handlers, and be careful about threading...
 // TODO: make debug_out_buffer thread_local
 //
-#ifndef NODBG
+#ifndef NODEBUG
 #define dbg_puts(module, fmt, ...) {                                             \
     p2::format<128>(debug_out_buffer, TOSTRING(module) "[%d]: " fmt,             \
                     proc_current_pid().value_or(-1u) __VA_OPT__(,) __VA_ARGS__); \
     puts(debug_out_buffer);}
 #else
-#define dbg_puts(module, fmt, ...)
+static inline void mute_fun(const char *, ...) {}
+#define dbg_puts(module, fmt, ...) mute_fun(fmt __VA_OPT__(,) __VA_ARGS__)
 #endif
 
 static inline void dbg_break()

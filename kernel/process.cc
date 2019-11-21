@@ -115,14 +115,10 @@ void proc_enqueue(proc_handle pid)
 static void destroy_process(proc_handle pid)
 {
   process &proc = processes[pid];
-
-  // Remove the process so it won't get picked for execution
-  dequeue(pid, proc.suspended ? &suspended_head : &running_head);
-
   proc.destroy();
 
   // TODO: we might want to keep the PCB around for a while so we can
-  // read the exit status, detect dangling PIDs, etc...
+  // read the exit status, detect dangling references, etc...
   processes.erase(pid);
 }
 
@@ -155,6 +151,9 @@ extern "C" void int_timer(isr_registers *)
 
 void proc_switch(proc_handle pid)
 {
+  if (proc_current_pid() && *proc_current_pid() == pid)
+    return;
+
   process &proc = processes[pid];
   assert(!proc.suspended && "please resume the process before switching to it");
 
@@ -163,7 +162,6 @@ void proc_switch(proc_handle pid)
     // The process has been terminated, so we cannot run it. This can
     // happen if the process was in a blocking syscall when someone
     // else asked to kill it.
-    destroy_process(pid);
     pid = decide_next_process();
   }
 
@@ -172,9 +170,6 @@ void proc_switch(proc_handle pid)
 
 static void switch_process(proc_handle pid)
 {
-  if (proc_current_pid() && *proc_current_pid() == pid)
-    return;
-
   dbg_puts(proc, "switching to pid %d", pid);
 
   // Receiving an interrupt between updating TSS.ESP0 and IRET is not
@@ -214,6 +209,7 @@ void proc_suspend(proc_handle pid)
     return;
   }
 
+  dbg_puts(proc, "suspending %d", pid);
   dequeue(pid, &running_head);
   enqueue_front(pid, &suspended_head);
   proc.suspended = true;
@@ -294,7 +290,6 @@ static uint32_t syscall_yield()
 
 void proc_kill(proc_handle pid, uint32_t exit_status)
 {
-  (void)exit_status;
   assert(pid != idle_process && "trying to kill the idle process");
 
   if (!processes.valid(pid)) {
@@ -304,15 +299,15 @@ void proc_kill(proc_handle pid, uint32_t exit_status)
 
   process &proc = processes[pid];
 
-  if (proc.suspended) {
-    // If the process is suspended we need to wait for the driver
-    dbg_puts(proc, "pid %d exiting with status %d", pid, exit_status);
-    proc.terminating = true;
-    return;
-  }
+  // Remove the process so it won't get picked for execution
+  dequeue(pid, proc.suspended ? &suspended_head : &running_head);
 
+  // Mark the process as terminating, but don't clean it up. Some
+  // other process should be waiting on this process, and it needs to
+  // clean it up because you cannot destroy the currently active
+  // address space
+  proc.exit(exit_status);
   dbg_puts(proc, "pid %d exited with status %d", pid, exit_status);
-  destroy_process(pid);
 }
 
 mem_space proc_get_space(proc_handle pid)
@@ -441,9 +436,16 @@ static int syscall_wait(int pid)
   }
 
   if (auto parent_pid = proc_current_pid()) {
-    proc_suspend(*parent_pid);
-    processes[pid].waiting_process = *parent_pid;
-    proc_yield();
+    if (!processes[pid].terminating) {
+      proc_suspend(*parent_pid);
+      processes[pid].waiting_process = *parent_pid;
+      proc_yield();
+      dbg_puts(proc, "came back after wait");
+      assert(processes[pid].terminating && "woke up without pid terminating");
+    }
+
+    // TODO: save exit status
+    destroy_process(pid);
   }
 
   return 1;
