@@ -19,18 +19,18 @@ require_relative "lib/utils.rb"
 # All paths are relative to the top of the repository
 chdir_top_of_repos
 
-test_suites = Dir["test/test_*.rb"]
-                .flat_map { |file| TestSuite.load_suites(file) }
+scenarios = Dir["test/test_*.rb"]
+                .flat_map { |file| Scenario.load_scenarios(file) }
 
-suites_by_build = group_suites_by_build(test_suites)
+scenarios_by_build = group_scenarios_by_build(scenarios)
 
-suites_by_build.each do |build, suites|
+scenarios_by_build.each do |build, scenarios|
   puts  "[------------] ".green + build
   print "[ RUN...     ] ".green + "  build\r"
 
   if execute_build(build)
     puts "[         OK ] ".green + "  build"
-    exit 1 unless suites.all?(&:run)
+    exit 1 unless scenarios.all?(&:run)
 
     puts "[------------] ".green + "all tests passed"
     puts

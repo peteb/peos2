@@ -16,18 +16,32 @@ case $1 in
       -monitor stdio -initrd init.tar -append init=/ramfs/bin/shell
     ;;
 
+  test-tester)
+    qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot -d pcall,cpu_reset,guest_errors \
+      -initrd init.tar -append init=/ramfs/bin/tester
+    ;;
+
+  test-shell)
+    qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot -d pcall,cpu_reset,guest_errors \
+      -initrd init.tar -append init=/ramfs/bin/shell
+    ;;
+
+  test-cdrom)
+    qemu-system-i386 -cdrom peos2.img -nographic -no-reboot -d pcall,cpu_reset,guest_errors
+    ;;
+
   vnc)
     printf "change vnc password\n%s\n" password | qemu-system-i386 -s -vnc :0,password -kernel kernel/vmpeoz \
       -no-reboot -no-shutdown -d pcall,cpu_reset,guest_errors -monitor stdio -initrd init.tar -append init=/ramfs/bin/shell_launcher
     ;;
 
-  serial)
+  terminal)
     qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot -d pcall,cpu_reset,guest_errors \
       -initrd init.tar -append init=/ramfs/bin/shell
     ;;
 
   *)
-    echo $"Usage: $0 {diskimage|display|vnc|serial}"
+    echo $"Usage: $0 {diskimage|debug|display|vnc|terminal|test-shell|test-cdrom}"
     exit 1
 esac
 

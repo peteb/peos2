@@ -23,7 +23,7 @@ static const size_t kernel_initial_stack_size = 0x1000 * 10;
 static const size_t user_initial_stack_size = 0x1000;
 
 //
-// process - contains state and resources that belongs to a process
+// process - contains state and resources that belong to a process
 //
 class process : p2::non_copyable {
 public:

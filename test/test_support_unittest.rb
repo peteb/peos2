@@ -7,6 +7,6 @@ scenario "libsupport unittest" do
   command "support/unittest"
 
   it "runs successfully" do
-    execute
+    successfully_executes
   end
 end
