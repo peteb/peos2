@@ -10,7 +10,7 @@ class ScenarioBuilder
   end
 
   def it(description, &block)
-    testcase = TestCaseBuilder.new(description)
+    testcase = CommandRunnerTestCaseBuilder.new(description)
     testcase.instance_eval(&block)
     @testcases << testcase
   end

@@ -5,12 +5,6 @@ class ScenarioCollectionBuilder
     @scenario_builders = {}
   end
 
-  def scenario(name, &block)
-    @scenario_builders[name] = ScenarioBuilder.new(self, name).tap do |suite|
-      suite.instance_eval(&block)
-    end
-  end
-
   def build
     @scenario_builders.values
       .reject(&:template?)
@@ -18,6 +12,12 @@ class ScenarioCollectionBuilder
   end
 
   private
+
+  def scenario(name, &block)
+    @scenario_builders[name] = ScenarioBuilder.new(self, name).tap do |suite|
+      suite.instance_eval(&block)
+    end
+  end
 
   # Util for scenarios
   def make_kernel(env)

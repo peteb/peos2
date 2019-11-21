@@ -15,6 +15,10 @@ class TestCase
   end
 end
 
+#
+# A scenario consists of a number of test cases that are run for each
+# combination of build and command
+#
 class Scenario
   attr_reader :name, :builds, :command
   attr_accessor :testcases

@@ -1,16 +1,9 @@
-class TestCaseBuilder
+#
+# Creates a test case that runs a command runner, for example Tcl Expect
+#
+class CommandRunnerTestCaseBuilder
   def initialize(name)
     @name = name
-  end
-
-  def successfully_expects(expect_script)
-    @script = expect_script
-    @command_class = ExpectCommandRunner
-  end
-
-  def successfully_executes
-    @script = nil
-    @command_class = ExecuteCommandRunner
   end
 
   def build(scenario, **opts)
@@ -24,10 +17,24 @@ class TestCaseBuilder
 
     TestCase.new(imbued_name, @command_class.new(scenario.command, @script))
   end
+
+  private
+
+  def successfully_expects(expect_script)
+    @script = expect_script
+    @command_class = ExpectCommandRunner
+  end
+
+  def successfully_executes
+    @script = nil
+    @command_class = ExecuteCommandRunner
+  end
 end
 
+#
 # Works like an ordinary test case builder but returns builders from
 # another scenario
+#
 class ExternalTestCasesBuilder
   def initialize(scenario_builder, scenario_name)
     @scenario_builder = scenario_builder

@@ -1,5 +1,7 @@
 #
-# Executes the given command within a Tcl Expect script (given as `script`)
+# Executes the given command within a Tcl Expect script given as
+# @script. The script should return 0 if successful and != 1 on
+# failure
 #
 class ExpectCommandRunner
   def initialize(command, script)
@@ -31,7 +33,7 @@ class ExpectCommandRunner
 end
 
 #
-# Executes the command and expects a successful exit status
+# Executes the given command and expects a successful exit status
 #
 class ExecuteCommandRunner
   def initialize(command, script)
