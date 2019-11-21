@@ -92,7 +92,7 @@ proc_handle proc_create(uint32_t flags)
   proc_handle pid = processes.emplace_back(space_handle,
                                            *vfs_create_context(),
                                            flags);
-  processes[pid].setup_stack();
+  processes[pid].setup_kernel_stack(nullptr);
   return pid;
 }
 
@@ -410,7 +410,7 @@ static int syscall_fork(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, isr_re
   proc_handle child_pid = processes.emplace_back(space_handle, file_context, 0);
   dbg_puts(proc, "... forked child pid: %d", child_pid);
 
-  processes[child_pid].setup_fork_stack(regs);
+  processes[child_pid].setup_kernel_stack(regs);
   proc_enqueue(child_pid);
   return child_pid;
 }
