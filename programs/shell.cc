@@ -1,5 +1,6 @@
 #include <support/string.h>
 #include <support/userspace.h>
+#include <support/utils.h>
 #include <kernel/syscall_decls.h>
 
 #include "command_line.h"
@@ -92,6 +93,11 @@ static void parse_command(char *command)
 
   if (line.num_arguments() == 0)
     return;
+
+  if (strncmp(line.argument(0), "exit", 5) == 0) {
+    puts("bye bye");
+    syscall1(exit, 0);
+  }
 
 
   int child_pid = syscall0(fork);

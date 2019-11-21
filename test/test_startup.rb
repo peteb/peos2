@@ -22,7 +22,7 @@ end
 
 scenario "qemu i386 image" do
   builds KERNEL_BUILDS
-  command "./run-qemu cdrom"
+  command "./run-qemu test-cdrom"
   it_successfully_runs "startup"
 end
 

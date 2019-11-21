@@ -13,7 +13,6 @@ class ExpectCommandRunner
 
       expect_before {
         timeout { exit 1 }
-        eof { exit 1 }
       }
 
       #{script}

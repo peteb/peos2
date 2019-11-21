@@ -39,6 +39,28 @@ scenario "simple shell stress test" do
       exit 0
     EOS
   end
+
+  it "spawns nested subshells and exits them" do
+    successfully_expects <<~'EOS'
+      for {set i 0} {$i < 20} {incr i 1} {
+        for {set a 0} {$a < 9} {incr a 1} {
+          expect "> "
+          sleep 0.001
+          send "/ramfs/bin/shell\r"
+          expect "WELCOME TO SHELL"
+        }
+
+        for {set a 0} {$a < 9} {incr a 1} {
+          expect "> "
+          send "exit\r"
+        }
+      }
+
+      expect "> "
+      send "exit\r"
+      expect eof
+    EOS
+  end
 end
 
 scenario "qemu i386 multiboot" do
