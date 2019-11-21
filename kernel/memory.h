@@ -53,7 +53,25 @@ mem_area mem_map_linear(mem_space space, uintptr_t start, uintptr_t end, uintptr
 mem_area mem_map_linear_eager(mem_space space, uintptr_t start, uintptr_t end, uintptr_t phys_start, uint16_t flags);
 mem_area mem_map_alloc(mem_space space, uintptr_t start, uintptr_t end, uint16_t flags);
 mem_area mem_map_fd(mem_space space, uintptr_t start, uintptr_t end, int fd, uint32_t offset, uint32_t file_size, uint16_t flags);
+
 void     mem_write_page(mem_space space_handle, uintptr_t virt_addr, const void *data, size_t size);
+
+//
+// mem_map_portal - creates a "portal" from the current address space into the other
+//
+// @src_virt_address in the current address space and
+// @dest_virt_address in @dest_space will point to the same page. This
+// page is allocated if not present.  Unmap the page in the current
+// space using mem_unmap_portal when done. It's a good idea to map
+// an address covered by an ALLOC area so the page is free'd when the
+// process exits.
+//
+int mem_map_portal(uintptr_t virt_address,
+                   size_t length,
+                   mem_space dest_space,
+                   uintptr_t dest_virt_address,
+                   uint16_t flags);
+void mem_unmap_portal(uintptr_t virt_address, size_t length);
 
 p2::opt<uint16_t> mem_area_flags(mem_space space, const void *address);
 

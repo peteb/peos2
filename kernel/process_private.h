@@ -43,6 +43,13 @@ class stack {
 public:
   stack() : sp(nullptr), base(nullptr), end(nullptr) {}
 
+  stack(uint32_t *start, uint32_t *end)
+    : sp(end), base(end), end(start)
+  {
+    // Sorry for the confusing name "end" ...
+    assert(start < end);
+  }
+
   template<size_t N>
   stack(stack_storage<N> &storage)
     : sp(storage.base()), base(storage.base()), end(storage.base() - N)
@@ -89,8 +96,6 @@ public:
   process(mem_space space_handle, vfs_context file_context, uint32_t flags)
     : space_handle(space_handle), file_context(file_context), flags(flags) {}
 
-  const uintptr_t USER_SPACE_STACK_BASE = 0xB0000000;
-
   //
   // setup_stacks - allocates and initializes user and kernel stacks
   //
@@ -100,6 +105,8 @@ public:
 
     kernel_stack_handle = kernel_stacks.emplace_back();
     kernel_stack = {kernel_stacks[kernel_stack_handle]};
+
+    dbg_puts(proc, "alloc kernel stack %d, starts at %x", kernel_stack_handle, (uintptr_t)kernel_stack.base);
 
     // We need a stack that can invoke iret as soon as possible, without
     // invoking any gcc function epilogues or prologues.  First, we need
@@ -181,8 +188,19 @@ public:
   {
     map_user_stack();  // This can fail with a panic if the stack is mapped already
 
-    stack_storage<0x1000 / sizeof(uint32_t)> user_stack_storage; // TODO: shouldn't have to divide here
-    stack user_stack(user_stack_storage);
+    // Map the first page of the user stack -- we shouldn't need much
+    // more for initialization unless there's a ton of arguments
+    const size_t initial_stack_size = 0x1000;
+
+    int retval = mem_map_portal(KERNEL_SCRATCH_BASE,
+                                initial_stack_size,
+                                space_handle,
+                                USER_SPACE_STACK_BASE - initial_stack_size,
+                                MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL);
+    assert(retval >= 0 && "failed to map portal");
+
+    // KERNEL_SCRATCH_BASE + 0x1000 is where the stack starts at and grows down
+    stack user_stack((uint32_t *)KERNEL_SCRATCH_BASE, (uint32_t *)(KERNEL_SCRATCH_BASE + initial_stack_size));
 
     char **arg_ptrs = (char **)user_stack.push((const char *)argv, sizeof(argv[0]) * argc);
 
@@ -201,12 +219,8 @@ public:
     else
       user_stack.push(0);
 
-    mem_write_page(space_handle,
-                   USER_SPACE_STACK_BASE - 0x1000,
-                   user_stack_storage.start(),
-                   0x1000);
-
     update_ks_ret_sp(user_stack.bytes_used());
+    mem_unmap_portal(KERNEL_SCRATCH_BASE, initial_stack_size);
   }
 
   //
@@ -233,6 +247,10 @@ public:
     if (previous_proc) {
       current_task_esp_ptr = &previous_proc->kernel_stack.sp;
     }
+
+    /*dbg_puts(proc, "switching to (KSB: %x, SP: %x)",
+             (uintptr_t)kernel_stack.base,
+             (uintptr_t)kernel_stack.sp);*/
 
     tss_set_kernel_stack((uintptr_t)kernel_stack.base);
     mem_activate_space(space_handle);

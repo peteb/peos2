@@ -7,8 +7,6 @@
 #include "x86.h"
 
 void panic(const char *explanation) {
-  dbg_break();
-
   uint32_t cs = 0;
   asm volatile("xor eax, eax\n"
                "mov eax, cs\n"
@@ -35,12 +33,14 @@ void panic(const char *explanation) {
       // TODO: don't kill the current process if this error doesn't
       // actually come from a process
       dbg_puts(sys, "panic: %s", explanation);
+      dbg_break();
       kill_caller();
     }
     else {
       // Before we've started executing processes
       print("PANIC! ");
       print(explanation);
+      dbg_break();
     }
   }
 

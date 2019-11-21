@@ -331,6 +331,43 @@ void mem_write_page(mem_space space_handle, uintptr_t virt_addr, const void *dat
   map_page(current_space, mapped_address, 0, 0);
 }
 
+int mem_map_portal(uintptr_t virt_address, size_t length, mem_space dest_space, uintptr_t dest_virt_address, uint16_t flags)
+{
+  uint16_t paging_flags = page_flags(flags);
+  space_info &dest_space_ = spaces[dest_space];
+
+  auto start_area = find_area(dest_space, dest_virt_address);
+  auto end_area = find_area(dest_space, dest_virt_address + length - 1);
+
+  assert(start_area && "starting address must be covered by an area in dest space to create a portal");
+  assert(end_area && "ending address must be covered by an area in dest space to create a portal");
+  assert(dest_space_.areas[*start_area].type == AREA_ALLOC && "area must be an alloc area");
+  assert(*start_area == *end_area && "start and end area must be the same");
+
+  for (uintptr_t offset = 0; offset < length; offset += 0x1000) {
+    if (auto *pte = find_pte(dest_space_, dest_virt_address + offset); pte && pte->flags & MEM_PE_P) {
+      assert(pte->flags == paging_flags);
+      map_page(current_space, virt_address + offset, pte_frame(pte), pte->flags);
+    }
+    else {
+      // TODO: maybe we should call the page fault handler instead of
+      // just assuming it's an ALLOC area?
+      uintptr_t phys_address = (uintptr_t)alloc_page();
+      map_page(current_space, virt_address + offset, phys_address, paging_flags);
+      map_page(dest_space, dest_virt_address + offset, phys_address, paging_flags);
+    }
+  }
+
+  return 0;
+}
+
+void mem_unmap_portal(uintptr_t virt_address, size_t length)
+{
+  for (uintptr_t offset = 0; offset < length; offset += 0x1000) {
+    map_page(current_space, virt_address + offset, 0xDEAD0000, 0);
+  }
+}
+
 static inline void invlpg(uintptr_t addr)
 {
   asm volatile("invlpg [%0]" :: "a"(addr) : "memory");

@@ -175,6 +175,8 @@ static void switch_process(proc_handle pid)
   if (proc_current_pid() && *proc_current_pid() == pid)
     return;
 
+  dbg_puts(proc, "switching to pid %d", pid);
+
   // Receiving an interrupt between updating TSS.ESP0 and IRET is not
   // something we want, so disable interrupts.
   asm volatile("cli");

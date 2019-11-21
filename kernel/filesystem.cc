@@ -111,6 +111,8 @@ static vfs_dirent *find_dirent(vfs_node_handle dir_node, const p2::string<32> &n
 
 static vfs_node_handle vfs_lookup_aux(vfs_node_handle parent, const char *path)
 {
+  // TODO: make this non-recursive to save on kernel stack space
+
   // Empty string or / references the parent
   if (!*path || (path[0] == '/' && path[1] == '\0')) {
     return parent;
@@ -177,6 +179,8 @@ struct ffd_retval {
 
 static p2::opt<ffd_retval> find_first_driver_aux(vfs_node_handle parent_idx, const char *path)
 {
+  // TODO: make this non-recursive to save on stack space
+
   if (nodes[parent_idx].type & VFS_DRIVER) {
     return {parent_idx, path};
   }
