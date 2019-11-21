@@ -15,8 +15,6 @@
 
 extern char debug_out_buffer[128];
 
-#define NODEBUG
-
 //
 // dbg_puts - writes a line to the console
 // Can only be used in interrupt handlers, and be careful about threading...

@@ -12,33 +12,6 @@ extern "C" void switch_task_iret();
 extern "C" void switch_task(uint32_t *old_esp, uint32_t new_esp, uintptr_t page_dir);
 extern "C" void _user_proc_cleanup();
 
-
-//
-// Storage for kernel and user stacks.
-//
-template<size_t N>
-class stack_storage {
-public:
-  uint32_t *base()
-  {
-    size_t length = ARRAY_SIZE(_data);
-    assert(length > 0);
-    return &_data[length];
-    // &_data[length] should be correct, ie, one above the end of the
-    // array: it's explicitly a legal pointer in C/C++, and x86 PUSH
-    // first decrements ESP before writing to [ESP].
-  }
-
-  uint32_t *start()
-  {
-    return &_data[0];
-  }
-
-  // User stacks need to be aligned on 4096 byte boundaries as we map
-  // them into the process. They also need to be aligned on 16 bytes.
-  uint32_t _data[N] alignas(0x1000);
-};
-
 class stack {
 public:
   stack() : sp(nullptr), base(nullptr), end(nullptr) {}
@@ -49,11 +22,6 @@ public:
     // Sorry for the confusing name "end" ...
     assert(start < end);
   }
-
-  template<size_t N>
-  stack(stack_storage<N> &storage)
-    : sp(storage.base()), base(storage.base()), end(storage.base() - N)
-  {}
 
   void push(uint32_t value)
   {
@@ -73,11 +41,6 @@ public:
     return dest;
   }
 
-  void rewind()
-  {
-    sp = base;
-  }
-
   size_t bytes_used() const
   {
     return (base - sp) * sizeof(*sp);
@@ -86,7 +49,6 @@ public:
   uint32_t *sp, *base, *end;
 };
 
-static p2::pool<stack_storage<512>, 128> kernel_stacks;
 static const uint16_t kernel_stack_flags = MEM_AREA_READWRITE|MEM_AREA_NO_FORK|MEM_AREA_RETAIN_EXEC;
 static const uint16_t user_stack_flags = MEM_AREA_READWRITE|MEM_AREA_USER|MEM_AREA_SYSCALL;
 
@@ -264,10 +226,6 @@ public:
     if (previous_proc) {
       current_task_esp_ptr = (uint32_t **)&previous_proc->kernel_stack_sp;
     }
-
-    /*dbg_puts(proc, "switching to (KSB: %x, SP: %x)",
-             (uintptr_t)kernel_stack.base,
-             (uintptr_t)kernel_stack.sp);*/
 
     tss_set_kernel_stack((uintptr_t)PROC_KERNEL_STACK_BASE);
     uintptr_t page_dir = mem_page_dir(space_handle);
