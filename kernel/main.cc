@@ -12,6 +12,7 @@
 #include "ramfs.h"
 #include "debug.h"
 #include "serial.h"
+#include "pci.h"
 
 #include "syscall_decls.h"
 
@@ -100,6 +101,7 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
 
   ramfs_init();
   vfs_print();
+  pci_init();
 
   // Adjust the memory region from which we'll allocate pages
   largest_region.start = p2::max(largest_region.start, KERNVIRT2PHYS((uintptr_t)&kernel_end));

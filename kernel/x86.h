@@ -150,26 +150,43 @@ struct tss_entry {
   uint16_t iomap_base;
 } __attribute__((packed));
 
-inline void outb(uint16_t port, uint8_t value) {
+inline void outb(uint16_t port, uint8_t value)
+{
   // dN = 8 bits are pased as immediate, while larger values are set in dx
   asm volatile("out %0, %1" : : "dN" (port), "a" (value));
 }
 
-inline void io_wait() {
+inline void io_wait()
+{
   asm volatile("outb 0x80, al" : : "a"(0));
 }
 
-inline void outb_wait(uint16_t port, uint8_t value) {
+inline void outb_wait(uint16_t port, uint8_t value)
+{
   // dN = 8 bits are passed as immediate, while larger values are set in dx
   asm volatile("out %0, %1" : : "dN" (port), "a" (value));
   io_wait();
 }
 
-inline void outw(uint16_t port, uint16_t value) {
+inline void outw(uint16_t port, uint16_t value)
+{
   asm volatile("out %0, %1" : : "dN" (port), "ax" (value));
 }
 
-inline uint8_t inb(uint16_t port) {
+inline void outd(uint16_t port, uint32_t value)
+{
+  asm volatile("out %0, %1" : : "dN" (port), "eax" (value));
+}
+
+inline uint32_t ind(uint16_t port)
+{
+  uint32_t ret;
+  asm volatile("in %0, %1" : "=a"(ret) : "dN"(port));
+  return ret;
+}
+
+inline uint8_t inb(uint16_t port)
+{
   uint8_t ret;
   asm volatile("in %0, %1" : "=a" (ret) : "dN" (port));
   return ret;
