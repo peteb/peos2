@@ -1,29 +1,41 @@
 #!/bin/bash
 cd `dirname $0`
 
+# Note that networking uses qemu's "user networking" mode rather than a TAP interface. I tried
+# to get a TAP up and running on macOS, but bridging it with an Ethernet interface would cause
+# consistent kernel panics (possibly in tuntaposx' kexts)
+# User mode networking should also make it easier to run integration tests; fewer moving parts
+# and no root access needed
+# Traffic to and from the guest can be monitored in realtime using ./run-wireshark
+# QEMU monitor can be connected to using ./connect-qemu-monitor
+
+FLAGS="-d pcall,cpu_reset,guest_errors \
+  -netdev user,id=mynet0,hostfwd=tcp::8884-:123 \
+  -device rtl8139,netdev=mynet0,mac=02:ca:fe:f0:0d:01 \
+  -object filter-dump,id=dp1,netdev=mynet0,file=vm0.pcap"
+
+INIT_SHELL="-initrd init.tar -append init=/ramfs/bin/shell"
+UD_MONITOR="-monitor unix:/tmp/qemu-monitor,server,nowait"
+
 case $1 in
   diskimage)
-    qemu-system-i386 -s -drive format=raw,file=peos2.img -no-reboot -no-shutdown -d pcall,cpu_reset,guest_errors -monitor stdio
+    qemu-system-i386 -s -drive format=raw,file=peos2.img -no-reboot -no-shutdown -monitor stdio $FLAGS
     ;;
 
   display)
-    qemu-system-i386 -s -kernel kernel/vmpeoz -no-reboot -no-shutdown -d pcall,cpu_reset,guest_errors \
-      -monitor stdio -initrd init.tar -append init=/ramfs/bin/shell
+    qemu-system-i386 -s -kernel kernel/vmpeoz -no-reboot -no-shutdown -monitor stdio $FLAGS $INIT_SHELL
     ;;
 
   debug)
-    qemu-system-i386 -s -S -kernel kernel/vmpeoz -no-reboot -no-shutdown -d pcall,cpu_reset,guest_errors \
-      -monitor stdio -initrd init.tar -append init=/ramfs/bin/shell
+    qemu-system-i386 -s -S -kernel kernel/vmpeoz -no-reboot -no-shutdown -monitor stdio $FLAGS $INIT_SHELL
     ;;
 
   test-tester)
-    qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot -d pcall,cpu_reset,guest_errors \
-      -initrd init.tar -append init=/ramfs/bin/tester
+    qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot $FLAGS -initrd init.tar -append init=/ramfs/bin/tester
     ;;
 
   test-shell)
-    qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot -d pcall,cpu_reset,guest_errors \
-      -initrd init.tar -append init=/ramfs/bin/shell
+    qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot $FLAGS $INIT_SHELL
     ;;
 
   test-cdrom)
@@ -32,12 +44,11 @@ case $1 in
 
   vnc)
     printf "change vnc password\n%s\n" password | qemu-system-i386 -s -vnc :0,password -kernel kernel/vmpeoz \
-      -no-reboot -no-shutdown -d pcall,cpu_reset,guest_errors -net nic,model=rtl8139 -monitor stdio -initrd init.tar -append init=/ramfs/bin/shell_launcher
+      -no-reboot -no-shutdown -$FLAGS -initrd init.tar -append init=/ramfs/bin/shell_launcher $UD_MONITOR
     ;;
 
   terminal)
-    qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot -d pcall,cpu_reset,guest_errors \
-      -initrd init.tar -append init=/ramfs/bin/shell
+    qemu-system-i386 -s ${EXTRA:-} -nographic -kernel kernel/vmpeoz $INIT_SHELL $FLAGS $UD_MONITOR
     ;;
 
   *)

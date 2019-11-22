@@ -134,6 +134,11 @@ extern "C" void int_doublefault(isr_registers *regs)
   panic(p2::format<128>("double fault (%x)", regs->error_code).str().c_str());
 }
 
+extern "C" void int_spurious(isr_registers *)
+{
+  // nop
+}
+
 extern "C" void isr_divzero(isr_registers *);
 extern "C" void isr_debug(isr_registers *);
 extern "C" void isr_nmi(isr_registers *);
@@ -153,7 +158,7 @@ extern "C" void isr_virt(isr_registers *);
 extern "C" void isr_sec(isr_registers *);
 extern "C" void isr_gpf(isr_registers *);
 extern "C" void isr_doublefault(isr_registers *);
-extern "C" void isr_muted(isr_registers *);
+extern "C" void isr_spurious(isr_registers *);
 
 void int_init()
 {
@@ -181,7 +186,8 @@ void int_init()
   int_register(INT_SEC,            isr_sec,           KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
 
   // Getting spurious interrupts on 0x27, and we don't use it now so just mute it
-  int_register(0x27,               isr_muted,         KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(IRQ_BASE_INTERRUPT + 7, isr_spurious,  KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
+  int_register(IRQ_BASE_INTERRUPT + 15, isr_spurious, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
 
   puts(p2::format<64>("IDT at %x", (uint32_t)idt_descriptors));
 

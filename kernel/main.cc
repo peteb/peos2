@@ -13,6 +13,7 @@
 #include "debug.h"
 #include "serial.h"
 #include "pci.h"
+#include "rtl8139.h"
 
 #include "syscall_decls.h"
 
@@ -109,6 +110,10 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   largest_region.start = ALIGN_UP(largest_region.start, 0x1000);
   largest_region.end = ALIGN_DOWN(largest_region.end, 0x1000);
   mem_init(&largest_region);
+
+
+  rtl8139_init();
+
 
   // Create process structures, this needs a working memory subsystem
   proc_init();

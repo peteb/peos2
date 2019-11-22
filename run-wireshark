@@ -1,0 +1,2 @@
+#!/bin/bash
+wireshark -k -i <(tail -c +0 -F vm0.pcap)

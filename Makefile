@@ -11,6 +11,9 @@ image : kernel/vmpeoz init.tar
 	cp init.tar .image/boot/
 	grub-mkrescue -o peos2.img .image
 
+vboximg : image
+	VBoxManage convertfromraw --format VDI peos2.img peos2.vdi
+
 init.tar : programs kernel/vmpeoz
 	@mkdir -p .initar/bin
 	cp programs/shell .initar/bin/
