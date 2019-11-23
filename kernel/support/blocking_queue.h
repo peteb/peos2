@@ -32,6 +32,7 @@ namespace p2 {
       size_t bytes_written = 0;
 
       for (; bytes_written < length; ++bytes_written) {
+        // TODO: more efficient block bushing
         if (!_queue.push_back(data[bytes_written])) {
           break;
         }

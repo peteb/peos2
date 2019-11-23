@@ -13,8 +13,13 @@
 #include "memareas.h"
 #include "x86.h"
 #include "protected_mode.h"
-#include "support/utils.h"
+#include "filesystem.h"
+#include "process.h"
+#include "syscall_decls.h"
 
+#include "support/utils.h"
+#include "support/optional.h"
+#include "support/blocking_queue.h"
 
 // Registers
 #define IDR0        0x00
@@ -82,14 +87,25 @@ static const uint16_t rx_ring_size = 8 * 1024;
 static uint8_t rx_buffer[rx_ring_size + 16 + 1500] alignas(uint32_t);
 static uint16_t rx_pos;
 
+// Tx state
 static uint8_t tx_buffers[4][1516];
 static volatile uint32_t tx_cur_write = 0;
 static volatile uint32_t tx_cur_send = 0;
 
+// Device driver state
+static p2::opt<proc_handle> process_opened;
+static p2::blocking_data_queue<10 * 1024> read_fifo;
+
+// Declarations
 extern "C" void isr_rtl8139(isr_registers *);
 static void receive(pci_device *dev);
 static int transmit(pci_device *dev, const char *data, size_t length);
 static void print_hwaddress();
+
+static int open(vfs_device *device, const char *path, uint32_t flags);
+static int close(int handle);
+static int read(int handle, char *data, int length);
+static int write(int handle, const char *data, int length);
 
 void rtl8139_init()
 {
@@ -132,9 +148,20 @@ void rtl8139_init()
   int_register(IRQ_BASE_INTERRUPT + dev->irq, isr_rtl8139, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
   irq_enable(dev->irq);
 
-  dbg_puts(rtl8139, "starting irq %d", dev->irq);
+  static vfs_device_driver interface = {
+    .write = write,
+    .read = read,
+    .open = open,
+    .close = close,
+    .control = nullptr,
+    .seek = nullptr,
+    .tell = nullptr,
+    .mkdir = nullptr
+  };
 
-  (void)transmit;
+  vfs_node_handle mountpoint = vfs_create_node(VFS_FILESYSTEM);
+  vfs_set_driver(mountpoint, &interface, nullptr);
+  vfs_add_dirent(vfs_lookup("/dev/"), "eth0", mountpoint);
 }
 
 extern "C" void int_rtl8139(isr_registers */*regs*/)
@@ -195,7 +222,12 @@ static void receive(pci_device *dev)
                packet_size,
                data_size);
 
-      // TODO: populate internal buffer/call processes
+      if (process_opened) {
+        // TODO: check that the buffer has space for both the header and the data first
+        // TODO: get rid of these crazy empty lambdas...!
+        read_fifo.push_back((const char *)&data_size, 2, [](){});
+        read_fifo.push_back((const char *)(rx_buffer + rx_pos), data_size, [](){});
+      }
     }
 
     // Our buffer is larger than the ring due to WRAP
@@ -257,4 +289,36 @@ static void print_hwaddress()
   // TODO: hex output
   dbg_puts(rtl8139, "hw address: %d:%d:%d:%d:%d:%d",
            parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]);
+}
+
+static int open(vfs_device */*device*/, const char */*path*/, uint32_t /*flags*/)
+{
+  if (process_opened)
+    return EBUSY;
+
+  process_opened = proc_current_pid();
+  return 0;
+}
+
+static int close(int /*handle*/)
+{
+  if (!process_opened || *process_opened != *proc_current_pid())
+    return EINVVAL;
+
+  // TODO: empty queue
+  process_opened = {};
+  return 0;
+}
+
+static int read(int /*handle*/, char *data, int length)
+{
+  return read_fifo.pop_front(data, length);
+}
+
+static int write(int /*handle*/, const char *data, int length)
+{
+  if (int ret = transmit(dev, data, length) < 0; ret < 0)
+    return ret;
+
+  return length;
 }

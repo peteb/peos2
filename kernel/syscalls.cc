@@ -79,6 +79,10 @@ static int syscall_strerror(int code, char *buf, int len)
     message = "Invalid value";
     break;
 
+  case EBUSY:
+    message = "Resource busy";
+    break;
+
   default:
     return -1;
   }

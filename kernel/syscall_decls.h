@@ -50,6 +50,7 @@
 #define ENOSPACE     -203  // No space in structure or file
 #define EINCONSTATE  -204  // Internal state is inconsistent
 #define EINVVAL      -205  // Invalid value
+#define EBUSY        -206  // Resource busy
 
 // Control numbers
 #define CTRL_RAMFS_SET_FILE_RANGE 0x0100      // (start_addr, size)

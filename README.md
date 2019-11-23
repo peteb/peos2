@@ -34,7 +34,7 @@ I'm running the system using Bochs (`bochs -q` in root) and QEMU (`run-qemu` in 
 
 Note that you won't get SMP support.
 
-If you want to play around with networking, using `./run-qemu terminal`, `./run-wireshark` and `./connect-qemu-monitor` together with remote gdb debugging ("target remote localhost:1234", automatically enabled) is a pretty nice setup. Remember to build with debug flags for best experience (`OPT_FLAGS=-g make all`). TCP port 8884 on the host is forwarded to guest 123.
+If you want to play around with networking, using `./run-qemu terminal`, `./run-wireshark` and `./connect-qemu-monitor` together with remote gdb debugging ("target remote localhost:1234", automatically enabled) is a pretty nice setup. Remember to build with debug flags for best experience (`OPT_FLAGS=-g make all`). TCP port 8884 on the host is forwarded to guest 123, and you can quit QEMU using `yes quit | ./connect-qemu-monitor`.
 
 ## Testing
 I try to extract support code into the "support" library and add unittests ("support/unittests") which can run on the host. There's also support for integration tests using Tcl Expect scripts reading from the serial port/COM1, have a look in the "test" directory.

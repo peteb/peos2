@@ -19,6 +19,7 @@ init.tar : programs kernel/vmpeoz
 	cp programs/shell .initar/bin/
 	cp programs/shell_launcher .initar/bin/
 	cp programs/tester .initar/bin/
+	cp programs/network .initar/bin/
 	cp programs/ls .initar/bin/
 	cd .initar && tar cf ../init.tar *
 
