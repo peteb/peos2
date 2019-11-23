@@ -18,7 +18,7 @@
 
 // Externs
 extern "C" void isr_page_fault(isr_registers *);
-extern int kernel_end;
+extern int kernel_start, kernel_end;
 extern char __start_READONLY, __stop_READONLY;
 
 // Forward decls
@@ -43,15 +43,57 @@ static mem_space current_space = spaces.end();
 static mem_space start_space;
 
 
-void mem_init(const region *phys_region)
+void mem_init()
 {
-  puts(p2::format<64>("mem: using region %x-%x (%d MB) for page alloc",
-                      phys_region->start,
-                      phys_region->end,
-                      ((uintptr_t)(phys_region->end - phys_region->start) / 1024 / 1024)));
+  // The bootloader supplies us with a memory map according to the Multiboot standard
+  const char *mmap_ptr = reinterpret_cast<char *>(multiboot_header->mmap_addr);
+  const char *const mmap_ptr_end = reinterpret_cast<char *>(multiboot_header->mmap_addr + multiboot_header->mmap_length);
+
+  log(mem, "memory map:");
+  uint64_t memory_available = 0;
+  region largest_region = {0, 0};
+
+  while (mmap_ptr < mmap_ptr_end) {
+    const multiboot_mmap_entry *const mmap_entry = reinterpret_cast<const multiboot_mmap_entry *>(mmap_ptr);
+
+    log(mem, "%lx-%lx %s (%d bytes)",
+        mmap_entry->addr,
+        mmap_entry->addr + mmap_entry->len,
+        multiboot_memory_type(mmap_entry->type),
+        mmap_entry->len);
+
+    if (mmap_entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
+      memory_available += mmap_entry->len;
+
+      if (mmap_entry->len > (largest_region.end - largest_region.start)) {
+        largest_region.start = mmap_entry->addr;
+        largest_region.end = mmap_entry->addr + mmap_entry->len;
+      }
+    }
+
+    mmap_ptr += mmap_entry->size + sizeof(mmap_entry->size);
+  }
+
+  log(mem, "total avail mem: %d MB", memory_available / 1024 / 1024);
+
+  log(mem, "kernel size: %d KB (ends at %x)",
+      ((uintptr_t)&kernel_end - (uintptr_t)&kernel_start) / 1024,
+      (uintptr_t)&kernel_end);
+
+  // Adjust the memory region from which we'll allocate pages
+  largest_region.start = p2::max(largest_region.start, KERNVIRT2PHYS((uintptr_t)&kernel_end));
+  largest_region.start = p2::max(largest_region.start, KERNVIRT2PHYS(multiboot_last_address()));
+  largest_region.start = ALIGN_UP(largest_region.start, 0x1000);
+  largest_region.end = ALIGN_DOWN(largest_region.end, 0x1000);
+
+
+  log(mem, "using region %x-%x (%d MB) for page alloc",
+      largest_region.start,
+      largest_region.end,
+      ((uintptr_t)(largest_region.end - largest_region.start) / 1024 / 1024));
 
   // TODO: fix this hackery
-  static p2::page_allocator alloc{{phys_region->start, phys_region->end}, KERNEL_VIRTUAL_BASE};
+  static p2::page_allocator alloc{{largest_region.start, largest_region.end}, KERNEL_VIRTUAL_BASE};
   user_space_allocator = &alloc;
 
   start_space = mem_create_space();

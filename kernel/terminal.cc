@@ -2,24 +2,35 @@
 #include "filesystem.h"
 #include "screen.h"
 #include "process.h"
+#include "debug.h"
 
 #include "support/format.h"
 #include "support/pool.h"
 
 #include "terminal_private.h"
 
-// Statics
+// Declarations
 static int write(int handle, const char *data, int length);
 static int read(int handle, char *data, int length);
 static int open(vfs_device *device, const char *path, uint32_t flags);
 static void focus_terminal(uint16_t term_id);
+static void create_terminal(const char *name, screen_buffer buffer);
 
 // Global state
 static p2::pool<terminal, 16> terminals;
 static uint16_t current_terminal = terminals.end();
 
 // Definitions
-void term_init(const char *name, screen_buffer buffer)
+void term_init()
+{
+  create_terminal("term0", screen_current_buffer());
+
+  for (int i = 1; i < 5; ++i) {
+    create_terminal(p2::format<10>("term%d", i).str().c_str(), screen_create_buffer());
+  }
+}
+
+void create_terminal(const char *name, screen_buffer buffer)
 {
   static vfs_device_driver interface =
   {
@@ -42,6 +53,8 @@ void term_init(const char *name, screen_buffer buffer)
   if (current_terminal == terminals.end()) {
     current_terminal = term_id;
   }
+
+  log(term, "created terminal %s", name);
 }
 
 void term_keypress(uint16_t keycode)

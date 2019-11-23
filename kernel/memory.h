@@ -31,7 +31,7 @@ struct region {
 typedef uint16_t mem_space;
 typedef uint16_t mem_area;
 
-void       mem_init(const region *phys_region);
+void       mem_init();
 
 // Address space management
 mem_space          mem_create_space();

@@ -185,6 +185,4 @@ void kbd_init()
   // TODO: extend setup to make sure we're in a good state
   irq_enable(IRQ_KEYBOARD);
   int_register(IRQ_BASE_INTERRUPT + IRQ_KEYBOARD, isr_kbd, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
-
-  puts("Initialized keyboard");
 }

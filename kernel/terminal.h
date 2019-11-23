@@ -19,7 +19,7 @@
 
 #include "screen.h"
 
-void term_init(const char *name, screen_buffer buffer);
+void term_init();
 void term_keypress(uint16_t keycode);
 
 #endif // !PEOS2_TERMINAL_H

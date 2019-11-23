@@ -21,7 +21,6 @@
 #include "support/format.h"
 #include "support/panic.h"
 
-extern int kernel_start, kernel_end;
 extern char stack_top;
 extern "C" int init_main();
 
@@ -34,6 +33,8 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   com_init();
   screen_init();
 
+  log(main, "initializing cpu");
+
   multiboot_header = (multiboot_info *)PHYS2KERNVIRT((uintptr_t)multiboot_hdr);
 
   if (multiboot_magic != MULTIBOOT_MAGIC) {
@@ -44,80 +45,32 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
     panic("Expecting a memory map in the multiboot header");
   }
 
-  // The bootloader supplies us with a memory map according to the Multiboot standard
-  const char *mmap_ptr = reinterpret_cast<char *>(multiboot_hdr->mmap_addr);
-  const char *const mmap_ptr_end = reinterpret_cast<char *>(multiboot_hdr->mmap_addr + multiboot_hdr->mmap_length);
-
-  puts("Memory map:");
-  uint64_t memory_available = 0;
-  region largest_region = {0, 0};
-
-  while (mmap_ptr < mmap_ptr_end) {
-    const multiboot_mmap_entry *const mmap_entry = reinterpret_cast<const multiboot_mmap_entry *>(mmap_ptr);
-
-    puts(p2::format<128>("%lx-%lx %s (%d bytes)",
-                         mmap_entry->addr,
-                         mmap_entry->addr + mmap_entry->len,
-                         multiboot_memory_type(mmap_entry->type),
-                         mmap_entry->len));
-
-    if (mmap_entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
-      memory_available += mmap_entry->len;
-
-      if (mmap_entry->len > (largest_region.end - largest_region.start)) {
-        largest_region.start = mmap_entry->addr;
-        largest_region.end = mmap_entry->addr + mmap_entry->len;
-      }
-    }
-
-    mmap_ptr += mmap_entry->size + sizeof(mmap_entry->size);
-  }
-
-  puts(p2::format<32>("Total avail mem: %d MB", memory_available / 1024 / 1024));
-
-  puts(p2::format<64>("Kernel size: %d KB (ends at %x)",
-                      ((uintptr_t)&kernel_end - (uintptr_t)&kernel_start) / 1024,
-                      (uintptr_t)&kernel_end));
-
   // x86 basic stuff setup
-  puts("Entering protected mode...");
   enter_protected_mode();
   int_init();
   pic_init();
+  syscalls_init();
 
   asm volatile("int 3");  // Test debug int
 
   kbd_init();
-  syscalls_init();
   com_setup_rx();
 
-  // Setup filesystem
-  vfs_init();
-  vfs_add_dirent(vfs_lookup("/"), "dev", vfs_create_node(VFS_DIRECTORY));
-  term_init("term0", screen_current_buffer());
-
-  for (int i = 1; i < 5; ++i) {
-    term_init(p2::format<10>("term%d", i).str().c_str(), screen_create_buffer());
-  }
-
-  ramfs_init();
-  vfs_print();
+  log(main, "initializing subsystems");
+  mem_init();  // deps: arch
+  proc_init();  // deps: mem
   pci_init();
 
-  // Adjust the memory region from which we'll allocate pages
-  largest_region.start = p2::max(largest_region.start, KERNVIRT2PHYS((uintptr_t)&kernel_end));
-  largest_region.start = p2::max(largest_region.start, KERNVIRT2PHYS(multiboot_last_address()));
-  largest_region.start = ALIGN_UP(largest_region.start, 0x1000);
-  largest_region.end = ALIGN_DOWN(largest_region.end, 0x1000);
-  mem_init(&largest_region);
+  vfs_init();
+  vfs_add_dirent(vfs_lookup("/"), "dev", vfs_create_node(VFS_DIRECTORY));
 
+  log(main, "initializing drivers");
 
-  rtl8139_init();
+  term_init();  // deps: vfs
+  ramfs_init();  // deps: vfs
+  rtl8139_init();  // deps: pci
 
-
-  // Create process structures, this needs a working memory subsystem
-  proc_init();
-
+  log(main, "initializing init");
   proc_handle init_pid = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE);
   proc_set_syscall_ret(init_pid, (uintptr_t)init_main);
 

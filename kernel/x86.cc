@@ -1,6 +1,7 @@
 #include "x86.h"
 #include "screen.h"
 #include "protected_mode.h"
+#include "debug.h"
 
 #include "support/assert.h"
 #include "support/format.h"
@@ -189,7 +190,7 @@ void int_init()
   int_register(IRQ_BASE_INTERRUPT + 7, isr_spurious,  KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
   int_register(IRQ_BASE_INTERRUPT + 15, isr_spurious, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P|IDT_TYPE_DPL3);
 
-  puts(p2::format<64>("IDT at %x", (uint32_t)idt_descriptors));
+  log(cpu, "IDT at %x", (uint32_t)idt_descriptors);
 
   // Prepare for any interrupts that might happen before we start multitasking
   size_t interrupt_stack_length = sizeof(interrupt_stack) / sizeof(interrupt_stack[0]);
