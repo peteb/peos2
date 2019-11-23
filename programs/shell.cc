@@ -92,18 +92,16 @@ static void parse_command(char *command)
     puts("bye bye");
     syscall1(exit, 0);
   }
-
-
-  int child_pid = syscall0(fork);
-
-  if (child_pid == 0) {
-    syscall1(exit, execute(line));
-  }
   else {
-    // TODO: read exit code
-    syscall1(wait, child_pid);
+    // It's a binary, so fork and exec
+    if (int child_pid = syscall0(fork); child_pid != 0) {
+      // TODO: read exit code
+      syscall1(wait, child_pid);
+    }
+    else {
+      syscall1(exit, execute(line));
+    }
   }
-
 }
 
 static int execute(const command_line &line)
@@ -116,7 +114,16 @@ static int execute(const command_line &line)
 
   argv[i] = nullptr;
 
-  if (int retval = syscall2(exec, line.argument(0), argv); retval < 0) {
+  int retval = syscall2(exec, line.argument(0), argv);
+
+  if (retval == ENOENT) {
+    // Try again but with a prefix path
+    p2::string<128> new_filename("/ramfs/bin/");
+    new_filename.append(line.argument(0));
+    retval = syscall2(exec, new_filename.c_str(), argv);
+  }
+
+  if (retval < 0) {
     char message_buf[128];
 
     if (int ret = syscall3(strerror, retval, message_buf, sizeof(message_buf) - 1); ret >= 0) {
