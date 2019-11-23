@@ -68,11 +68,6 @@ static void setup_std_fds(const char *terminal_filename)
   setup_term_at(terminal_filename, 2);
 }
 
-void panic(const char *explanation) {
-  syscall3(write, 0, explanation, strlen(explanation));
-  while (true);
-}
-
 static void list_terminals(pool<string<32>, 16> *terminals)
 {
   assert(terminals);

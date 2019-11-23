@@ -38,12 +38,6 @@ int main(int /*argc*/, char */*argv*/[])
 
 START(main);
 
-void panic(const char *explanation)
-{
-  syscall3(write, 0, explanation, strlen(explanation));
-  while (true);
-}
-
 static int consume_line_from_buffer(char *out, size_t length)
 {
   const char *nl = strnchr(input_buffer, '\n', input_buffer_size);

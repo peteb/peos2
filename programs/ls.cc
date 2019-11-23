@@ -45,9 +45,3 @@ int main(int argc, char *argv[])
 }
 
 START(main);
-
-void panic(const char *explanation)
-{
-  syscall3(write, 0, explanation, strlen(explanation));
-  while (true);
-}

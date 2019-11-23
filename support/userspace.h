@@ -7,7 +7,13 @@
 #define START(fun) extern "C" void _start(int argc, char *argv[])    \
   {                                                                  \
     syscall1(exit, fun(argc, argv));                                 \
+  }                                                                  \
+  void panic(const char *explanation)                                \
+  {                                                                  \
+    syscall3(write, 0, explanation, strlen(explanation));            \
+    while (true);                                                    \
   }
+
 
 static inline void puts(const char *message)
 {
