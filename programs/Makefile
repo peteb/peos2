@@ -7,7 +7,7 @@ AS=i686-elf-as
 CFLAGS=-std=gnu99 -m32 -masm=intel -nostdlib -ffreestanding $(OPT_FLAGS) -Wall -Wextra -Werror -fno-threadsafe-statics -DNDEBUG
 CXXFLAGS=-std=c++17 -m32 -masm=intel -nostdlib -ffreestanding $(OPT_FLAGS) -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fno-threadsafe-statics -mno-red-zone -mgeneral-regs-only -I. -I.. -DNDEBUG
 LDFLAGS=-L../support  -lgcc
-BINARIES=shell shell_launcher tester ls network
+BINARIES=shell shell_launcher tester ls ns
 
 .PHONY : clean
 
@@ -34,8 +34,8 @@ shell_launcher : shell_launcher.o
 tester : tester.o
 	$(CC) -o $@ $(CXXFLAGS) tester.o $(LDFLAGS) -lsupport
 
-network : network.o
-	$(CC) -o $@ $(CXXFLAGS) network.o $(LDFLAGS) -lsupport
+ns : net/main.o
+	$(CC) -o $@ $(CXXFLAGS) net/main.o $(LDFLAGS) -lsupport
 
 ls : ls.o
 	$(CC) -o $@ $(CXXFLAGS) ls.o $(LDFLAGS) -lsupport
