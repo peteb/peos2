@@ -1,7 +1,8 @@
+#include <stdint.h>
+
 #include "pci.h"
 #include "x86.h"
 #include "debug.h"
-#include <stdint.h>
 #include "support/pool.h"
 
 #define CONFIG_ADDRESS 0xCF8
@@ -65,15 +66,15 @@ void pci_init()
           dev.iobase = bar0 & ~0xF;
         }
 
-        const char *mmio = (dev.mmio ? "MMIO" : "IO");
-        dbg_puts(pci, "%d/%d: vend=%x dev=%x io=%x %s irq=%d",
-                 bus,
-                 slot,
-                 vendor,
-                 device,
-                 dev.iobase,
-                 mmio,
-                 dev.irq);
+        const char *mmio = (dev.mmio ? "MMIO" : "  IO");
+        log(pci, "%d/%d: vend=%x dev=%x io=%x %s irq=%d",
+            bus,
+            slot,
+            vendor,
+            device,
+            dev.iobase,
+            mmio,
+            dev.irq);
 
         devices.push_back(dev);
       }

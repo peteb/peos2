@@ -30,6 +30,11 @@ static inline void mute_fun(const char *, ...) {}
 #define dbg_puts(module, fmt, ...) mute_fun(fmt __VA_OPT__(,) __VA_ARGS__)
 #endif
 
+#define log(module, fmt, ...) {                                                  \
+    p2::format<128>(debug_out_buffer, TOSTRING(module) "[%d]: " fmt,             \
+                    proc_current_pid().value_or(-1u) __VA_OPT__(,) __VA_ARGS__); \
+    puts(debug_out_buffer);}
+
 static inline void dbg_break()
 {
   asm volatile("xchg bx, bx");  // "magical breakpoint"

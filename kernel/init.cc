@@ -86,7 +86,7 @@ extern "C" int init_main(int argc, const char **argv)
 
 static int write_info(const char *path, const char *filename, uintptr_t start_addr, uintptr_t size)
 {
-  puts_sys(kernout, p2::format<128>("writing info to /ramfs%s%s\n", path, filename));
+  puts_sys(kernout, p2::format<128>("init: writing /ramfs%s%s\n", path, filename));
 
   int mod_fd = verify(syscall2(open, p2::format<64>("/ramfs%s%s", path, filename).str().c_str(), OPEN_CREATE));
   verify(syscall4(control, mod_fd, CTRL_RAMFS_SET_FILE_RANGE, start_addr, size));
@@ -100,8 +100,8 @@ void load_multiboot_modules()
   multiboot_mod *modules = (multiboot_mod *)PHYS2KERNVIRT(mbhdr->mods_addr);
   verify(syscall1(mkdir, "/ramfs/modules"));
 
-  puts_sys(kernout, p2::format<64>("mods_count: %d\n", (uint32_t)mbhdr->mods_count));
-  puts_sys(kernout, p2::format<128>("cmd_line: \"%s\"\n", (const char *)PHYS2KERNVIRT(mbhdr->cmd_line)));
+  puts_sys(kernout, p2::format<64>("init: mods_count: %d\n", (uint32_t)mbhdr->mods_count));
+  puts_sys(kernout, p2::format<128>("init: cmd_line: \"%s\"\n", (const char *)PHYS2KERNVIRT(mbhdr->cmd_line)));
 
   for (uint32_t i = 0; i < mbhdr->mods_count; ++i) {
     write_info("/modules/", (const char *)PHYS2KERNVIRT(modules[i].string_addr), PHYS2KERNVIRT(modules[i].mod_start), modules[i].mod_end - modules[i].mod_start);

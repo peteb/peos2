@@ -289,8 +289,8 @@ static void print_hwaddress()
   };
 
   // TODO: hex output
-  dbg_puts(rtl8139, "hw address: %d:%d:%d:%d:%d:%d",
-           parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]);
+  log(rtl8139, "initialized with hwaddr=%d:%d:%d:%d:%d:%d",
+      parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]);
 }
 
 static int open(vfs_device */*device*/, const char */*path*/, uint32_t /*flags*/)
