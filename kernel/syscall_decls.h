@@ -53,8 +53,10 @@
 #define EBUSY        -206  // Resource busy
 
 // Control numbers
+#define CTRL_NET_HW_ADDR          0x0010      // uint8[6]
 #define CTRL_RAMFS_SET_FILE_RANGE 0x0100      // (start_addr, size)
 #define CTRL_RAMFS_GET_FILE_RANGE 0x0200      // (*start_addr, *size)
+
 
 // System definitions
 SYSCALL_DEF3(strerror,  SYSCALL_NUM_STRERROR, int, char *, int);

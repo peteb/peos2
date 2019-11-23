@@ -16,6 +16,7 @@
 #include "filesystem.h"
 #include "process.h"
 #include "syscall_decls.h"
+#include "syscall_utils.h"
 
 #include "support/utils.h"
 #include "support/optional.h"
@@ -106,6 +107,7 @@ static int open(vfs_device *device, const char *path, uint32_t flags);
 static int close(int handle);
 static int read(int handle, char *data, int length);
 static int write(int handle, const char *data, int length);
+static int control(int handle, uint32_t function, uint32_t param1, uint32_t param2);
 
 void rtl8139_init()
 {
@@ -153,7 +155,7 @@ void rtl8139_init()
     .read = read,
     .open = open,
     .close = close,
-    .control = nullptr,
+    .control = control,
     .seek = nullptr,
     .tell = nullptr,
     .mkdir = nullptr
@@ -321,4 +323,25 @@ static int write(int /*handle*/, const char *data, int length)
     return ret;
 
   return length;
+}
+
+static int control(int /*handle*/, uint32_t function, uint32_t param1, uint32_t /*param2*/)
+{
+  if (function == CTRL_NET_HW_ADDR) {
+    uint8_t *dest = (uint8_t *)param1;
+    verify_ptr(rtl8139, dest);
+
+    uint32_t mac0 = ind(dev->iobase + IDR0);
+    uint16_t mac1 = inw(dev->iobase + IDR0 + 4);
+
+    dest[0] = (mac0 >> 0) & 0xFFu;
+    dest[1] = (mac0 >> 8) & 0xFFu;
+    dest[2] = (mac0 >> 16) & 0xFFu;
+    dest[3] = (mac0 >> 24) & 0xFFu;
+    dest[4] = (mac1 >> 0) & 0xFFu;
+    dest[5] = (mac1 >> 8) & 0xFFu;
+    return 0;
+  }
+
+  return -1;
 }

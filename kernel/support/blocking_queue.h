@@ -59,6 +59,9 @@ namespace p2 {
 
     size_t pop_front(char *destination, size_t max_size)
     {
+      if (max_size == 0)
+        return 0;
+
       int bytes_read = 0;
 
       while (true) {

@@ -200,7 +200,7 @@ static int control(int handle, uint32_t function, uint32_t param1, uint32_t para
     return 0;
   }
 
-  return 1;
+  return -1;
 }
 
 static int close(int handle)
