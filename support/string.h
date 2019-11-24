@@ -14,14 +14,13 @@
 
 namespace p2 {
   char digit_as_char(int digit, int radix);
+  bool isdigit(char c);
 
-  //
   // TODO: this class has two different "modes"; one when the data is
   // allocated by the class, one where we're referencing outside
   // memory. Might want to extract that into a "storage provider"
   // later if we need dynamic allocation
   // TODO: extract string building logic into its own "string_builder" class
-  //
   template<int _MaxLen>
   class string {
   public:

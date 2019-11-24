@@ -16,3 +16,7 @@ char p2::digit_as_char(int digit, int radix) {
 
   return '?';
 }
+
+bool p2::isdigit(char c) {
+  return c >= '0' && c <= '9';
+}

@@ -38,4 +38,9 @@ TESTSUITE(p2::format) {
     char dat[3];
     ASSERT_PANIC(p2::format(dat, "%d", 123));
   }
+
+  TESTCASE("can take length of hexadecimal output") {
+    p2::format<5> fmt("%04x", 0xBEEF);
+    ASSERT_EQ(fmt.str(), p2::string<5>("BEEF"));
+  }
 }

@@ -33,7 +33,7 @@ void eth_run(int fd)
     verify(read(fd, (char *)&hdr, sizeof(hdr)));
     verify(read(fd, pdu, pdu_size));
 
-    log(eth, "rx pdusz=%d,typ=%x,dst=%s,src=%s",
+    log(eth, "rx pdusz=%d,typ=%04x,dst=%s,src=%s",
         pdu_size, hdr.ether_type, hwaddr_str(hdr.mac_dest).c_str(), hwaddr_str(hdr.mac_src).c_str());
   }
 
@@ -42,7 +42,7 @@ void eth_run(int fd)
 
 static p2::string<32> hwaddr_str(uint8_t *parts)
 {
-  return p2::format<32>("%d:%d:%d:%d:%d:%d",
+  return p2::format<32>("%02x:%02x:%02x:%02x:%02x:%02x",
                         (uint32_t)parts[0], (uint32_t)parts[1], (uint32_t)parts[2], (uint32_t)parts[3],
                         (uint32_t)parts[4], (uint32_t)parts[5]).str();
 }
