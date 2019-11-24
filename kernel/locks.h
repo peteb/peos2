@@ -14,8 +14,13 @@ public:
   int wait()
   {
     // TODO: verify that we're not already on the list
-    _waiting_procs.push_back(*proc_current_pid());
-    return proc_block(*proc_current_pid());
+    int idx = _waiting_procs.push_back(*proc_current_pid());
+    int ret = proc_block(*proc_current_pid());
+
+    if (ret < 0 && _waiting_procs.valid(idx))
+      _waiting_procs.erase(idx);
+
+    return ret;
   }
 
   void notify_one()

@@ -24,7 +24,19 @@ void eth_run(int fd)
   char pdu[1500];
   uint16_t packet_size = 0;
 
-  while (verify(read(fd, (char *)&packet_size, 2)) > 0) {
+  while (true) {
+    verify(syscall1(set_timeout, 20));
+    int ret = read(fd, (char *)&packet_size, 2);
+
+    if (ret == ETIMEOUT) {
+      arp_tick();
+      continue;
+    }
+    else if (ret < 0) {
+      log(eth, "read failed");
+      return;
+    }
+
     header hdr;
     uint16_t pdu_size = packet_size - sizeof(hdr);
 

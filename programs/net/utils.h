@@ -14,7 +14,7 @@ extern char debug_out_buffer[512];
 
 #define log(module, fmt, ...) {                                             \
     p2::format<512>(debug_out_buffer, TOSTRING(module) ": " fmt             \
-                    __VA_OPT__(,) __VA_ARGS__);                             \
+                    __VA_OPT__(,) __VA_ARGS__).str();                       \
     puts(debug_out_buffer);}
 
 p2::string<32> hwaddr_str(const uint8_t *octets);

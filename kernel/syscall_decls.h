@@ -28,6 +28,7 @@
 #define SYSCALL_NUM_FORK        205
 #define SYSCALL_NUM_SHUTDOWN    206
 #define SYSCALL_NUM_WAIT        207
+#define SYSCALL_NUM_SET_TIMEOUT 208
 
 #define SYSCALL_NUM_MMAP        300
 
@@ -51,6 +52,7 @@
 #define EINCONSTATE  -204  // Internal state is inconsistent
 #define EINVVAL      -205  // Invalid value
 #define EBUSY        -206  // Resource busy
+#define ETIMEOUT     -207  // Timed out
 
 // Control numbers
 #define CTRL_NET_HW_ADDR          0x0010      // uint8[6]
@@ -62,22 +64,23 @@
 SYSCALL_DEF3(strerror,  SYSCALL_NUM_STRERROR, int, char *, int);
 
 // Filesystem definitions
-SYSCALL_DEF3(write,     SYSCALL_NUM_WRITE, int, const char *, int);
-SYSCALL_DEF3(read,      SYSCALL_NUM_READ, int, char *, int);
-SYSCALL_DEF2(open,      SYSCALL_NUM_OPEN, const char *, uint32_t);
-SYSCALL_DEF1(close,     SYSCALL_NUM_CLOSE, int);
-SYSCALL_DEF4(control,   SYSCALL_NUM_CONTROL, int, uint32_t, uint32_t, uint32_t);
-SYSCALL_DEF3(seek,      SYSCALL_NUM_SEEK, int, int, int);
-SYSCALL_DEF2(tell,      SYSCALL_NUM_TELL, int, int *);
-SYSCALL_DEF1(mkdir,     SYSCALL_NUM_MKDIR, const char *);
-SYSCALL_DEF2(dup2,      SYSCALL_NUM_DUP2, int, int);
+SYSCALL_DEF3(write,       SYSCALL_NUM_WRITE, int, const char *, int);
+SYSCALL_DEF3(read,        SYSCALL_NUM_READ, int, char *, int);
+SYSCALL_DEF2(open,        SYSCALL_NUM_OPEN, const char *, uint32_t);
+SYSCALL_DEF1(close,       SYSCALL_NUM_CLOSE, int);
+SYSCALL_DEF4(control,     SYSCALL_NUM_CONTROL, int, uint32_t, uint32_t, uint32_t);
+SYSCALL_DEF3(seek,        SYSCALL_NUM_SEEK, int, int, int);
+SYSCALL_DEF2(tell,        SYSCALL_NUM_TELL, int, int *);
+SYSCALL_DEF1(mkdir,       SYSCALL_NUM_MKDIR, const char *);
+SYSCALL_DEF2(dup2,        SYSCALL_NUM_DUP2, int, int);
 
 // Process definitions
-SYSCALL_DEF0(yield,     SYSCALL_NUM_YIELD);
-SYSCALL_DEF1(exit,      SYSCALL_NUM_EXIT, int);
-SYSCALL_DEF0(fork,      SYSCALL_NUM_FORK);
-SYSCALL_DEF0(shutdown,  SYSCALL_NUM_SHUTDOWN);
-SYSCALL_DEF1(wait,      SYSCALL_NUM_WAIT, int);
+SYSCALL_DEF0(yield,       SYSCALL_NUM_YIELD);
+SYSCALL_DEF1(exit,        SYSCALL_NUM_EXIT, int);
+SYSCALL_DEF0(fork,        SYSCALL_NUM_FORK);
+SYSCALL_DEF0(shutdown,    SYSCALL_NUM_SHUTDOWN);
+SYSCALL_DEF1(wait,        SYSCALL_NUM_WAIT, int);
+SYSCALL_DEF1(set_timeout, SYSCALL_NUM_SET_TIMEOUT, int);
 
 //
 // exec - rewrites the current process so that it'll run `filename`

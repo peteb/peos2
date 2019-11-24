@@ -93,6 +93,11 @@ void arp_recv(int eth_fd, eth_frame */*frame*/, const char *data, size_t length)
   }
 }
 
+void arp_tick()
+{
+  log(arp, "checking for timed out actions");
+}
+
 int arp_lookup_ipv4(int fd, uint32_t ipaddr, uint8_t *hwaddr)
 {
   // TODO: cache per fd

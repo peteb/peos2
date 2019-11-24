@@ -130,6 +130,7 @@ public:
   p2::opt<proc_handle> waiting_process;
 
   uint64_t    last_tick = 0;
+  int32_t     suspension_timeout = -1;
 
 private:
   uint32_t _flags;

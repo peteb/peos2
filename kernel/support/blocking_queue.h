@@ -12,6 +12,7 @@
 #include "process.h"
 #include "locks.h"
 #include "support/queue.h"
+#include "debug.h"
 
 namespace p2 {
   //
@@ -56,12 +57,16 @@ namespace p2 {
 
       // We don't need a mutex around the state because mutual
       // exclusion is guaranteed by the IF bit in EFLAGS: no
-      // concurrent interrupts will be invoked. For now.
+      // concurrent interrupts will be invoked and there are no other
+      // CPUs. For now.
 
       while (true) {
         if (_queue.size() == 0) {
-          if (int ret = _pushed_data_signal.wait(); ret < 0)
+          dbg_puts(blocking_queue, "waiting for cond");
+          if (int ret = _pushed_data_signal.wait(); ret < 0) {
+            dbg_puts(blocking_queue, "returning %d", ret);
             return ret;
+          }
         }
 
         // Even though we've been woken up, the input queue might've

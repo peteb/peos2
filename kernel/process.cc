@@ -30,6 +30,7 @@ static int         syscall_exec(const char *filename, const char **argv);
 static int         syscall_fork(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, isr_registers *regs);
 static int         syscall_shutdown();
 static int         syscall_wait(int pid);
+static int         syscall_set_timeout(int timeout);
 
 static proc_handle decide_next_process();
 static void        destroy_process(proc_handle pid);
@@ -53,13 +54,14 @@ static uint64_t tick_count;
 void proc_init()
 {
   // Syscalls
-  syscall_register(SYSCALL_NUM_YIELD, (syscall_fun)syscall_yield);
-  syscall_register(SYSCALL_NUM_EXIT, (syscall_fun)syscall_exit);
-  syscall_register(SYSCALL_NUM_KILL, (syscall_fun)syscall_kill);
-  syscall_register(SYSCALL_NUM_EXEC, (syscall_fun)syscall_exec);
-  syscall_register(SYSCALL_NUM_FORK, (syscall_fun)syscall_fork);
-  syscall_register(SYSCALL_NUM_SHUTDOWN, (syscall_fun)syscall_shutdown);
-  syscall_register(SYSCALL_NUM_WAIT, (syscall_fun)syscall_wait);
+  syscall_register(SYSCALL_NUM_YIELD,       (syscall_fun)syscall_yield);
+  syscall_register(SYSCALL_NUM_EXIT,        (syscall_fun)syscall_exit);
+  syscall_register(SYSCALL_NUM_KILL,        (syscall_fun)syscall_kill);
+  syscall_register(SYSCALL_NUM_EXEC,        (syscall_fun)syscall_exec);
+  syscall_register(SYSCALL_NUM_FORK,        (syscall_fun)syscall_fork);
+  syscall_register(SYSCALL_NUM_SHUTDOWN,    (syscall_fun)syscall_shutdown);
+  syscall_register(SYSCALL_NUM_WAIT,        (syscall_fun)syscall_wait);
+  syscall_register(SYSCALL_NUM_SET_TIMEOUT, (syscall_fun)syscall_set_timeout);
 
   // Timer for preemptive task switching
   pit_set_phase(10);  // 9 is high freq, 10 is lower
@@ -144,7 +146,25 @@ void proc_run()
 
 extern "C" void int_timer(isr_registers *)
 {
+  proc_handle proc = suspended_head;
   irq_eoi(IRQ_SYSTEM_TIMER);
+
+  while (proc != processes.end()) {
+    process &process_ = processes[proc];
+
+    if (process_.suspension_timeout > 0) {
+      process_.suspension_timeout -= 1;  // TODO: correct tick
+
+      if (process_.suspension_timeout <= 0) {
+        // The timeout reached 0 so wake it up
+        dbg_puts(proc, "unblocking %d due to timeout", proc);
+        proc_unblock_and_switch(proc, ETIMEOUT);
+      }
+    }
+
+    proc = process_.next_process;
+  }
+
   proc_yield();
 }
 
@@ -201,7 +221,8 @@ int proc_yield()
 int proc_block(proc_handle pid)
 {
   proc_suspend(pid);
-  return proc_yield();
+  int ret = proc_yield();
+  return ret;
 }
 
 void proc_unblock_and_switch(proc_handle pid, int status)
@@ -460,6 +481,15 @@ static int syscall_wait(int pid)
   }
 
   return 1;
+}
+
+static int syscall_set_timeout(int timeout)
+{
+  if (auto pid = proc_current_pid()) {
+    processes[*pid].suspension_timeout = timeout;
+  }
+
+  return 0;
 }
 
 //
