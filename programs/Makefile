@@ -34,8 +34,8 @@ shell_launcher : shell_launcher.o
 tester : tester.o
 	$(CC) -o $@ $(CXXFLAGS) tester.o $(LDFLAGS) -lsupport
 
-nsa : net/main.o
-	$(CC) -o $@ $(CXXFLAGS) net/main.o $(LDFLAGS) -lsupport
+nsa : net/main.o net/ethernet.o net/utils.o
+	$(CC) -o $@ $(CXXFLAGS) net/main.o net/ethernet.o net/utils.o $(LDFLAGS) -lsupport
 
 ls : ls.o
 	$(CC) -o $@ $(CXXFLAGS) ls.o $(LDFLAGS) -lsupport
