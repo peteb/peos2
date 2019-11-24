@@ -5,14 +5,13 @@
 
 #include "utils.h"
 #include "ethernet.h"
+#include "arp.h"
 
 struct header {
   uint8_t  mac_dest[6];
   uint8_t  mac_src[6];
   uint16_t ether_type;
 } __attribute__((packed));
-
-static p2::string<32> hwaddr_str(uint8_t *components);
 
 using namespace p2;
 
@@ -33,16 +32,58 @@ void eth_run(int fd)
     verify(read(fd, (char *)&hdr, sizeof(hdr)));
     verify(read(fd, pdu, pdu_size));
 
-    log(eth, "rx pdusz=%d,typ=%04x,dst=%s,src=%s",
-        pdu_size, hdr.ether_type, hwaddr_str(hdr.mac_dest).c_str(), hwaddr_str(hdr.mac_src).c_str());
-  }
+    uint16_t ether_type = ntohs(hdr.ether_type);
 
+    log(eth, "rx pdusz=%d,typ=%04x,dst=%s,src=%s",
+        pdu_size, ether_type, hwaddr_str(hdr.mac_dest).c_str(), hwaddr_str(hdr.mac_src).c_str());
+
+    eth_frame frame = {
+      .dest = hdr.mac_dest,
+      .src = hdr.mac_src,
+      .type = ether_type
+    };
+
+    switch (ether_type) {
+    case ET_IPV4:
+      // TODO: handle ipv4
+      break;
+
+    case ET_IPV6:
+      // TODO: handle ipv6
+      break;
+
+    case ET_ARP:
+      arp_recv(fd, &frame, pdu, pdu_size);
+      break;
+
+    case ET_FLOW:
+      // TODO: handle ethernet flow
+      break;
+    }
+  }
 }
 
-
-static p2::string<32> hwaddr_str(uint8_t *parts)
+void eth_hwaddr(int fd, uint8_t *octets)
 {
-  return p2::format<32>("%02x:%02x:%02x:%02x:%02x:%02x",
-                        (uint32_t)parts[0], (uint32_t)parts[1], (uint32_t)parts[2], (uint32_t)parts[3],
-                        (uint32_t)parts[4], (uint32_t)parts[5]).str();
+  // TODO: cache the address locally, this is very wasteful
+  verify(syscall4(control, fd, CTRL_NET_HW_ADDR, (uintptr_t)octets, 0));
+}
+
+int eth_send(int fd, eth_frame *frame, const char *data, size_t size)
+{
+  log(eth, "tx pdusz=%d,dst=%s,src=%s",
+      size, hwaddr_str(frame->dest).c_str(), hwaddr_str(frame->src).c_str());
+
+  // TODO: looping writes
+  header hdr;
+  memcpy(hdr.mac_dest, frame->dest, 6);
+  memcpy(hdr.mac_src, frame->src, 6);
+  hdr.ether_type = htons(frame->type);
+
+  // TODO: return failure rather than verify
+  uint16_t packet_size = sizeof(hdr) + size;
+  verify(syscall3(write, fd, (char *)&packet_size, sizeof(packet_size)));
+  verify(syscall3(write, fd, (char *)&hdr, sizeof(hdr)));
+  verify(syscall3(write, fd, data, size));
+  return 1;
 }

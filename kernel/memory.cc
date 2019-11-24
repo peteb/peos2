@@ -76,7 +76,7 @@ void mem_init()
 
   log(mem, "total avail mem: %d MB", memory_available / 1024 / 1024);
 
-  log(mem, "kernel size: %d KB (ends at %x)",
+  log(mem, "kernel size: %d KB (ends at %p)",
       ((uintptr_t)&kernel_end - (uintptr_t)&kernel_start) / 1024,
       (uintptr_t)&kernel_end);
 
@@ -87,7 +87,7 @@ void mem_init()
   largest_region.end = ALIGN_DOWN(largest_region.end, 0x1000);
 
 
-  log(mem, "using region %x-%x (%d MB) for page alloc",
+  log(mem, "using region %p-%p (%d MB) for page alloc",
       largest_region.start,
       largest_region.end,
       ((uintptr_t)(largest_region.end - largest_region.start) / 1024 / 1024));
@@ -111,7 +111,7 @@ mem_space mem_create_space()
 {
   page_dir_entry *page_dir = (page_dir_entry *)page_dir_allocator.alloc_page_zero();
   mem_space space_handle = spaces.emplace_back(page_dir);
-  dbg_puts(mem, "created space %d with page dir %x", space_handle, (uintptr_t)page_dir);
+  dbg_puts(mem, "created space %d with page dir %p", space_handle, (uintptr_t)page_dir);
   return space_handle;
 }
 
@@ -135,13 +135,13 @@ void mem_destroy_space(mem_space space_handle)
       continue;
     }
 
-    dbg_puts(mem, "deleting page table %x", PHYS2KERNVIRT(space->page_dir[i].table_11_31 << 12));
+    dbg_puts(mem, "deleting page table %p", PHYS2KERNVIRT(space->page_dir[i].table_11_31 << 12));
     page_table_allocator.free_page((void *)PHYS2KERNVIRT(space->page_dir[i].table_11_31 << 12));
     space->page_dir[i].table_11_31 = 0;
     space->page_dir[i].flags = 0;
   }
 
-  dbg_puts(mem, "deleting page dir %x", (uintptr_t)space->page_dir);
+  dbg_puts(mem, "deleting page dir %p", (uintptr_t)space->page_dir);
   page_dir_allocator.free_page(space->page_dir);
   space->page_dir = nullptr;
   spaces.erase(space_handle);
@@ -177,7 +177,7 @@ void mem_print_space(mem_space space_handle)
       continue;
 
     area_info &area = space.areas[i];
-    dbg_puts(mem, "%d: area %x-%x (type %d flags %x)", i, area.start, area.end, area.type, area.flags);
+    dbg_puts(mem, "%d: area %p-%p (type %d flags %x)", i, area.start, area.end, area.type, area.flags);
   }
 }
 
@@ -253,7 +253,7 @@ static void copy_area(area_info &source_area, space_info &source_space, mem_spac
          page_address += 0x1000) {
 
       if (auto *pte = find_pte(source_space, page_address); pte && pte->flags & MEM_PE_P) {
-        dbg_puts(mem, "copying page %x", page_address);
+        dbg_puts(mem, "copying page %p", page_address);
 
         uintptr_t phys_address = (uintptr_t)alloc_page();
         map_page(dest_space_handle, page_address, phys_address, page_flags(source_area.flags));
@@ -376,7 +376,7 @@ void mem_write_page(mem_space space_handle, uintptr_t virt_addr, const void *dat
     assert(pte && (pte->flags & MEM_PE_P));
   }
 
-  dbg_puts(mem, "writing to virt address %x (%x) from %x (%d bytes)",
+  dbg_puts(mem, "writing to virt address %p (%p) from %p (%d bytes)",
            (uintptr_t)virt_addr,
            (uintptr_t)pte_frame(pte),
            (uintptr_t)data,
@@ -509,7 +509,7 @@ void mem_map_kernel(mem_space space_handle, uint16_t flags)
                            segments[i].virt_address,
                            KERNVIRT2PHYS(current_address),
                            last_flags);
-      dbg_puts(mem, "%d: map %x-%x @ %x: %x", i, current_address, segments[i].virt_address, KERNVIRT2PHYS(current_address), last_flags);
+      dbg_puts(mem, "%d: map %p-%p @ %p: %p", i, current_address, segments[i].virt_address, KERNVIRT2PHYS(current_address), last_flags);
       assert(segments[i].virt_address >= current_address);
     }
 
@@ -571,7 +571,7 @@ mem_area mem_map_linear_eager(mem_space space_handle,
 
 mem_area mem_map_alloc(mem_space space_handle, uintptr_t start, uintptr_t end, uint16_t flags)
 {
-  dbg_puts(mem, "mapping alloc in %d: %x - %x", space_handle, start, end);
+  dbg_puts(mem, "mapping alloc in %d: %p - %p", space_handle, start, end);
   assert(!overlaps_existing_area(space_handle, start, end));
 
   // Another nifty way of doing allocations would be to get rid of
@@ -636,7 +636,7 @@ static void page_fault_linear_map(area_info &area, uintptr_t faulted_address)
   linear_map_info &lm_info = spaces[current_space].linear_maps[area.info_handle];
   uintptr_t page_address = ALIGN_DOWN(faulted_address, 0x1000);
   ptrdiff_t area_offset = page_address - area.start;
-  dbg_puts(mem, "linear map; mapping %x to %x", page_address, lm_info.phys_start + area_offset);
+  dbg_puts(mem, "linear map; mapping %p to %p", page_address, lm_info.phys_start + area_offset);
   map_page(current_space, page_address, lm_info.phys_start + area_offset, page_flags(area.flags));
 }
 
@@ -644,7 +644,7 @@ static void page_fault_alloc(area_info &area, uintptr_t faulted_address)
 {
   uintptr_t page_address = ALIGN_DOWN(faulted_address, 0x1000);
   uintptr_t phys_block = (uintptr_t)alloc_page();
-  dbg_puts(mem, "alloc map; allocated %x and mapping it at %x", phys_block, page_address);
+  dbg_puts(mem, "alloc map; allocated %p and mapping it at %p", phys_block, page_address);
 
   uint16_t writable = area.flags & MEM_AREA_READWRITE;
   // Temporarily set the page to readwrite so we can null the page
@@ -668,7 +668,7 @@ static void page_fault_file(area_info &area, uintptr_t faulted_address)
   ptrdiff_t area_offset = page_address - area.start;
   uint32_t file_offset = area_offset + fm_info.offset;
 
-  dbg_puts(mem, "file map; allocated %x and mapping it at %x. fd is %d", phys_block, page_address, fm_info.fd);
+  dbg_puts(mem, "file map; allocated %p and mapping it at %p. fd is %d", phys_block, page_address, fm_info.fd);
 
 
   // TODO: syscall here is unnecessary; we're already in the kernel
@@ -724,7 +724,7 @@ extern "C" void int_page_fault(isr_registers *regs)
     if (regs->error_code & 0x3)
       cpl = "user";
 
-    dbg_puts(mem, "%s process tried to %s protected page at %x", cpl, access_type, faulted_address);
+    dbg_puts(mem, "%s process tried to %s protected page at %p", cpl, access_type, faulted_address);
     kill_caller();
     return;
   }
@@ -732,7 +732,7 @@ extern "C" void int_page_fault(isr_registers *regs)
   p2::optional<mem_area> area_handle = find_area(current_space, faulted_address);
 
   if (!area_handle) {
-    dbg_puts(mem, "process tried to access un-mapped area at %x in space %d (esp: %x, eip: %x)",
+    dbg_puts(mem, "process tried to access un-mapped area at %p in space %d (esp: %p, eip: %p)",
              faulted_address,
              current_space,
              regs->user_esp,
@@ -742,7 +742,7 @@ extern "C" void int_page_fault(isr_registers *regs)
     return;
   }
 
-  dbg_puts(mem, "page fault (error %x) at %x, area %d", regs->error_code, faulted_address, *area_handle);
+  dbg_puts(mem, "page fault (error %x) at %p, area %d", regs->error_code, faulted_address, *area_handle);
 
   area_info &area = spaces[current_space].areas[*area_handle];
   page_fault_handler handler = nullptr;
@@ -786,7 +786,7 @@ static void *alloc_page()
 {
   assert(user_space_allocator);
   void *mem = user_space_allocator->alloc_page();
-  dbg_puts(mem, "allocated 4k page at %x, pages left: %d", (uintptr_t)mem, user_space_allocator->free_pages());
+  dbg_puts(mem, "allocated 4k page at %p, pages left: %d", (uintptr_t)mem, user_space_allocator->free_pages());
   return mem;
 }
 
@@ -794,5 +794,5 @@ static void free_page(void *page)
 {
   assert(user_space_allocator);
   user_space_allocator->free_page(page);
-  dbg_puts(mem, "freed 4k page at %x, pages left: %d", (uintptr_t)page, user_space_allocator->free_pages());
+  dbg_puts(mem, "freed 4k page at %p, pages left: %d", (uintptr_t)page, user_space_allocator->free_pages());
 }

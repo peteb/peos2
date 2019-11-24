@@ -110,7 +110,7 @@ int elf_map_process(proc_handle pid, const char *filename)
   if (hdr.e_type != 2)
     panic("Only executable files supported");
 
-  dbg_puts(elf, "e_entry: %x", hdr.e_entry);
+  dbg_puts(elf, "e_entry: %p", hdr.e_entry);
 
   elf_program_header pht[32];
   assert(hdr.e_phnum < ARRAY_SIZE(pht));
@@ -130,7 +130,7 @@ int elf_map_process(proc_handle pid, const char *filename)
   }
 
   for (int i = 0; i < hdr.e_phnum; ++i) {
-    dbg_puts(elf, "type: %x ofs: %x virt: %x flags: %x",
+    dbg_puts(elf, "type: %x ofs: %x virt: %p flags: %x",
              pht[i].p_type,
              pht[i].p_offset,
              pht[i].p_vaddr,

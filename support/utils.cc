@@ -23,6 +23,20 @@ extern "C" void *memcpy(void *dest, const void *src, size_t length)
   return dest;
 }
 
+extern "C" int memcmp(const void *s1, const void *s2, size_t length)
+{
+  char *d1 = (char *)s1, *d2 = (char *)s2;
+
+  while (length-- > 0) {
+    if (*d1 != *d2)
+      return *d1 - *d2;
+    else
+      ++d1, ++d2;
+  }
+
+  return 0;
+}
+
 char *strchr(char *str, char c)
 {
   while (*str != c) {

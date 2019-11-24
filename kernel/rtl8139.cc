@@ -96,6 +96,8 @@ static volatile uint32_t tx_cur_send = 0;
 // Device driver state
 static p2::opt<proc_handle> process_opened;
 static p2::blocking_data_queue<10 * 1024> read_fifo;
+static uint8_t write_buffer[10 * 1024];
+static uint16_t write_pos = 0;
 
 // Declarations
 extern "C" void isr_rtl8139(isr_registers *);
@@ -319,10 +321,45 @@ static int read(int /*handle*/, char *data, int length)
 
 static int write(int /*handle*/, const char *data, int length)
 {
-  if (int ret = transmit(dev, data, length) < 0; ret < 0)
-    return ret;
+  assert(length > 0);
+  int bytes_writable = p2::min<int>(write_pos + length, sizeof(write_buffer)) - write_pos;
+  memcpy(write_buffer + write_pos, data, bytes_writable);
+  write_pos += bytes_writable;
 
-  return length;
+  dbg_puts(rtl8139, "wrote %d bytes to out buffer, pos=%d", bytes_writable, write_pos);
+
+  if (write_pos <= sizeof(uint16_t))
+    return bytes_writable;
+
+  // We *might* have a full packet, so try consuming. TODO: move this
+  // to interrupt? But which one?
+  uint8_t *tx_pos = write_buffer, *buf_end = write_buffer + write_pos;
+
+  while (tx_pos < buf_end) {
+    uint16_t packet_size = 0;
+    memcpy(&packet_size, tx_pos, sizeof(packet_size));
+
+    if (tx_pos + packet_size < buf_end) {
+      // We've received a full packet
+      tx_pos += sizeof(packet_size);
+      dbg_puts(rtl8139, "sending packet size=%d", packet_size);
+      transmit(dev, (char *)tx_pos, packet_size);
+      // TODO: check that we successfully tx'd the data
+      tx_pos += packet_size;
+    }
+    else {
+      // We're in the middle of a packet, but we can possibly compact
+      // the buffer and remove sent packets
+      // TODO: use memmove due to overlapping regions
+      dbg_puts(rtl8139, "incomplete packet");
+      size_t bytes_sent = tx_pos - write_buffer;
+      memcpy(write_buffer, tx_pos, write_pos - bytes_sent);
+      write_pos -= bytes_sent;
+      break;
+    }
+  }
+
+  return bytes_writable;
 }
 
 static int control(int /*handle*/, uint32_t function, uint32_t param1, uint32_t /*param2*/)

@@ -59,6 +59,7 @@ char *strncpy(char *dest, const char *src, size_t len);
 // Functions used by the compiler sometimes for optimization
 extern "C" void *memset(void *dest, int value, size_t len);
 extern "C" void *memcpy(void *dest, const void *src, size_t length);
+extern "C" int memcmp(const void *s1, const void *s2, size_t length);
 
 #if __STDC_HOSTED__ == 0
 // Placement new operator overloads

@@ -9,6 +9,8 @@ CXXFLAGS=-std=c++17 -m32 -masm=intel -nostdlib -ffreestanding $(OPT_FLAGS) -Wall
 LDFLAGS=-L../support  -lgcc
 BINARIES=shell shell_launcher tester ls nsa
 
+NSA_OBJECTS=net/main.o net/ethernet.o net/utils.o net/arp.o
+
 .PHONY : clean
 
 %.o : %.s
@@ -34,10 +36,11 @@ shell_launcher : shell_launcher.o
 tester : tester.o
 	$(CC) -o $@ $(CXXFLAGS) tester.o $(LDFLAGS) -lsupport
 
-nsa : net/main.o net/ethernet.o net/utils.o
-	$(CC) -o $@ $(CXXFLAGS) net/main.o net/ethernet.o net/utils.o $(LDFLAGS) -lsupport
+nsa : $(NSA_OBJECTS)
+	$(CC) -o $@ $(CXXFLAGS) $(NSA_OBJECTS) $(LDFLAGS) -lsupport
 
 ls : ls.o
 	$(CC) -o $@ $(CXXFLAGS) ls.o $(LDFLAGS) -lsupport
 
--include $(OBJDIR)/*.d
+-include *.d
+-include */*.d

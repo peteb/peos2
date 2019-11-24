@@ -16,6 +16,8 @@ namespace p2 {
   template<typename T, int _MaxLen>
   class queue {
   public:
+    // TODO: use placement new, right now we're doing a lot of initialization
+
     // Returns false if the queue is full
     bool push_back(const T &val)
     {
@@ -42,6 +44,21 @@ namespace p2 {
     bool full() const
     {
       return size() == _MaxLen;
+    }
+
+    int begin() const
+    {
+      return _read_idx;
+    }
+
+    int end() const
+    {
+      return _write_idx;
+    }
+
+    const T &operator [](int idx) const
+    {
+      return _items[idx % _MaxLen];
     }
 
   private:

@@ -51,6 +51,10 @@ case $1 in
     qemu-system-i386 -s ${EXTRA:-} -nographic -kernel kernel/vmpeoz $INIT_SHELL $FLAGS $UD_MONITOR
     ;;
 
+  terminal-net)
+    qemu-system-i386 -s ${EXTRA:-} -nographic -kernel kernel/vmpeoz -initrd init.tar -append init=/ramfs/bin/nsa $FLAGS $UD_MONITOR
+    ;;
+
   *)
     echo $"Usage: $0 {diskimage|debug|display|vnc|terminal|test-shell|test-cdrom}"
     exit 1

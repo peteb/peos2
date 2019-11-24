@@ -143,12 +143,15 @@ namespace p2 {
       number_traits traits = {-1, 10, ' '};
       fmt_scan();
 
-      if (!fmt_peek("lxd")) {
+      if (!fmt_peek("lxdp")) {
         traits.fill = fmt_consume();
         traits.width = fmt_expect_positive_number();
       }
 
-      switch (fmt_expect("lxd")) {
+      switch (fmt_expect("lxdp")) {
+      case 'p':
+        return {8, 16, '0'};
+
       case 'l':  // 64 bit TODO: remove this after updating all callsites
         fmt_expect("x");
         return {16, 16, '0'};

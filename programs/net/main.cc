@@ -5,6 +5,7 @@
 
 #include "ethernet.h"
 #include "utils.h"
+#include "arp.h"
 
 using namespace p2;
 
@@ -13,6 +14,9 @@ int main(int /*argc*/, char */*argv*/[])
   puts("Welcome to the network stack!");
 
   int fd = verify(syscall2(open, "/dev/eth0", 0));
+
+  uint8_t hwaddr[6];
+  arp_lookup_ipv4(fd, parse_ipaddr("10.0.2.2"), hwaddr);
   eth_run(fd);
   verify(syscall1(close, fd));
 
