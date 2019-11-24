@@ -218,7 +218,6 @@ switch_task_iret:
 .extern \handler
 .global \name
 \name:
-        cli
         // Push dummy code
         push $0x0
 
@@ -229,7 +228,6 @@ switch_task_iret:
 .extern \handler
 .global \name
 \name:
-        cli
         isr_routine_common \handler
 .endm
 

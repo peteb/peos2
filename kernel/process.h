@@ -23,9 +23,11 @@ void                 proc_enqueue(proc_handle pid);
 void                 proc_switch(proc_handle pid);
 void                 proc_suspend(proc_handle pid);
 void                 proc_resume(proc_handle pid);
-void                 proc_yield();
+int                  proc_yield();
 p2::opt<proc_handle> proc_current_pid();
 void                 proc_run();
+int                  proc_block(proc_handle pid);
+void                 proc_unblock_and_switch(proc_handle pid, int status);
 
 void                 proc_kill(proc_handle pid, uint32_t exit_status);
 mem_space            proc_get_space(proc_handle pid);

@@ -30,10 +30,9 @@ public:
 
       // Note: queue.push_back will switch to a waiting process
       // immediately
-      size_t bytes_pushed = _input_queue.push_back(&_line_buffer[0], _line_buffer.size(), [&]() {
-                              _line_buffer.clear();
-                            });
-
+      p2::string<200> buffer = _line_buffer;
+      _line_buffer.clear();
+      size_t bytes_pushed = _input_queue.push_back(buffer.c_str(), buffer.size());
       assert(bytes_pushed);
     }
     else if (keycode == '\b') {

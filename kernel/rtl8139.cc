@@ -170,8 +170,6 @@ void rtl8139_init()
 
 extern "C" void int_rtl8139(isr_registers */*regs*/)
 {
-  asm volatile("cli");  // To protect buffers and other state. TODO: do something better
-
   uint16_t status = inw(dev->iobase + ISR);
   outw(dev->iobase + ISR, status);
 
@@ -228,9 +226,8 @@ static void receive(pci_device *dev)
 
       if (process_opened) {
         // TODO: check that the buffer has space for both the header and the data first
-        // TODO: get rid of these crazy empty lambdas...!
-        read_fifo.push_back((const char *)&data_size, 2, [](){});
-        read_fifo.push_back((const char *)(rx_buffer + rx_pos), data_size, [](){});
+        read_fifo.push_back((const char *)&data_size, 2);
+        read_fifo.push_back((const char *)(rx_buffer + rx_pos), data_size);
       }
     }
 

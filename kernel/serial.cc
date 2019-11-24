@@ -73,7 +73,6 @@ void com_setup_rx()
 extern "C" void int_com1(volatile isr_registers *)
 {
   // TODO: check which com port actually triggered this IRQ
-
   while (free_to_receive()) {
     char c = (char)inb(COM1_PORT_BASE);
 

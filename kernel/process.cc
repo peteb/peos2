@@ -144,7 +144,6 @@ void proc_run()
 
 extern "C" void int_timer(isr_registers *)
 {
-  asm volatile("cli");
   irq_eoi(IRQ_SYSTEM_TIMER);
   proc_yield();
 }
@@ -172,10 +171,6 @@ static void switch_process(proc_handle pid)
 {
   dbg_puts(proc, "switching to pid %d", pid);
 
-  // Receiving an interrupt between updating TSS.ESP0 and IRET is not
-  // something we want, so disable interrupts.
-  asm volatile("cli");
-
   process &proc = processes[pid];
 
   // Update last_tick so the scheduler will work correctly
@@ -190,7 +185,7 @@ static void switch_process(proc_handle pid)
   proc.activate(previous_proc);
 }
 
-void proc_yield()
+int proc_yield()
 {
   // TODO: pull this tick count out into another kind of tick
   tick_count++;
@@ -200,6 +195,22 @@ void proc_yield()
     processes[current_pid].last_tick = tick_count;
 
   proc_switch(decide_next_process());
+  return processes[current_pid].unblock_status;
+}
+
+int proc_block(proc_handle pid)
+{
+  proc_suspend(pid);
+  return proc_yield();
+}
+
+void proc_unblock_and_switch(proc_handle pid, int status)
+{
+  if (processes.valid(pid)) {
+    processes[pid].unblock_status = status;
+    proc_resume(pid);
+    proc_switch(pid);
+  }
 }
 
 void proc_suspend(proc_handle pid)

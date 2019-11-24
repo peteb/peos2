@@ -10,7 +10,7 @@
 #include <stddef.h>
 
 #include "process.h"
-
+#include "locks.h"
 #include "support/queue.h"
 
 namespace p2 {
@@ -25,14 +25,12 @@ namespace p2 {
     //
     // Returns how many bytes were pushed
     //
-    template<typename _CleanupFunT>
-    size_t push_back(const char *data, size_t length, _CleanupFunT cleanup_fun)
+    size_t push_back(const char *data, size_t length)
     {
-      asm volatile("cli");
       size_t bytes_written = 0;
 
       for (; bytes_written < length; ++bytes_written) {
-        // TODO: more efficient block bushing
+        // TODO: more efficient block pushing
         if (!_queue.push_back(data[bytes_written])) {
           break;
         }
@@ -43,46 +41,34 @@ namespace p2 {
         return 0;
       }
 
-      if (_process_waiting) {
-        proc_resume(_waiting_process);
-        _process_waiting = false;
-        cleanup_fun();
-
-        // TODO: can we actually do the process switch here? Wouldn't
-        // it be better to let the interrupt handler continue its work
-        // immediately and then switch task before the ISR executes iret?
-        proc_switch(_waiting_process);
-      }
-
+      // As a single consumer might not read everything we've written,
+      // we're notifying all of them
+      _pushed_data_signal.notify_all();
       return bytes_written;
     }
 
-    size_t pop_front(char *destination, size_t max_size)
+    int pop_front(char *destination, int max_size)
     {
       if (max_size == 0)
         return 0;
 
       int bytes_read = 0;
 
+      // We don't need a mutex around the state because mutual
+      // exclusion is guaranteed by the IF bit in EFLAGS: no
+      // concurrent interrupts will be invoked. For now.
+
       while (true) {
-        asm volatile("cli");
-
         if (_queue.size() == 0) {
-          // We need to block!
-          // TODO: check that there's none already waiting
-          proc_suspend(*proc_current_pid());
-          _waiting_process = *proc_current_pid();
-          _process_waiting = true;
-
-          proc_yield();
-          // When the process is unsuspended, execution will continue here
+          if (int ret = _pushed_data_signal.wait(); ret < 0)
+            return ret;
         }
 
-        asm volatile("cli");
-
-        // Even though we've been woken up, the input_queue might've been
-        // emptied since then. That's what we've got the outer loop for.
+        // Even though we've been woken up, the input queue might've
+        // been emptied since then. That's what we've got the outer
+        // loop for.
         while (_queue.size() > 0 && max_size > 0) {
+          // TODO: block copy
           destination[bytes_read++] = _queue.pop_front();
           --max_size;
         }
@@ -102,8 +88,7 @@ namespace p2 {
 
   private:
     p2::queue<char, _MaxLen> _queue;
-    proc_handle _waiting_process;
-    bool _process_waiting = false;
+    condition_variable<16> _pushed_data_signal;
   };
 
 }

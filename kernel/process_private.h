@@ -122,7 +122,7 @@ public:
 
   bool        suspended = false;
   bool        terminating = false;
-  int         exit_status;
+  int         exit_status = 0, unblock_status = 0;
 
   proc_handle prev_process;
   proc_handle next_process;

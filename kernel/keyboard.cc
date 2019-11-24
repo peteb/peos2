@@ -102,6 +102,7 @@ static scancode_mapping scancode_set1_map[0xFF] =
 
 static bool shift_depressed = false, ctrl_depressed = false;
 
+
 extern "C" void int_kbd(isr_registers *regs)
 {
   bool gray_keys = false;
@@ -161,7 +162,6 @@ extern "C" void int_kbd(isr_registers *regs)
       }
 
       if (key_code) {
-        asm volatile("cli");
         irq_eoi(IRQ_KEYBOARD);
         term_keypress(key_code);  // Can take a while to return if a context switch happens
         return;
