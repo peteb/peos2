@@ -93,9 +93,9 @@ void arp_recv(int eth_fd, eth_frame */*frame*/, const char *data, size_t length)
   }
 }
 
-void arp_tick()
+void arp_tick(int ticks)
 {
-  log(arp, "checking for timed out actions");
+  log(arp, "checking for timed out actions, ticks=%d", ticks);
 }
 
 int arp_lookup_ipv4(int fd, uint32_t ipaddr, uint8_t *hwaddr)

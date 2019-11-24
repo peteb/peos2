@@ -29,6 +29,7 @@
 #define SYSCALL_NUM_SHUTDOWN    206
 #define SYSCALL_NUM_WAIT        207
 #define SYSCALL_NUM_SET_TIMEOUT 208
+#define SYSCALL_NUM_GET_TIMEOUT 209
 
 #define SYSCALL_NUM_MMAP        300
 
@@ -81,6 +82,7 @@ SYSCALL_DEF0(fork,        SYSCALL_NUM_FORK);
 SYSCALL_DEF0(shutdown,    SYSCALL_NUM_SHUTDOWN);
 SYSCALL_DEF1(wait,        SYSCALL_NUM_WAIT, int);
 SYSCALL_DEF1(set_timeout, SYSCALL_NUM_SET_TIMEOUT, int);
+SYSCALL_DEF0(get_timeout, SYSCALL_NUM_GET_TIMEOUT);
 
 //
 // exec - rewrites the current process so that it'll run `filename`

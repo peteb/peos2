@@ -31,6 +31,7 @@ static int         syscall_fork(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t
 static int         syscall_shutdown();
 static int         syscall_wait(int pid);
 static int         syscall_set_timeout(int timeout);
+static int         syscall_get_timeout();
 
 static proc_handle decide_next_process();
 static void        destroy_process(proc_handle pid);
@@ -62,6 +63,7 @@ void proc_init()
   syscall_register(SYSCALL_NUM_SHUTDOWN,    (syscall_fun)syscall_shutdown);
   syscall_register(SYSCALL_NUM_WAIT,        (syscall_fun)syscall_wait);
   syscall_register(SYSCALL_NUM_SET_TIMEOUT, (syscall_fun)syscall_set_timeout);
+  syscall_register(SYSCALL_NUM_GET_TIMEOUT, (syscall_fun)syscall_get_timeout);
 
   // Timer for preemptive task switching
   pit_set_phase(10);  // 9 is high freq, 10 is lower
@@ -487,6 +489,15 @@ static int syscall_set_timeout(int timeout)
 {
   if (auto pid = proc_current_pid()) {
     processes[*pid].suspension_timeout = timeout;
+  }
+
+  return 0;
+}
+
+static int syscall_get_timeout()
+{
+  if (auto pid = proc_current_pid()) {
+    return processes[*pid].suspension_timeout;
   }
 
   return 0;

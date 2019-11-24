@@ -23,13 +23,17 @@ void eth_run(int fd)
 
   char pdu[1500];
   uint16_t packet_size = 0;
+  const int timeout_duration = 20;
 
   while (true) {
-    verify(syscall1(set_timeout, 20));
+    verify(syscall1(set_timeout, timeout_duration));
     int ret = read(fd, (char *)&packet_size, 2);
 
+    // Not a very accurate way to aggregate time, but should be good enough for now
+    int timeout_consumed = timeout_duration - syscall0(get_timeout);
+    arp_tick(timeout_consumed);
+
     if (ret == ETIMEOUT) {
-      arp_tick();
       continue;
     }
     else if (ret < 0) {
