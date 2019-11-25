@@ -45,6 +45,12 @@ namespace p2 {
     non_copyable(const non_copyable &) = delete;
     non_copyable &operator =(const non_copyable &) = delete;
   };
+
+  template<typename T>
+  [[nodiscard]] constexpr T *launder(T* t) noexcept
+  {
+    return __builtin_launder(t);
+  }
 }
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))

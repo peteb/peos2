@@ -222,12 +222,12 @@ namespace p2 {
 
     node *element(_IndexT idx)
     {
-      return (node *)_element_data + idx;
+      return p2::launder(reinterpret_cast<node *>(_element_data)) + idx;
     }
 
     const node *element(_IndexT idx) const
     {
-      return (node *)_element_data + idx;
+      return p2::launder(reinterpret_cast<const node *>(_element_data)) + idx;
     }
 
     void free_list_prepend(_IndexT idx)
