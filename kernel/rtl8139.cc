@@ -218,7 +218,7 @@ static void receive(pci_device *dev)
       // TODO: reset?
     }
     else {
-      uint16_t data_size = packet_size - 2 - 4;
+      uint16_t data_size = packet_size - 2 - 4;  // 2 = header size, 4 = trailing CRC
       dbg_puts(rtl8139, "rx valid packet rx_pos=%d,size=%d,datasz=%d",
                rx_pos,
                packet_size,

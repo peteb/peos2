@@ -14,6 +14,9 @@
 #define PROTO_TCP    6
 #define PROTO_UDP   17
 
+#define FLAGS_DF  0x01
+#define FLAGS_MF  0x02
+
 struct header {
   uint8_t  ihl:4;
   uint8_t  version:4;
@@ -104,10 +107,9 @@ void ipv4_recv(int interface, eth_frame *frame, const char *data, size_t length)
 
   const char *payload = data + 4 * hdr.ihl;
   size_t payload_size = length - 4 * hdr.ihl;
-  size_t total_data_len = hdr.total_len - hdr.ihl * 4;
 
   if (hdr.protocol == PROTO_TCP) {
-    if (total_data_len == payload_size) {
+    if (!(hdr.flags & FLAGS_MF) && hdr.frag_ofs == 0) {
       // All data was contained in this packet, so we can just forward it
       ipv4_dgram info;
       info.ttl = hdr.ttl;
