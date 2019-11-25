@@ -6,7 +6,7 @@
 #include "arp.h"
 #include "ethernet.h"
 #include "utils.h"
-#include "arp_probe.h"
+#include "retryable.h"
 
 struct header {
   uint16_t htype;
@@ -25,15 +25,28 @@ struct cache_entry {
 };
 
 // Declarations
-static void add_cache_entry(uint32_t ipaddr, const uint8_t *hwaddr);
+typedef retryable<probe_result> probe;
+
+static void               add_cache_entry(uint32_t ipaddr, const uint8_t *hwaddr);
 static const cache_entry *fetch_cache_entry(uint32_t ipaddr);
-static void send_ipv4_request(int fd, uint32_t ipaddr);
-static probe_ipv4 *fetch_ipv4_probe(uint32_t ipaddr);
+static void               send_ipv4_request(int fd, uint32_t ipaddr);
+static size_t             find_ipv4_probe(uint32_t ipaddr);
 
 // Global state
 static p2::queue<cache_entry, 64> ipv4_entries;
 // TODO: replace this cache with something that doesn't require brute force search
-static p2::pool<probe_ipv4, 64> ipv4_probes;  // TODO: replace with iterable hash?
+
+
+struct ipaddr_probe {
+  ipaddr_probe(uint32_t ipaddr, probe probe_)
+    : key(ipaddr), value(probe_) {}
+
+  uint32_t key;
+  probe value;
+};
+
+
+static p2::pool<ipaddr_probe, 64> ipv4_probes;  // TODO: replace with iterable hash?
 
 // Definitions
 void arp_recv(int eth_fd, eth_frame */*frame*/, const char *data, size_t length)
@@ -87,8 +100,12 @@ void arp_recv(int eth_fd, eth_frame */*frame*/, const char *data, size_t length)
         hwaddr_str(hdr.tha).c_str(),
         ipaddr_str(tpa).c_str());
 
-    // TODO: populate our cache with this mapping
     add_cache_entry(spa, hdr.sha);
+
+    if (size_t probe_idx = find_ipv4_probe(spa); probe_idx != ipv4_probes.end()) {
+      ipv4_probes[probe_idx].value.notify_all(PROBE_REPLY);
+      ipv4_probes.erase(probe_idx);
+    }
   }
   else {
     log(arp, "invalid oper=%04x", oper);
@@ -102,30 +119,45 @@ void arp_tick(int ticks)
     if (!ipv4_probes.valid(i))
       continue;
 
-    if (!ipv4_probes[i].tick(ticks))
+    if (!ipv4_probes[i].value.tick(ticks)) {
+      ipv4_probes[i].value.notify_all(PROBE_TIMEOUT);
       ipv4_probes.erase(i);
+    }
   }
 }
 
-int arp_lookup_ipv4(int fd, uint32_t ipaddr)
+int arp_cache_lookup_ipv4(int fd, uint32_t ipaddr, uint8_t *hwaddr)
+{
+  (void)fd;
+
+  if (const cache_entry *entry = fetch_cache_entry(ipaddr)) {
+    memcpy(hwaddr, entry->hwaddr, 6);
+    return 1;
+  }
+
+  return 0;
+}
+
+int arp_request_lookup_ipv4(int fd, uint32_t ipaddr, probe::await_fun callback)
 {
   // TODO: cache per fd
-  //if (const cache_entry *entry = fetch_cache_entry(ipaddr)) {
-    //memcpy(hwaddr, entry->hwaddr, 6);
-    // call lambda
-  //  return 1;
-  //}
+  if (fetch_cache_entry(ipaddr)) {
+    callback(PROBE_REPLY);
+    return 1;
+  }
 
-  if (probe_ipv4 *probe = fetch_ipv4_probe(ipaddr)) {
-    // TODO: attach callback
-    probe->reset();
+  if (size_t probe_idx = find_ipv4_probe(ipaddr); probe_idx != ipv4_probes.end()) {
+    ipv4_probes[probe_idx].value.reset();
+    ipv4_probes[probe_idx].value.await(callback);
   }
   else {
-    ipv4_probes.emplace_back(fd, ipaddr);
+    // TODO: get rid of all copies
+    probe::op_fun op = [=]() {send_ipv4_request(fd, ipaddr); };
+    int idx = ipv4_probes.emplace_back(ipaddr, op);
+    ipv4_probes[idx].value.await(callback);
+    ipv4_probes[idx].value.tick(0);
   }
-  // TODO: check if we already have an outstanding request for this
-  // address and restart it
-  //
+
   return 0;
 }
 
@@ -181,15 +213,15 @@ static inline const cache_entry *fetch_cache_entry(uint32_t ipaddr)
   return latest_entry;
 }
 
-static probe_ipv4 *fetch_ipv4_probe(uint32_t ipaddr)
+static size_t find_ipv4_probe(uint32_t ipaddr)
 {
   for (int i = 0; i < ipv4_probes.watermark(); ++i) {
     if (!ipv4_probes.valid(i))
       continue;
 
-    if (ipv4_probes[i].probingFor(ipaddr))
-      return &ipv4_probes[i];
+    if (ipv4_probes[i].key == ipaddr)
+      return i;
   }
 
-  return nullptr;
+  return ipv4_probes.end();
 }

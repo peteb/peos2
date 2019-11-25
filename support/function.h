@@ -27,26 +27,24 @@ namespace p2 {
       return *this;
     }
 
-    _RetVal operator()(_Args&&... args) {
+    _RetVal operator()(_Args... args) {
       callable *target = p2::launder(reinterpret_cast<callable *>(_storage));
-      return target->invoke(p2::forward<_Args>(args)...);
+      return target->invoke(args...);
     }
 
   private:
     class callable {
     public:
-      virtual ~callable() = default;
-      virtual _RetVal invoke(_Args&&...) = 0;
+      virtual _RetVal invoke(_Args...) {}
     };
 
     template<typename T>
     class callable_impl : public callable {
     public:
       callable_impl(const T &lambda) : _lambda(lambda) {}
-      ~callable_impl() override = default;
 
-      _RetVal invoke(_Args&&... args) override {
-        return _lambda(p2::forward<_Args>(args)...);
+      _RetVal invoke(_Args... args) override {
+        return _lambda(args...);
       }
 
     private:
