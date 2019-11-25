@@ -11,8 +11,8 @@
 #define ET_FLOW 0x8808
 
 struct eth_frame {
-  uint8_t *dest;
-  uint8_t *src;
+  const uint8_t *dest;
+  const uint8_t *src;
   uint16_t type;
 };
 

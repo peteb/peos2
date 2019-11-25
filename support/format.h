@@ -58,6 +58,13 @@ namespace p2 {
       return *this;
     }
 
+    template<int _StrSz>
+    format &operator %(const p2::string<_StrSz> &str) {
+      expect_string();
+      _storage_ref.append(str.c_str());
+      return *this;
+    }
+
     format &operator %(uint64_t val) {
       number_traits traits = expect_number();
       _storage_ref.append(val, traits.width, traits.radix, traits.fill);

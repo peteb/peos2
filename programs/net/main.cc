@@ -6,6 +6,7 @@
 #include "ethernet.h"
 #include "utils.h"
 #include "arp.h"
+#include "ipv4.h"
 
 using namespace p2;
 
@@ -21,21 +22,10 @@ int main(int argc, char *argv[])
 
   int fd = verify(syscall2(open, "/dev/eth0", 0));
 
-  const char *target = "10.0.2.2";
-
-  retryable<probe_result>::await_fun recvd_addr = [=](probe_result res) {
-    if (res == PROBE_TIMEOUT) {
-      log(eth, "%s: lookup timed out", target);
-    }
-    else {
-      uint8_t hwaddr[6];
-      if (arp_cache_lookup_ipv4(fd, parse_ipaddr(target), hwaddr)) {
-        log(eth, "%s: lookup returned %s", target, hwaddr_str(hwaddr).c_str());
-      }
-    }
-  };
-
-  arp_request_lookup_ipv4(fd, parse_ipaddr(target), recvd_addr);
+  ipv4_configure(fd,
+                 parse_ipaddr("10.0.2.15"),
+                 parse_ipaddr("255.255.255.0"),
+                 parse_ipaddr("10.0.2.2"));
 
   eth_run(fd);
   verify(syscall1(close, fd));

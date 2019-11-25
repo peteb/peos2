@@ -6,6 +6,7 @@
 #include "utils.h"
 #include "ethernet.h"
 #include "arp.h"
+#include "ipv4.h"
 
 struct header {
   uint8_t  mac_dest[6];
@@ -62,6 +63,7 @@ void eth_run(int fd)
     switch (ether_type) {
     case ET_IPV4:
       // TODO: handle ipv4
+      ipv4_recv(fd, &frame, pdu, pdu_size);
       break;
 
     case ET_IPV6:

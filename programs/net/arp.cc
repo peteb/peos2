@@ -7,6 +7,7 @@
 #include "ethernet.h"
 #include "utils.h"
 #include "retryable.h"
+#include "ipv4.h"
 
 struct header {
   uint16_t htype;
@@ -30,6 +31,7 @@ typedef retryable<probe_result> probe;
 static void               add_cache_entry(uint32_t ipaddr, const uint8_t *hwaddr);
 static const cache_entry *fetch_cache_entry(uint32_t ipaddr);
 static void               send_ipv4_request(int fd, uint32_t ipaddr);
+static void               send_ipv4_reply(int fd, uint32_t ipaddr, const uint8_t *hwaddr);
 static size_t             find_ipv4_probe(uint32_t ipaddr);
 
 // Global state
@@ -90,7 +92,11 @@ void arp_recv(int eth_fd, eth_frame */*frame*/, const char *data, size_t length)
         hwaddr_str(hdr.tha).c_str(),
         ipaddr_str(tpa).c_str());
 
-    // TODO: ask the IP stack if this IP address is us. If it is, then reply
+    uint32_t local_addr;
+
+    if (ipv4_local_address(&local_addr) >= 0) {
+      send_ipv4_reply(eth_fd, spa, hdr.tha);
+    }
   }
   else if (oper == 2) {
     // Reply
@@ -161,29 +167,45 @@ int arp_request_lookup_ipv4(int fd, uint32_t ipaddr, probe::await_fun callback)
   return 0;
 }
 
-static void send_ipv4_request(int fd, uint32_t ipaddr)
+static int send_arp(int fd, int op, uint32_t tpa, const uint8_t *tha, const uint8_t *eth_hwaddr_dest)
 {
+  uint32_t local_ip_addr = 0;
+
+  if (ipv4_local_address(&local_ip_addr) < 0)
+    local_ip_addr = 0;
+
   header hdr;
   hdr.htype = htons(1);
   hdr.ptype = htons(ET_IPV4);
   hdr.hlen = 6;
   hdr.plen = 4;
-  hdr.oper = htons(1);
+  hdr.oper = htons(op);
   eth_hwaddr(fd, hdr.sha);
-  hdr.spa = 0;  // TODO: fill in IP address?
-  memset(hdr.tha, 0, sizeof(hdr.tha));
-  hdr.tpa = htonl(ipaddr);
-
-  uint8_t bdxaddr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  hdr.spa = htonl(local_ip_addr);
+  memcpy(hdr.tha, tha, 6);
+  hdr.tpa = htonl(tpa);
 
   eth_frame frame = {
-    .dest = bdxaddr,
+    .dest = eth_hwaddr_dest,
     .src = hdr.sha,
     .type = ET_ARP
   };
 
-  int ret = eth_send(fd, &frame, (char *)&hdr, sizeof(hdr));
-  assert(ret >= 0);
+  return eth_send(fd, &frame, (char *)&hdr, sizeof(hdr));
+}
+
+// send_ipv4_request - broadcasts a request for @ipaddr
+static void send_ipv4_request(int fd, uint32_t ipaddr)
+{
+  uint8_t tha[6] = {0, 0, 0, 0, 0, 0};
+  uint8_t dest_hwaddr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  send_arp(fd, 1, ipaddr, tha, dest_hwaddr);
+}
+
+// send_ipv4_reply - sends our mapping to @ipaddr (@hwaddr)
+static void send_ipv4_reply(int fd, uint32_t ipaddr, const uint8_t *hwaddr)
+{
+  send_arp(fd, 1, ipaddr, hwaddr, hwaddr);
 }
 
 static void add_cache_entry(uint32_t ipaddr, const uint8_t *hwaddr)
