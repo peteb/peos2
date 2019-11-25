@@ -1,10 +1,12 @@
 #include <support/utils.h>
 #include <support/assert.h>
 #include <support/queue.h>
+#include <support/pool.h>
 
 #include "arp.h"
 #include "ethernet.h"
 #include "utils.h"
+#include "arp_probe.h"
 
 struct header {
   uint16_t htype;
@@ -26,11 +28,12 @@ struct cache_entry {
 static void add_cache_entry(uint32_t ipaddr, const uint8_t *hwaddr);
 static const cache_entry *fetch_cache_entry(uint32_t ipaddr);
 static void send_ipv4_request(int fd, uint32_t ipaddr);
-
+static probe_ipv4 *fetch_ipv4_probe(uint32_t ipaddr);
 
 // Global state
 static p2::queue<cache_entry, 64> ipv4_entries;
 // TODO: replace this cache with something that doesn't require brute force search
+static p2::pool<probe_ipv4, 64> ipv4_probes;  // TODO: replace with iterable hash?
 
 // Definitions
 void arp_recv(int eth_fd, eth_frame */*frame*/, const char *data, size_t length)
@@ -95,20 +98,34 @@ void arp_recv(int eth_fd, eth_frame */*frame*/, const char *data, size_t length)
 
 void arp_tick(int ticks)
 {
-  log(arp, "checking for timed out actions, ticks=%d", ticks);
+  for (size_t i = 0; i < ipv4_probes.watermark(); ++i) {
+    if (!ipv4_probes.valid(i))
+      continue;
+
+    if (!ipv4_probes[i].tick(ticks))
+      ipv4_probes.erase(i);
+  }
 }
 
-int arp_lookup_ipv4(int fd, uint32_t ipaddr, uint8_t *hwaddr)
+int arp_lookup_ipv4(int fd, uint32_t ipaddr)
 {
   // TODO: cache per fd
-  if (const cache_entry *entry = fetch_cache_entry(ipaddr)) {
-    memcpy(hwaddr, entry->hwaddr, 6);
-    return 1;
-  }
+  //if (const cache_entry *entry = fetch_cache_entry(ipaddr)) {
+    //memcpy(hwaddr, entry->hwaddr, 6);
+    // call lambda
+  //  return 1;
+  //}
 
+  if (probe_ipv4 *probe = fetch_ipv4_probe(ipaddr)) {
+    // TODO: attach callback
+    probe->reset();
+  }
+  else {
+    ipv4_probes.emplace_back(fd, ipaddr);
+  }
   // TODO: check if we already have an outstanding request for this
   // address and restart it
-  send_ipv4_request(fd, ipaddr);
+  //
   return 0;
 }
 
@@ -150,7 +167,7 @@ static void add_cache_entry(uint32_t ipaddr, const uint8_t *hwaddr)
   ipv4_entries.push_back(entry);
 }
 
-static const cache_entry *fetch_cache_entry(uint32_t ipaddr)
+static inline const cache_entry *fetch_cache_entry(uint32_t ipaddr)
 {
   const cache_entry *latest_entry = nullptr;
 
@@ -162,4 +179,17 @@ static const cache_entry *fetch_cache_entry(uint32_t ipaddr)
   }
 
   return latest_entry;
+}
+
+static probe_ipv4 *fetch_ipv4_probe(uint32_t ipaddr)
+{
+  for (int i = 0; i < ipv4_probes.watermark(); ++i) {
+    if (!ipv4_probes.valid(i))
+      continue;
+
+    if (ipv4_probes[i].probingFor(ipaddr))
+      return &ipv4_probes[i];
+  }
+
+  return nullptr;
 }
