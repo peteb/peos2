@@ -2,27 +2,16 @@
 
 #include "tcp.h"
 #include "utils.h"
+#include "tcp_connection_table.h"
 
-#define FIN 0x0001
-#define SYN 0x0002
-#define RST 0x0004
-#define PSH 0x0008
-#define ACK 0x0010
-#define URG 0x0020
-#define ECE 0x0040
-#define CWR 0x0080
-#define NS  0x0100
 
-struct header {
-  uint16_t src_port;
-  uint16_t dest_port;
-  uint32_t seq_nbr;
-  uint32_t ack_nbr;
-  uint16_t flags_hdrsz;
-  uint16_t wndsz;
-  uint16_t checksum;
-  uint16_t urgptr;
-} __attribute__((packed));
+// State
+static tcp_connection_table connections;
+
+void tcp_init()
+{
+  connections.create_connection({0, 0}, {0, 123}, tcp_connection_state::LISTEN);
+}
 
 void tcp_recv(int interface, eth_frame *frame, ipv4_dgram *datagram, const char *data, size_t length)
 {
@@ -34,12 +23,12 @@ void tcp_recv(int interface, eth_frame *frame, ipv4_dgram *datagram, const char 
 
   log(tcp, "rx datagram");
 
-  if (length < sizeof(header)) {
+  if (length < sizeof(tcp_header)) {
     log(tcp, "length less than header, dropping");
     return;
   }
 
-  header hdr;
+  tcp_header hdr;
   memcpy(&hdr, data, sizeof(hdr));
   hdr.dest_port = ntohs(hdr.dest_port);
   hdr.src_port = ntohs(hdr.src_port);
@@ -55,4 +44,18 @@ void tcp_recv(int interface, eth_frame *frame, ipv4_dgram *datagram, const char 
 
   log(tcp, "dest_port=%d,src_port=%d,seq_nbr=%d,ack_nbr=%d,wndsz=%d,flags=%x,hdrsz=%x",
       hdr.dest_port, hdr.src_port, hdr.seq_nbr, hdr.ack_nbr, hdr.wndsz, flags, hdrsz);
+
+  tcp_endpoint remote{datagram->src_addr, hdr.src_port};
+  tcp_endpoint local{datagram->dest_addr, hdr.dest_port};
+
+  if (auto conn = connections.find_best_match(remote, local); conn != connections.end()) {
+    tcp_segment segment;
+    segment.frame = frame;
+    segment.datagram = datagram;
+    segment.tcphdr = &hdr;
+    connections[conn].recv(segment);
+  }
+  else {
+    log(tcp, "no connections matched");
+  }
 }

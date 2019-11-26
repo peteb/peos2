@@ -7,6 +7,7 @@
 #include "utils.h"
 #include "arp.h"
 #include "ipv4.h"
+#include "tcp.h"
 
 using namespace p2;
 
@@ -26,6 +27,7 @@ int main(int argc, char *argv[])
                  parse_ipaddr("10.0.2.15"),
                  parse_ipaddr("255.255.255.0"),
                  parse_ipaddr("10.0.2.2"));
+  tcp_init();
 
   eth_run(fd);
   verify(syscall1(close, fd));

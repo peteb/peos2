@@ -96,7 +96,8 @@ void case_report(bool succeeded, const char *exp) {
     current_case = nullptr;
   }
   else {
-    red_header("[       FAIL ]") << "  " << current_case << ": " << exp << std::endl;
+    red_header("[       FAIL ]") << "  " << current_case << std::endl;
+    std::cout << exp << std::endl;
     abort();
   }
 }

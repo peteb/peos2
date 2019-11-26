@@ -45,7 +45,7 @@ template<typename A, typename B>
 void assert_eq(const A &value, const B &expected, const char *file, int line) {
   if (!(value == expected)) {
     std::stringstream ss;
-    ss << "[" << file << ":" << line << "] expected " << value << " to equal " << expected;
+    ss << file << ":" << line << ": expected " << value << " to equal " << expected;
     case_report(false, ss.str().c_str());
   }
 }
