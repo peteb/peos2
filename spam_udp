@@ -1,0 +1,8 @@
+#!/bin/bash
+
+dd if=/dev/random of=crapfile count=10
+
+while :
+do
+cat crapfile > /dev/udp/localhost/8884
+done

@@ -38,7 +38,6 @@ namespace p2 {
       }
 
       if (bytes_written == 0) {
-        // TODO: restore interrupt bit?
         return 0;
       }
 

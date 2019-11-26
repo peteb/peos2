@@ -27,7 +27,6 @@ static void *alloc_page();
 static void free_page(void *page);
 static void map_page(mem_space space, uint32_t virt, uint32_t phys, uint16_t flags);
 static int syscall_mmap(void *start, void *end, int fd, uint32_t offset, uint8_t flags);
-static p2::opt<mem_area> find_area(mem_space space_handle, uintptr_t address);
 static page_table_entry *find_pte(const space_info &space, uintptr_t virtual_address);
 static uintptr_t pte_frame(const page_table_entry *pte);
 static uint16_t page_flags(uint16_t mem_flags);
@@ -360,7 +359,7 @@ void mem_write_page(mem_space space_handle, uintptr_t virt_addr, const void *dat
   assert(!(virt_addr & 0xFFF));
 
   // We can only write to ALLOC areas for now
-  auto area_handle = find_area(space_handle, (uintptr_t)virt_addr);
+  auto area_handle = mem_find_area(space_handle, (uintptr_t)virt_addr);
   assert(area_handle && "address to map must be in a valid area");
 
   space_info &dest_space = spaces[space_handle];
@@ -393,8 +392,8 @@ int mem_map_portal(uintptr_t virt_address, size_t length, mem_space dest_space, 
 {
   space_info &dest_space_ = spaces[dest_space];
 
-  auto start_area = find_area(dest_space, dest_virt_address);
-  auto end_area = find_area(dest_space, dest_virt_address + length - 1);
+  auto start_area = mem_find_area(dest_space, dest_virt_address);
+  auto end_area = mem_find_area(dest_space, dest_virt_address + length - 1);
 
   assert(start_area && "starting address must be covered by an area in dest space to create a portal");
   assert(end_area && "ending address must be covered by an area in dest space to create a portal");
@@ -605,7 +604,7 @@ mem_area mem_map_fd(mem_space space_handle,
   return space.areas.push_back({start, end, AREA_FILE, flags, map_handle});
 }
 
-static p2::opt<mem_area> find_area(mem_space space_handle, uintptr_t address)
+p2::opt<mem_area> mem_find_area(mem_space space_handle, uintptr_t address)
 {
   space_info &space = spaces[space_handle];
 
@@ -623,7 +622,7 @@ static p2::opt<mem_area> find_area(mem_space space_handle, uintptr_t address)
 
 p2::opt<uint16_t> mem_area_flags(mem_space space_handle, const void *address)
 {
-  if (auto area_handle = find_area(space_handle, (uintptr_t)address))
+  if (auto area_handle = mem_find_area(space_handle, (uintptr_t)address))
     return spaces[space_handle].areas[*area_handle].flags;
   else
     return {};
@@ -729,7 +728,7 @@ extern "C" void int_page_fault(isr_registers *regs)
     return;
   }
 
-  p2::optional<mem_area> area_handle = find_area(current_space, faulted_address);
+  p2::optional<mem_area> area_handle = mem_find_area(current_space, faulted_address);
 
   if (!area_handle) {
     dbg_puts(mem, "process tried to access un-mapped area at %p in space %d (esp: %p, eip: %p)",

@@ -287,8 +287,7 @@ static int syscall_write(int fd, const char *data, int length)
 
 static int syscall_read(int fd, char *data, int length)
 {
-  verify_ptr(vfs, data);
-  // TODO: verify that the range data, data + length is valid
+  verify_buf(vfs, data, length);
 
   p2::res<size_t> read_result = vfs_read(proc_get_file_context(*proc_current_pid()), fd, data, length);
 

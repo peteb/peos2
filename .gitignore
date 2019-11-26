@@ -7,3 +7,4 @@ unittest
 *.d
 peos2.img
 *.pcap
+crapfile

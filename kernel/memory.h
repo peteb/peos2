@@ -78,5 +78,6 @@ int mem_map_portal(uintptr_t virt_address,
 void mem_unmap_portal(uintptr_t virt_address, size_t length);
 
 p2::opt<uint16_t> mem_area_flags(mem_space space, const void *address);
+p2::opt<mem_area> mem_find_area(mem_space space_handle, uintptr_t address);
 
 #endif // !PEOS2_MEMORY_H

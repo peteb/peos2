@@ -213,9 +213,13 @@ static void receive(pci_device *dev)
     uint16_t packet_size = packet_header >> 16;
     rx_pos += 4;  // Consume header
 
-    if (!(packet_status & RXS_ROK)) {
-      dbg_puts(rtl8139, "rx invalid packet, rx_pos=%d,status=%x", rx_pos, packet_status);
-      // TODO: reset?
+    // TODO: collect statistics
+
+    if (!(packet_status & RXS_ROK) || packet_size > 1518) {
+      dbg_puts(rtl8139, "rx invalid packet, packet_size=%d,rx_pos=%d,status=%x", packet_size, rx_pos, packet_status);
+      rx_pos = 0;
+      packet_size = 0;
+      outb(dev->iobase + CR, CR_TE|CR_RE);
     }
     else {
       uint16_t data_size = packet_size - 4;  // 2 = header size, 4 = trailing CRC
@@ -226,13 +230,18 @@ static void receive(pci_device *dev)
 
       if (process_opened) {
         // TODO: check that the buffer has space for both the header and the data first
-        read_fifo.push_back((const char *)&data_size, 2);
-        read_fifo.push_back((const char *)(rx_buffer + rx_pos), data_size);
+        // TODO: send a hint to the fifo that we're going to push more, so don't
+        //       context switch. We shouldn't really context switch here anyway!
+        if (read_fifo.push_back((const char *)&data_size, 2) <= 0)
+          dbg_puts(rtl8139, "failed to write size");
+
+        if (read_fifo.push_back((const char *)(rx_buffer + rx_pos), data_size) <= 0)
+          dbg_puts(rtl8139, "failed to write content");
       }
     }
 
     // Our buffer is larger than the ring due to WRAP
-    rx_pos = ALIGN_UP((rx_pos + packet_size) % rx_ring_size, 4);
+    rx_pos = ALIGN_UP(rx_pos + packet_size, 4) % rx_ring_size;
     outw(dev->iobase + CAPR, rx_pos - 16);
   }
 }
