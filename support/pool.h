@@ -61,6 +61,15 @@ namespace p2 {
       // TODO: make these checks compile-time
       assert(_MaxLen <= p2::numeric_limits<_IndexT>::max() && "max value of _IndexT is reserved as a sentinel");
       assert(_MaxLen > 0);
+      clear();
+    }
+
+    void clear()
+    {
+      _watermark = 0;
+      _free_list_head = END_SENTINEL;
+      _free_list_tail = END_SENTINEL;
+      _count = 0;
     }
 
     _IndexT push_back(const T &value)

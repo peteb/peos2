@@ -1,0 +1,5 @@
+#!/bin/bash
+while :
+do
+  tail -n+0 -F vm0.pcap  | tshark -r - 2>/dev/null
+done

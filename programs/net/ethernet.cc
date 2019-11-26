@@ -33,6 +33,7 @@ void eth_run(int fd)
     // Not a very accurate way to aggregate time, but should be good enough for now
     int timeout_consumed = timeout_duration - syscall0(get_timeout);
     arp_tick(timeout_consumed);
+    ipv4_tick(timeout_consumed);
 
     if (ret == ETIMEOUT) {
       continue;

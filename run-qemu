@@ -10,7 +10,7 @@ cd `dirname $0`
 # QEMU monitor can be connected to using ./connect-qemu-monitor
 
 FLAGS="-d pcall,cpu_reset,guest_errors \
-  -netdev user,id=mynet0,hostfwd=tcp::8884-:123 \
+  -netdev user,id=mynet0,hostfwd=tcp::8884-:123,hostfwd=udp::8884-:123 \
   -device rtl8139,netdev=mynet0,mac=02:ca:fe:f0:0d:01 \
   -object filter-dump,id=dp1,netdev=mynet0,file=vm0.pcap"
 

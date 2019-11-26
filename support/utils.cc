@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "panic.h"
 
 extern "C" void *memset(void *dest, int value, size_t len)
 {
@@ -96,4 +97,9 @@ char *strncpy(char *dest, const char *src, size_t len)
     *dest++ = '\0';
 
   return ret;
+}
+
+extern "C" void __cxa_pure_virtual()
+{
+  panic("Called abstract function");
 }

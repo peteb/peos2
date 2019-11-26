@@ -35,7 +35,7 @@ namespace p2 {
   private:
     class callable {
     public:
-      virtual _RetVal invoke(_Args...) {}
+      virtual _RetVal invoke(_Args...) =0;
     };
 
     template<typename T>
