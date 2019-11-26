@@ -1,2 +1,4 @@
 #!/bin/bash
+cd `dirname $0`
+
 make -f Makefile.host all && ./unittest

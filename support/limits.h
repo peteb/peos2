@@ -22,7 +22,6 @@ namespace p2 {
   template<> constexpr short   numeric_limits<short  >::max() {return SHRT_MAX; }
 
   template<> constexpr int8_t  numeric_limits<int8_t >::max() {return INT8_MAX; }
-  template<> constexpr int64_t numeric_limits<int64_t>::max() {return INT64_MAX; }
 }
 
 #endif // !PEOS2_SUPPORT_LIMITS_H

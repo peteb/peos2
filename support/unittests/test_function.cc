@@ -1,6 +1,6 @@
 #include "unittest.h"
-#include "function.h"
-#include "pool.h"
+#include "support/function.h"
+#include "support/pool.h"
 
 TESTSUITE(p2::inline_fun) {
   TESTCASE("can be instantiated in a number of ways") {
