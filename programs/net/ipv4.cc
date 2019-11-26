@@ -8,6 +8,7 @@
 #include "utils.h"
 #include "ethernet.h"
 #include "tcp.h"
+#include "udp.h"
 
 #define NUM_BUFFERS 32
 
@@ -129,6 +130,10 @@ void ipv4_recv(int interface, eth_frame *frame, const char *data, size_t length)
   switch (hdr.protocol) {
   case PROTO_TCP:
     recv_function = tcp_recv;
+    break;
+
+  case PROTO_UDP:
+    recv_function = udp_recv;
     break;
 
   default:

@@ -10,7 +10,7 @@ LDFLAGS=-L../support  -lgcc
 BINARIES=shell shell_launcher tester ls nsa
 CRTBEGIN_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
-NSA_OBJECTS=net/main.o net/ethernet.o net/utils.o net/arp.o net/ipv4.o net/tcp.o
+NSA_OBJECTS=net/main.o net/ethernet.o net/utils.o net/arp.o net/ipv4.o net/tcp.o net/udp.o
 
 .PHONY : clean
 
