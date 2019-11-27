@@ -2,6 +2,7 @@
 #include <support/assert.h>
 #include <support/pool.h>
 #include <support/frag_buffer.h>
+#include <support/flip_buffer.h>
 
 #include "ipv4.h"
 #include "arp.h"
@@ -50,13 +51,22 @@ struct buffer {
 
 // Declarations
 static uint16_t fetch_or_create_buffer(const buffer_id &bufid);
+static void send_single_datagram(int interface,
+                                 uint8_t protocol,
+                                 uint32_t src_addr,
+                                 uint32_t dest_addr,
+                                 uint32_t ethernet_dest_ipaddr,
+                                 const char *data,
+                                 size_t length);
 
 // Fragmentation reassembly state
 static p2::pool<buffer, NUM_BUFFERS> used_buffers;  // Indexes point into `buffers`
 static p2::frag_buffer<0xFFFF> buffers[NUM_BUFFERS];
+static p2::flip_buffer<1024 * 10> arp_wait_buffer;  // Holding area for packets awaiting ARP
 
 // State
 static uint32_t local_ipaddr, local_netmask, local_gwaddr;
+static uint16_t ip_id = 1;
 
 void ipv4_configure(int interface, uint32_t ipaddr, uint32_t netmask, uint32_t gwaddr)
 {
@@ -91,8 +101,6 @@ void ipv4_configure(int interface, uint32_t ipaddr, uint32_t netmask, uint32_t g
 
 void ipv4_recv(int interface, eth_frame *frame, const char *data, size_t length)
 {
-  (void)interface;
-  (void)frame;
   assert(length > sizeof(header));
 
   header hdr;
@@ -172,6 +180,51 @@ void ipv4_recv(int interface, eth_frame *frame, const char *data, size_t length)
   }
 }
 
+size_t ipv4_send(int interface, const ipv4_dgram &ipv4, const char *data, size_t length)
+{
+  uint32_t ethernet_dest_ipaddr = 0;
+
+  if ((local_ipaddr & local_netmask) == (ipv4.dest_addr & local_netmask)) {
+    // Same subnet
+    ethernet_dest_ipaddr = ipv4.dest_addr;
+  }
+  else {
+    // Different network
+    ethernet_dest_ipaddr = local_gwaddr;
+  }
+
+  // Because the arp lookup is asynchronous
+  auto data_handle = arp_wait_buffer.alloc(length);
+  memcpy(arp_wait_buffer.data(data_handle), data, length);
+
+  // TODO: skip copying to buffer if we don't have to do a request
+  arp_request_lookup_ipv4(interface, ethernet_dest_ipaddr, [=](probe_result result) {
+    if (result == PROBE_TIMEOUT) {
+      log(ipv4, "ARP lookup timeout, dropping outgoing datagram");
+      return;
+    }
+
+    char *payload = arp_wait_buffer.data(data_handle);
+
+    if (!payload) {
+      log(ipv4, "payload buffer disappeared while we waited for ARP, dropping outgoing datagram");
+      return;
+    }
+
+    log(ipv4, "ARP lookup done, sending datagram");
+
+    send_single_datagram(interface,
+                         PROTO_UDP,
+                         ipv4.src_addr,
+                         ipv4.dest_addr,
+                         ethernet_dest_ipaddr,
+                         payload,
+                         length);
+  });
+
+  return 0;
+}
+
 void ipv4_tick(int dt)
 {
   for (size_t i = 0; i < used_buffers.watermark(); ++i) {
@@ -209,4 +262,48 @@ static uint16_t fetch_or_create_buffer(const buffer_id &bufid)
   uint16_t idx = used_buffers.push_back({bufid, 250});
   buffers[idx].reset();
   return idx;
+}
+
+
+static void send_single_datagram(int interface,
+                                 uint8_t protocol,
+                                 uint32_t src_addr,
+                                 uint32_t dest_addr,
+                                 uint32_t ethernet_dest_ipaddr,
+                                 const char *data,
+                                 size_t length)
+{
+  header hdr;
+  hdr.ihl = 5; // 5 * 4 = 20 bytes
+  hdr.version = 4;
+  hdr.ecn_dscp = 0;
+  hdr.total_len = htons(sizeof(hdr) + length);
+  hdr.id = htons(ip_id++);
+  hdr.frag_ofs = htons(0);
+  hdr.ttl = 65;
+  hdr.protocol = protocol;
+  hdr.checksum = htons(123);  // TODO
+  hdr.src_addr = htonl(src_addr);
+  hdr.dest_addr = htonl(dest_addr);
+
+  uint8_t dest[6], src[6];
+  eth_hwaddr(interface, src);
+  arp_cache_lookup_ipv4(interface, ethernet_dest_ipaddr, dest);
+
+  eth_frame ethernet;
+  ethernet.dest = dest;
+  ethernet.src = src;
+  ethernet.type = ET_IPV4;
+
+  char buffer[1500];
+
+  if (sizeof(hdr) + length > sizeof(buffer)) {
+    log(ipv4, "datagram too large for one packet, dropping");
+    return;
+  }
+
+  memcpy(buffer, &hdr, sizeof(hdr));
+  memcpy(buffer + sizeof(hdr), data, length);
+
+  eth_send(interface, &ethernet, buffer, sizeof(hdr) + length);
 }
