@@ -54,6 +54,9 @@ namespace p2 {
 }
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+#define ALIGN_UP(val, align) (((val) + (align) - 1) & ~((align) - 1))
+#define ALIGN_DOWN(val, align) ((val) & ~((align) - 1))
+
 
 char *strchr(char *str, char c);
 char *strnchr(char *str, char c, size_t len);

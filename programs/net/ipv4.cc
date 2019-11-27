@@ -107,8 +107,8 @@ void ipv4_recv(int interface, eth_frame *frame, const char *data, size_t length)
   uint8_t flags = hdr.frag_ofs >> 12;
   uint16_t frag_offset = (hdr.frag_ofs & 0x1FFF) * 8;
 
-  log(ipv4, "rx packet ver=%x,ihl=%x,ecn_dscp=%x,len=% 5d,id=%d,flags=%x,frag=%04x,prot=%d,ttl=%d,check=%04x",
-      hdr.version, hdr.ihl, hdr.ecn_dscp, hdr.total_len, hdr.id, flags, frag_offset, hdr.protocol, hdr.ttl, hdr.checksum);
+  log(ipv4, "rx packet ver=%x,ihl=%x,ecn_dscp=%x,len=% 5d,id=%d,flags=%x,frag=%04x,prot=%d,ttl=%d,check=%04x,length=%d",
+      hdr.version, hdr.ihl, hdr.ecn_dscp, hdr.total_len, hdr.id, flags, frag_offset, hdr.protocol, hdr.ttl, hdr.checksum, length);
 
   if (hdr.version != 4) {
     log(ipv4, "incorrect version, dropping");
@@ -142,7 +142,7 @@ void ipv4_recv(int interface, eth_frame *frame, const char *data, size_t length)
   }
 
   const char *payload = data + 4 * hdr.ihl;
-  size_t payload_size = length - 4 * hdr.ihl;
+  size_t payload_size = hdr.total_len - 4 * hdr.ihl;
 
   ipv4_dgram info;
   info.ttl = hdr.ttl;

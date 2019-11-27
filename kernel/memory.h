@@ -12,9 +12,6 @@
 #include "support/optional.h"
 #include "support/result.h"
 
-#define ALIGN_UP(val, align) (((val) + (align) - 1) & ~((align) - 1))
-#define ALIGN_DOWN(val, align) ((val) & ~((align) - 1))
-
 #define MEM_AREA_READWRITE       0x0001  // Area can be read and written
 #define MEM_AREA_EXECUTABLE      0x0002  // Area can execute code
 #define MEM_AREA_USER            0x0004  // Area can be accessed by user space

@@ -63,6 +63,15 @@ tcp_seqnbr tcp_recv_queue::readable_until() const
   return _read_cursor;
 }
 
+bool tcp_recv_queue::has_readable() const
+{
+  if (_segments.size() == 0)
+    return false;
+
+  const tcp_recv_segment &seg = _segments[find_front_segment()];
+  return seg.seqnbr == _read_cursor;
+}
+
 tcp_seqnbr tcp_recv_queue::read_cursor() const
 {
   return _read_cursor;

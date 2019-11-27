@@ -7,8 +7,6 @@
 #include "support/assert.h"
 #include "support/utils.h"
 
-#include <iostream>
-
 // TODO: optimize structure
 
 namespace p2 {

@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "net/ipv4.h"
 #include "net/ethernet.h"
+#include "tcp_recv_queue.h"
 
 #define FIN 0x0001
 #define SYN 0x0002
@@ -37,11 +38,16 @@ struct tcp_segment {
   eth_frame *frame;
   ipv4_dgram *datagram;
   tcp_header *tcphdr;
+  const char *payload;
+  size_t payload_size;
 };
+
+class tcp_connection;
 
 class tcp_connection_state {
 public:
-  virtual void recv(const tcp_segment &segment) const {(void)segment; }
+  virtual void early_recv(tcp_connection &connection, const tcp_segment &segment) const =0;
+  virtual void recv(tcp_connection &connection, const tcp_recv_segment &segment) const =0;
 
   static const tcp_connection_state *LISTEN;
 };
@@ -66,9 +72,13 @@ public:
   // recv - handles a freshly arrived datagram from IPv4
   void recv(const tcp_segment &segment);
 
+  void rx_enqueue(const tcp_segment &segment);
+
 private:
   tcp_endpoint _remote, _local;
   const tcp_connection_state *_state;
+
+  tcp_recv_queue _rx_queue;
 };
 
 #endif // !NET_TCP_CONNECTION_H

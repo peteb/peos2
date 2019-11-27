@@ -24,13 +24,24 @@ namespace {
   }
 }
 
+
+// LISTEN state
 static const class : public tcp_connection_state {
-  void recv(const tcp_segment &segment) const {
+  void early_recv(tcp_connection &conn, const tcp_segment &segment) const override {
     (void)segment;
-    log(tcp, "rx segment in LISTEN");
+    log(tcp, "rx segment in LISTEN (length: %d)", segment.payload_size);
+    conn.rx_enqueue(segment);
   }
+
+  void recv(tcp_connection &connection, const tcp_recv_segment &segment) const override {
+    (void)segment;
+    (void)connection;
+    log(tcp, "rx ordered segment in LISTEN");
+  }
+
 } listen;
 const tcp_connection_state *tcp_connection_state::LISTEN = &listen;
+
 
 int tcp_connection::compare(const tcp_endpoint &remote, const tcp_endpoint &local)
 {
@@ -45,12 +56,30 @@ int tcp_connection::compare(const tcp_endpoint &remote, const tcp_endpoint &loca
 
 void tcp_connection::recv(const tcp_segment &segment)
 {
-  (void)segment;
-  if (_state) {
-    _state->recv(segment);
-  }
-  // 1. check if we should kill this segment early: ie, if the
-  // sequence number is larger than read cursor + window size. BUT if SYN is set, skip
+  assert(_state);
 
-  //!!! how can we write SYNs into our rx buffer? we can't. so we should just sen an ACK immediately
+  _state->early_recv(*this, segment);
+
+  char buffer[10 * 1024]; // Largest segment is 10K
+
+  while (_rx_queue.has_readable()) {
+    tcp_recv_segment ordered_segment;
+
+    if (!_rx_queue.read_one_segment(&ordered_segment, buffer, sizeof(buffer))) {
+      // This is weird, has_readable returned true...!
+      log(tcp, "failed to read one segment");
+      return;
+    }
+
+    _state->recv(*this, ordered_segment);
+  }
+}
+
+void tcp_connection::rx_enqueue(const tcp_segment &segment)
+{
+  tcp_recv_segment ordered_segment;
+  ordered_segment.flags = segment.tcphdr->flags_hdrsz & 0x1FF;
+  ordered_segment.seqnbr = segment.tcphdr->seq_nbr;
+  _rx_queue.insert(ordered_segment, segment.payload, segment.payload_size);
+  // TODO: handle result? What if the queue is full?
 }
