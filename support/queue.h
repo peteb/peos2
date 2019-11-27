@@ -30,6 +30,16 @@ namespace p2 {
       return true;
     }
 
+    bool replace(int offset, const T &val)
+    {
+      while (_read_idx + offset >= _write_idx && push_back(T()));
+      if (_read_idx + offset > _write_idx)
+        return false;
+
+      _items[(_read_idx + offset) % _MaxLen] = val;
+      return true;
+    }
+
     // Don't call this if size() == 0
     T pop_front()
     {

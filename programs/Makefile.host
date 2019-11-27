@@ -7,7 +7,7 @@ AS=as
 CFLAGS=-std=gnu99 $(OPT_FLAGS) -Wall -Wextra -Werror -fno-threadsafe-statics -I. -I.. -DNDEBUG
 CXXFLAGS=-std=c++17 $(OPT_FLAGS) -Wall -fstrict-aliasing -Wstrict-aliasing=3 -Wextra -Werror -fno-threadsafe-statics -I.. -I. -I../support/unittests/ -DNDEBUG
 OBJDIR=.host
-OBJECTS=net/tcp_connection_table.o net/tcp_connection.o
+OBJECTS=net/tcp_connection_table.o net/tcp_connection.o net/tcp_recv_queue.o
 
 .PHONY : clean
 

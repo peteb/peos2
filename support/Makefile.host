@@ -22,6 +22,9 @@ clean :
 unittest : $(OBJECT_PATHS)
 	$(CXX) -o unittest -Werror $(OPT_FLAGS) $(OBJECT_PATHS)
 
+check : unittest
+	@./unittest
+
 -include *.d
 -include .host/*.d
 -include .host/*/*.d
