@@ -7,8 +7,16 @@ bool tcp_recv_queue::insert(const tcp_recv_segment &segment, const char *data, s
   if (_segments.full())
     return false;
 
-  if (segment.seqnbr < _read_cursor)
-    return false;
+  if (p2::numeric_limits<tcp_seqnbr>::max() - _read_cursor < _data_buffer.capacity()) {
+    // The window is wrapping around
+    if (segment.seqnbr < _read_cursor &&
+        segment.seqnbr >= _read_cursor + _data_buffer.capacity())
+      return false;
+  }
+  else {
+    if (segment.seqnbr < _read_cursor)
+      return false;
+  }
 
   if (!_data_buffer.write(data,
                           length,
@@ -77,4 +85,11 @@ size_t tcp_recv_queue::find_front_segment() const
 
   assert(lowest_seq_segment != _segments.end() && "cannot call find_front_segment on empty queue");
   return lowest_seq_segment;
+}
+
+void tcp_recv_queue::reset(tcp_seqnbr seqnbr)
+{
+  _read_cursor = seqnbr;
+  _data_buffer.clear();
+  _segments.clear();
 }

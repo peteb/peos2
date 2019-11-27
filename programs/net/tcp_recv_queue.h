@@ -26,6 +26,7 @@ public:
   // readable_until - the largest continuous chunk starting at the read cursor
   tcp_seqnbr readable_until() const;
   tcp_seqnbr read_cursor() const;
+  void reset(tcp_seqnbr seqnbr);
 
 private:
   size_t find_front_segment() const;

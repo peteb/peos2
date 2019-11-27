@@ -101,4 +101,37 @@ TESTSUITE(tcp_recv_queue) {
       ASSERT_EQ(memcmp(data, as, sizeof(as)), 0);
     }
   }
+
+  TESTCASE("32 bit wrap-around: segments can be written over the border") {
+    // given
+    char data[1024];
+    tcp_recv_queue q;
+    q.reset(0xFFFFFFF0);
+
+    // when
+    tcp_recv_segment segment;
+    ASSERT_EQ(q.insert(tcp_recv_segment{0, 0xFFFFFFF0, 0}, data, 20), true);
+    ASSERT_EQ(q.readable_until(), 4u);
+    ASSERT_EQ(q.read_one_segment(&segment, data, sizeof(data)), true);
+    ASSERT_EQ(segment.seqnbr, 0xFFFFFFF0);
+    ASSERT_EQ(segment.length, 20u);
+
+    ASSERT_EQ(q.insert(tcp_recv_segment{0, 4u, 0}, data, 20), true);
+    ASSERT_EQ(q.readable_until(), 24u);
+    ASSERT_EQ(q.read_one_segment(&segment, data, sizeof(data)), true);
+    ASSERT_EQ(segment.seqnbr, 4u);
+    ASSERT_EQ(segment.length, 20u);
+  }
+
+  TESTCASE("32 bit wrap-around: segments are accepted when reader is lagging") {
+    // given
+    char data[1024];
+    tcp_recv_queue q;
+    q.reset(0xFFFFFFF0);
+
+    // when
+    ASSERT_EQ(q.insert(tcp_recv_segment{0, 0xFFFFFFF0, 0}, data, 20), true);
+    ASSERT_EQ(q.readable_until(), 4u);
+    ASSERT_EQ(q.insert(tcp_recv_segment{0, 4u, 0}, data, 1000), true);
+  }
 }

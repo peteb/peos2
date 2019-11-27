@@ -71,6 +71,11 @@ namespace p2 {
       return _items[idx % _MaxLen];
     }
 
+    void clear()
+    {
+      _read_idx = _write_idx = 0;
+    }
+
   private:
     void normalize()
     {

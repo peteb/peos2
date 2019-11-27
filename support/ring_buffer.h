@@ -59,6 +59,11 @@ namespace p2 {
       return _MaxLen;
     }
 
+    void clear()
+    {
+      _queue.clear();
+    }
+
   private:
     p2::queue<char, _MaxLen> _queue;
   };
