@@ -19,7 +19,7 @@ public:
   tcp_connection &operator [](handle idx);
 
 private:
-  p2::pool<tcp_connection, 1024, handle> _connections;
+  p2::pool<tcp_connection, 10, handle> _connections;
 };
 
 #endif // !NET_TCP_CONNECTION_TABLE_H

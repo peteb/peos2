@@ -46,6 +46,11 @@ namespace p2 {
       return _items[_read_idx++ % _MaxLen];
     }
 
+    const T &front() const
+    {
+      return _items[_read_idx % _MaxLen];
+    }
+
     int size() const
     {
       return _write_idx - _read_idx;

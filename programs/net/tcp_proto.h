@@ -40,6 +40,7 @@ struct tcp_segment {
   size_t payload_size;
 };
 
+typedef uint32_t tcp_seqnbr;
 
 
 #endif // !NET_TCP_PROTO_H

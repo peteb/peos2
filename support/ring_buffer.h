@@ -46,6 +46,32 @@ namespace p2 {
       return bytes_read;
     }
 
+    size_t read(char *data, int start, int length)
+    {
+      int max_length = p2::max(p2::min<int>(start + length, size()) - start, 0);
+      size_t bytes_read = 0;
+
+      while (bytes_read < (size_t)max_length) {
+        char c = _queue[_queue.begin() + start + bytes_read];
+        data[bytes_read++] = c;
+      }
+
+      return bytes_read;
+    }
+
+    size_t consume(size_t max_length)
+    {
+      max_length = p2::min(max_length, size());
+      size_t bytes_ignored = 0;
+
+      while (bytes_ignored < max_length) {
+        _queue.pop_front();
+        ++bytes_ignored;
+      }
+
+      return bytes_ignored;
+    }
+
     size_t size() const
     {
       // TODO: unify signedness

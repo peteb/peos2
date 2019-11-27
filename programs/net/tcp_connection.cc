@@ -1,5 +1,7 @@
 #include "tcp_connection.h"
 #include "utils.h"
+#include <support/assert.h>
+
 
 namespace {
   int count_specific_matches(const tcp_endpoint &filter, const tcp_endpoint &endpoint)

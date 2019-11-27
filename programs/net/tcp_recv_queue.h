@@ -9,7 +9,7 @@
 #include <support/pool.h>
 #include <support/ring_buffer.h>
 
-typedef uint32_t tcp_seqnbr;
+#include "tcp_proto.h"
 
 struct tcp_recv_segment {
   uint16_t flags;

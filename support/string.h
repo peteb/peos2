@@ -6,6 +6,14 @@
 #if __STDC_HOSTED__ == 1
 #include <iostream>
 #undef assert
+
+// TODO: don't redefine assert here, use assert.h but without the guards
+#define assert(exp)                                                     \
+  {                                                                     \
+    if (!(exp)) {                                                       \
+      panic("ASSERT " __FILE__ ":" TOSTRING(__LINE__) ": " #exp);       \
+    }                                                                   \
+  }
 #endif // __STDC_HOSTED__ == 1
 
 #include <stdint.h>
