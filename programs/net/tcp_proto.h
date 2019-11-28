@@ -16,10 +16,12 @@
 #define CWR 0x0080
 #define NS  0x0100
 
+typedef uint32_t tcp_seqnbr;
+
 struct tcp_header {
   uint16_t src_port;
   uint16_t dest_port;
-  uint32_t seq_nbr;
+  tcp_seqnbr seq_nbr;
   uint32_t ack_nbr;
   uint16_t flags_hdrsz;
   uint16_t wndsz;
@@ -38,9 +40,8 @@ struct tcp_segment {
   tcp_header *tcphdr;
   const char *payload;
   size_t payload_size;
+  uint16_t flags;
 };
-
-typedef uint32_t tcp_seqnbr;
 
 
 #endif // !NET_TCP_PROTO_H

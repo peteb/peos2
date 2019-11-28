@@ -1,4 +1,5 @@
 #include "tcp_send_queue.h"
+#include "utils.h"
 
 tcp_send_queue::tcp_send_queue()
 {
@@ -71,6 +72,8 @@ void tcp_send_queue::ack(tcp_seqnbr new_ack_pos)
 
     if (segment.seqnbr + segment.length > new_ack_pos)
       break;
+
+    log(tcp_send_queue, "acking segment %08x", segment.seqnbr);
 
     _data_buffer.consume(segment.length);
     _segments.pop_front();

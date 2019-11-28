@@ -46,6 +46,9 @@ void tcp_connection::recv(const tcp_segment &segment)
 
   _state->early_recv(*this, segment);
 
+  if (segment.flags & ACK)
+    _tx_queue.ack(segment.tcphdr->seq_nbr);
+
   char buffer[10 * 1024]; // Largest segment is 10K
   // TODO: review this buffer size
 
@@ -58,7 +61,7 @@ void tcp_connection::recv(const tcp_segment &segment)
       return;
     }
 
-    _state->recv(*this, sequenced_segment);
+    _state->recv(*this, sequenced_segment, buffer, sequenced_segment.length);
   }
 }
 
@@ -73,10 +76,12 @@ void tcp_connection::rx_enqueue(const tcp_segment &segment)
 
 void tcp_connection::tx_enqueue(const tcp_send_segment &segment, const char *data, size_t length)
 {
+  static char buf[10 * 1024];
+  // TODO: if this is ever multithreaded, fix the static!!
+
   _tx_queue.write_back(segment, data, length);
 
   while (_tx_queue.has_readable()) {
-    char buf[10 * 1024];
     tcp_send_segment seg;
 
     if (size_t bytes_read = _tx_queue.read_one_segment(&seg, buf, sizeof(buf)); bytes_read > 0) {
@@ -143,4 +148,9 @@ void tcp_connection::send(const tcp_send_segment &segment, const char *data, siz
 
     ipv4_send(connection_table().interface(), ipv4, buffer, length + sizeof(hdr));
   }
+}
+
+void tcp_connection::transition(const tcp_connection_state *new_state)
+{
+  _state = new_state;
 }

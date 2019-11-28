@@ -58,6 +58,8 @@ void tcp_recv(int interface, eth_frame *frame, ipv4_dgram *datagram, const char 
     segment.tcphdr = &hdr;
     segment.payload = data + total_header_size;
     segment.payload_size = length - total_header_size;
+    segment.flags = flags;
+
     connections[conn].recv(segment);
   }
   else {

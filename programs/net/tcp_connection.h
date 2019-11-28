@@ -54,6 +54,8 @@ public:
                   const char *data,
                   size_t length);
 
+  void transition(const tcp_connection_state *new_state);
+
   tcp_connection_table &connection_table() { return *_connection_table; }
 
 private:
