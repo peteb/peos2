@@ -18,7 +18,11 @@ public:
   handle end() const;
   tcp_connection &operator [](handle idx);
 
+  void set_interface(int interface) {_interface = interface; }
+  int interface() {return _interface; }
+
 private:
+  int _interface;
   p2::pool<tcp_connection, 10, handle> _connections;
 };
 

@@ -8,8 +8,10 @@
 // State
 static tcp_connection_table connections;
 
-void tcp_init()
+void tcp_init(int interface)
 {
+  // TODO: fix multi-interface handling
+  connections.set_interface(interface);
   connections.create_connection({0, 0}, {0, 123}, tcp_connection_state::LISTEN);
 }
 

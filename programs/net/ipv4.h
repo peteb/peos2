@@ -6,9 +6,14 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define PROTO_ICMP   1
+#define PROTO_TCP    6
+#define PROTO_UDP   17
+
 struct ipv4_dgram {
   uint8_t ttl;
   uint32_t src_addr, dest_addr;
+  uint16_t proto;
 };
 
 void ipv4_configure(int interface, uint32_t ipaddr, uint32_t netmask, uint32_t gwaddr);

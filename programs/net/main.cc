@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
                  parse_ipaddr("10.0.2.15"),
                  parse_ipaddr("255.255.255.0"),
                  parse_ipaddr("10.0.2.2"));
-  tcp_init();
+  tcp_init(fd);
 
   eth_run(fd);
   verify(syscall1(close, fd));

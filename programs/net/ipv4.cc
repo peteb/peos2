@@ -13,10 +13,6 @@
 
 #define NUM_BUFFERS 32
 
-#define PROTO_ICMP   1
-#define PROTO_TCP    6
-#define PROTO_UDP   17
-
 #define FLAGS_DF  0x01
 #define FLAGS_MF  0x02
 
@@ -156,6 +152,7 @@ void ipv4_recv(int interface, eth_frame *frame, const char *data, size_t length)
   info.ttl = hdr.ttl;
   info.src_addr = hdr.src_addr;
   info.dest_addr = hdr.dest_addr;
+  info.proto = hdr.protocol;
 
   if (!(flags & FLAGS_MF) && hdr.frag_ofs == 0) {
     // All data was contained in this packet, so we can just forward it
@@ -214,7 +211,7 @@ size_t ipv4_send(int interface, const ipv4_dgram &ipv4, const char *data, size_t
     log(ipv4, "ARP lookup done, sending datagram");
 
     send_single_datagram(interface,
-                         PROTO_UDP,
+                         ipv4.proto,
                          ipv4.src_addr,
                          ipv4.dest_addr,
                          ethernet_dest_ipaddr,

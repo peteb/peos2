@@ -1,4 +1,5 @@
 #include "net/tcp_connection_table.h"
+#include "utils.h"
 
 tcp_connection_table::handle tcp_connection_table::find_best_match(const tcp_endpoint &remote,
                                                                    const tcp_endpoint &local)
@@ -29,7 +30,13 @@ tcp_connection_table::handle tcp_connection_table::create_connection(const tcp_e
                                                                      const tcp_endpoint &local,
                                                                      const tcp_connection_state *state)
 {
-  return _connections.emplace_back(remote, local, state);
+  log(tcp, "creating connection remote=%s:%d local=%s:%d",
+      ipaddr_str(remote.ipaddr),
+      remote.port,
+      ipaddr_str(local.ipaddr),
+      local.port);
+
+  return _connections.emplace_back(this, remote, local, state);
 }
 
 tcp_connection_table::handle tcp_connection_table::end() const
