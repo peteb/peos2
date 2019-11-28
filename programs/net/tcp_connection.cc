@@ -47,26 +47,27 @@ void tcp_connection::recv(const tcp_segment &segment)
   _state->early_recv(*this, segment);
 
   char buffer[10 * 1024]; // Largest segment is 10K
+  // TODO: review this buffer size
 
   while (_rx_queue.has_readable()) {
-    tcp_recv_segment ordered_segment;
+    tcp_recv_segment sequenced_segment;
 
-    if (!_rx_queue.read_one_segment(&ordered_segment, buffer, sizeof(buffer))) {
+    if (!_rx_queue.read_one_segment(&sequenced_segment, buffer, sizeof(buffer))) {
       // This is weird, has_readable returned true...!
       log(tcp, "failed to read one segment");
       return;
     }
 
-    _state->recv(*this, ordered_segment);
+    _state->recv(*this, sequenced_segment);
   }
 }
 
 void tcp_connection::rx_enqueue(const tcp_segment &segment)
 {
-  tcp_recv_segment ordered_segment;
-  ordered_segment.flags = segment.tcphdr->flags_hdrsz & 0x1FF;
-  ordered_segment.seqnbr = segment.tcphdr->seq_nbr;
-  _rx_queue.insert(ordered_segment, segment.payload, segment.payload_size);
+  tcp_recv_segment segment_;
+  segment_.flags = segment.tcphdr->flags_hdrsz & 0x1FF;
+  segment_.seqnbr = segment.tcphdr->seq_nbr;
+  _rx_queue.insert(segment_, segment.payload, segment.payload_size);
   // TODO: handle result? What if the queue is full?
 }
 
