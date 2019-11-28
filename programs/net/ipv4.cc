@@ -279,9 +279,10 @@ static void send_single_datagram(int interface,
   hdr.frag_ofs = htons(0);
   hdr.ttl = 65;
   hdr.protocol = protocol;
-  hdr.checksum = htons(123);  // TODO
+  hdr.checksum = 0;  // Checksum needs to be 0 when calculating the checksum
   hdr.src_addr = htonl(src_addr);
   hdr.dest_addr = htonl(dest_addr);
+  hdr.checksum = ipv4_checksum((char *)&hdr, sizeof(hdr), nullptr, 0);
 
   uint8_t dest[6], src[6];
   eth_hwaddr(interface, src);
@@ -303,4 +304,45 @@ static void send_single_datagram(int interface,
   memcpy(buffer + sizeof(hdr), data, length);
 
   eth_send(interface, &ethernet, buffer, sizeof(hdr) + length);
+}
+
+uint64_t sum_words(const char *data, size_t length)
+{
+  uint64_t sum = 0;
+
+  // Warning: possibly non-aligned reads, but works on my CPU...
+  const uint32_t *ptr32 = (const uint32_t *)data;
+
+  while (length >= 4) {
+    sum += *ptr32++;
+    length -= 4;
+  }
+
+  // Might be leftovers
+  const uint16_t *ptr16 = (const uint16_t *)ptr32;
+
+  if (length >= 2) {
+    sum += *ptr16;
+    length -= 2;
+  }
+
+  // Might be even more leftovers (which should be padded)
+  if (length > 0) {
+    uint8_t byte = *(const uint8_t *)ptr16;
+    sum += ntohs(byte << 8);
+  }
+
+  return sum;
+}
+
+uint16_t ipv4_checksum(const char *data, size_t length, const char *data2, size_t length2)
+{
+  uint32_t sum = 0;
+  sum += sum_words(data, length);
+  sum += sum_words(data2, length2);
+
+  while (sum > 0xFFFF)
+    sum = (sum >> 16) + (sum & 0xFFFF);
+
+  return ~(uint16_t)sum;
 }

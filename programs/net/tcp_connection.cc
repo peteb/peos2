@@ -3,6 +3,7 @@
 #include "tcp_connection_table.h"
 #include "tcp_connection.h"
 #include "utils.h"
+#include "tcp.h"
 
 namespace {
   int count_specific_matches(const tcp_endpoint &filter, const tcp_endpoint &endpoint)
@@ -107,9 +108,9 @@ void tcp_connection::send(const tcp_send_segment &segment, const char *data, siz
   hdr.dest_port = htons(_remote.port);
   hdr.seq_nbr = htonl(segment.seqnbr);
   hdr.ack_nbr = htonl(_rx_queue.read_cursor());
-  hdr.flags_hdrsz = ntohs(flags_hdrsrz);
-  hdr.wndsz = 10000; // TODO
-  hdr.checksum = 0; // TODO
+  hdr.flags_hdrsz = htons(flags_hdrsrz);
+  hdr.wndsz = htons(10000); // TODO
+  hdr.checksum = 0;
   hdr.urgptr = 0;
 
   ipv4_dgram ipv4;
@@ -120,9 +121,19 @@ void tcp_connection::send(const tcp_send_segment &segment, const char *data, siz
 
   if ((segment.flags & SYN) && length == 1) {
     // Phantom byte, ignore it. TODO: flag for this?
+    hdr.checksum = tcp_checksum(ipv4.src_addr,
+                                ipv4.dest_addr,
+                                ipv4.proto,
+                                (char *)&hdr,
+                                sizeof(hdr),
+                                nullptr,
+                                0);
+
     ipv4_send(connection_table().interface(), ipv4, (char *)&hdr, sizeof(hdr));
   }
   else {
+    hdr.checksum = ipv4_checksum((char *)&hdr, sizeof(hdr), data, length);
+
     // TODO: there's a lot of copies all the way down to ethernet, improve that
     char buffer[1500];
     assert(length + sizeof(hdr) < sizeof(buffer));
