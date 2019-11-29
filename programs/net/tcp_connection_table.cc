@@ -30,15 +30,21 @@ tcp_connection_table::handle tcp_connection_table::create_connection(const tcp_e
                                                                      const tcp_endpoint &local,
                                                                      const tcp_connection_state *state)
 {
-  log(tcp, "creating connection remote=%s:%d local=%s:%d",
+  log(tcp_connection_table, "creating connection remote=%s:%d local=%s:%d",
       ipaddr_str(remote.ipaddr),
       remote.port,
       ipaddr_str(local.ipaddr),
       local.port);
 
   handle new_conn = _connections.emplace_back(this, remote, local, state);
+  _connections[new_conn].handle = new_conn;
   _new_connections.push_back(new_conn);
   return new_conn;
+}
+
+void tcp_connection_table::finish_connection(handle conn_handle)
+{
+  _finished_connections.push_back(conn_handle);
 }
 
 void tcp_connection_table::tick(int dt)
@@ -71,5 +77,24 @@ void tcp_connection_table::step_new_connections()
   }
 
   if (_new_connections.size() > 0)
-    log(tcp, "warning, recursively creating connections");
+    log(tcp_connection_table, "warning, recursively creating connections");
+}
+
+void tcp_connection_table::destroy_finished_connections()
+{
+  for (size_t i = 0; i < _finished_connections.watermark(); ++i) {
+    if (_finished_connections.valid(i)) {
+      handle handle_ = _finished_connections[i];
+
+      if (!_connections.valid(handle_)) {
+        log(tcp_connection_table, "double finish for handle %d", handle_);
+        break;
+      }
+
+      log(tcp_connection_table, "removing connection");
+      _connections.erase(handle_);
+    }
+  }
+
+  _finished_connections.clear();
 }

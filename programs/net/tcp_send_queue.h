@@ -23,7 +23,11 @@ public:
   bool has_readable();
 
   void set_window(size_t wndsz);
+
+  // Removes all segments up until @new_ack_pos so that they won't get
+  // resent
   void ack(tcp_seqnbr new_ack_pos);
+
   void reset(tcp_seqnbr seqnbr);
   tcp_seqnbr write_cursor() const { return _write_pos; }
 

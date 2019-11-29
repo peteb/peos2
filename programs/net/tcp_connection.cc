@@ -48,15 +48,27 @@ void tcp_connection::recv(const tcp_segment &segment)
 
   // Automatically use the ack seqnbr from remote to stop our
   // retransmission of packets
-  if (segment.flags & ACK)
+  if (segment.flags & ACK) {
     _tx_queue.ack(segment.tcphdr->ack_nbr);
+
+    if (segment.tcphdr->ack_nbr >= _tx_queue.write_cursor()) {
+      // Remote has ACK'd everything we've sent
+      _state->remote_consumed_all(*this);
+    }
+  }
 
   // The sender's segment will be ack'd by the tx queue automatically
   // on transmission or after a timeout
   step();
 }
 
-void tcp_connection::step() {
+void tcp_connection::mark_for_destruction()
+{
+  _connection_table->finish_connection(handle);
+}
+
+void tcp_connection::step()
+{
   static char buffer[20 * 1024]; // Largest segment is 10K
   // TODO: review this buffer size
   // TODO: change static when this is multithreaded
@@ -155,7 +167,7 @@ void tcp_connection::send(const tcp_send_segment &segment, const char *data, siz
   ipv4.dest_addr = _remote.ipaddr;
   ipv4.proto = PROTO_TCP;
 
-  if (((segment.flags & SYN) && length == 1) || length == 0) {
+  if ((((segment.flags & SYN) || (segment.flags & FIN)) && length == 1) || length == 0) {
     // Phantom byte (during handshake) or possibly an idle ack with
     // empty payload
     log(tcp_connection, "send: sending empty or phantom message, seqnbr=% 12d, ack=% 12d",
@@ -189,6 +201,7 @@ void tcp_connection::send(const tcp_send_segment &segment, const char *data, siz
 
 void tcp_connection::transition(const tcp_connection_state *new_state)
 {
+  log(tcp, "transitioning from %s to %s", _state->name(), new_state->name());
   _state = new_state;
 }
 

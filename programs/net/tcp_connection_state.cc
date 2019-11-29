@@ -5,6 +5,8 @@
 
 #include "ipv4.h"
 
+static char phantom[1] = {'!'};
+
 // LISTEN - server is waiting for SYN segments
 static const class : public tcp_connection_state {
   const char *name() const
@@ -15,36 +17,35 @@ static const class : public tcp_connection_state {
   void early_recv(tcp_connection &conn,
                   const tcp_segment &segment) const override
   {
-    // TODO: check that the segment has the SYN bit set
-    log(tcp, "LISTEN: rx segment length=%d", segment.payload_size);
+    if (!(segment.flags & SYN)) {
+      log(tcp, "LISTEN: received segment without SYN, dropping");
+      return;
+    }
 
+    // Create a new connection for this pair of endpoints
+    // TODO: what if someone listens on the most specific pair of endpoints already?
     tcp_connection_table &conntab = conn.connection_table();
     auto conn_idx = conntab.create_connection({segment.datagram->src_addr, segment.tcphdr->src_port},
                                               {segment.datagram->dest_addr, segment.tcphdr->dest_port},
                                               tcp_connection_state::SYN_RCVD);
 
-    // Create a new connection where we'll sequence this SYN (and thus send the ACK)
+    // Sequence this SYN, and thus send the ACK, in the new connection
     tcp_connection &client_conn = conntab[conn_idx];
-    tcp_seqnbr isn = 0xDEADBEEF;
+    tcp_seqnbr isn = 0xDEADBEEF;  // TODO: generate
     client_conn.reset_rx(segment.tcphdr->seq_nbr);
     client_conn.reset_tx(isn);
 
     // Even if we don't receive or send the implicit length of 1 for
     // SYNs and FINs, we need to increase the cursor of the rx buffer
     // to allow acking etc
-    char phantom[1] = {'!'};
     client_conn.sequence(segment, phantom, 1);
   }
 
-  void sequenced_recv(tcp_connection &connection,
-                      const tcp_recv_segment &segment,
-                      const char *data,
-                      size_t length) const override
+  void sequenced_recv(tcp_connection &,
+                      const tcp_recv_segment &,
+                      const char *,
+                      size_t) const override
   {
-    (void)segment;
-    (void)connection;
-    (void)data;
-    (void)length;
     log(tcp, "LISTEN: rx sequenced segment, shouldn't happen");
   }
 
@@ -64,8 +65,6 @@ static const class : public tcp_connection_state {
   void early_recv(tcp_connection &conn,
                   const tcp_segment &segment) const override
   {
-    log(tcp, "SYN-RCVD: rx early recv");
-
     // TODO: extra check on sequence numbers?
 
     if (segment.flags == ACK) {
@@ -80,15 +79,16 @@ static const class : public tcp_connection_state {
                       const char *data,
                       size_t length) const override
   {
+    if (!(segment.flags & SYN)) {
+      log(tcp, "SYN-RCVD: sequenced a segment without SYN set");
+      return;
+    }
+
     (void)data;
-    (void)length;
-    (void)segment;
-    (void)connection;
     log(tcp, "SYN-RCVD: rx sequenced segment of size %d", length);
 
     // TODO: verify that this is a sequenced SYN
     tcp_send_segment response;
-    char phantom[1] = {'!'};
     response.flags = SYN;
     connection.transmit(response, phantom, 1, 0);
   }
@@ -107,22 +107,37 @@ static const class : public tcp_connection_state {
     return "ESTABLISHED";
   }
 
-  void early_recv(tcp_connection &conn,
-                  const tcp_segment &segment) const override
+  void early_recv(tcp_connection &conn, const tcp_segment &segment) const override
   {
-    (void)conn;
-    (void)segment;
-    log(tcp, "ESTABLISHED: rx early recv");
-    // TODO: check if this is a FIN or something else
-    conn.sequence(segment, segment.payload, segment.payload_size);
+    if ((segment.flags & FIN) && segment.payload_size == 0) {
+      // We need to sequence FINs with a phantom byte so that they
+      // increase the sequence number and can be ACKd
+      conn.sequence(segment, phantom, 1);
+    }
+    else {
+      conn.sequence(segment, segment.payload, segment.payload_size);
+    }
   }
 
-  void sequenced_recv(tcp_connection &connection,
+  void sequenced_recv(tcp_connection &conn,
                       const tcp_recv_segment &segment,
-                      const char *data, size_t length) const override
+                      const char *data,
+                      size_t length) const override
   {
-    (void)segment;
-    (void)connection;
+    if (segment.flags & FIN) {
+      // Remote wants to shut the connection down, so ACK that segment
+      // (will be done automatically) and send them a FIN of our
+      // own. Because we don't have an application to wait for, we're
+      // bypassing the CLOSE-WAIT state.  TODO: implement CLOSE-WAIT
+      // on server side
+
+      tcp_send_segment response;
+      response.flags = FIN;
+      conn.transmit(response, phantom, 1, 0);
+      conn.transition(tcp_connection_state::LAST_ACK);
+      return;
+    }
+
     char buffer[256];
     memcpy(buffer, data, p2::min(length, sizeof(buffer)));
     buffer[p2::min(length, sizeof(buffer) - 1)] = 0;
@@ -132,3 +147,21 @@ static const class : public tcp_connection_state {
 } established;
 
 const tcp_connection_state *tcp_connection_state::ESTABLISHED = &established;
+
+
+// LAST_ACK
+static const class : public tcp_connection_state {
+  const char *name() const
+  {
+    return "LAST-ACK";
+  }
+
+  void remote_consumed_all(tcp_connection &conn) const
+  {
+    log(tcp, "LAST-ACK: remote consumed all our messages, closing down connection...");
+    conn.mark_for_destruction();
+  }
+
+} last_ack;
+
+const tcp_connection_state *tcp_connection_state::LAST_ACK = &last_ack;

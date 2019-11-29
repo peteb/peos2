@@ -36,6 +36,9 @@ public:
   int compare(const tcp_endpoint &remote,
               const tcp_endpoint &local);
 
+  // Frees the connection in the connection table
+  void mark_for_destruction();
+
   // Handle a freshly arrived datagram from IPv4
   void recv(const tcp_segment &segment);
 
@@ -70,12 +73,15 @@ public:
 
   void step();
 
+  uint16_t handle;
+
 private:
   void send(const tcp_send_segment &segment,
             const char *data,
             size_t length);
 
   tcp_connection_table *_connection_table;
+
   tcp_endpoint _remote, _local;
   const tcp_connection_state *_state;
 

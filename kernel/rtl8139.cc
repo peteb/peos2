@@ -330,9 +330,9 @@ static int write(int /*handle*/, const char *data, int length)
   static char buf[1600];  // TODO/NB: global state
   assert(length > 0);
 
-  // write_buffer contains an unfinished outgoing packet, the packet
-  // is prefixed with a 16 bit length (like what the user writes on
-  // the fd)
+  // pending_tx contains an unfinished outgoing packet, the packet is
+  // prefixed with a 16 bit length (like what the user writes on the
+  // fd)
   int bytes_writable = p2::min<int>(pending_tx.capacity(), length);
   if (!pending_tx.write(data, bytes_writable)) {
     dbg_puts(rtl8139, "failed to write bytes to pending tx buffer, writable=%d", bytes_writable);

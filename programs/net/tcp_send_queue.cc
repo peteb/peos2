@@ -72,11 +72,8 @@ void tcp_send_queue::reset(tcp_seqnbr seqnbr)
 
 void tcp_send_queue::ack(tcp_seqnbr new_ack_pos)
 {
-  log(tcp_send_queue, "received ack % 16d", new_ack_pos);
-
   // TODO: 32 bit wrap-around
   while (new_ack_pos > _ack_pos) {
-    log(tcp_send_queue, "... we're at % 16d", _ack_pos);
     assert(_segments.size() > 0);
 
     const tcp_send_segment &segment = _segments.front();

@@ -15,15 +15,31 @@ public:
   // Called when a segment has just arrived -- might be a duplicate,
   // in wrong order, etc.
   virtual void early_recv(tcp_connection &connection,
-                          const tcp_segment &segment) const =0;
+                          const tcp_segment &segment) const
+  {
+    (void)connection;
+    (void)segment;
+  }
 
   // Segment received in correct order, no duplicates
   virtual void sequenced_recv(tcp_connection &connection,
                               const tcp_recv_segment &segment,
                               const char *data,
-                              size_t length) const =0;
+                              size_t length) const
+  {
+    (void)connection;
+    (void)segment;
+    (void)data;
+    (void)length;
+  }
 
-  static const tcp_connection_state *LISTEN, *SYN_RCVD, *ESTABLISHED;
+  // TODO: better name
+  virtual void remote_consumed_all(tcp_connection &connection) const
+  {
+    (void)connection;
+  }
+
+  static const tcp_connection_state *LISTEN, *SYN_RCVD, *ESTABLISHED, *LAST_ACK;
 };
 
 #endif // !NET_TCP_CONNECTION_STATE_H

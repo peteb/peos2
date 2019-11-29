@@ -28,7 +28,7 @@ NSA_OBJECTS=net/main.o net/ethernet.o net/utils.o net/arp.o net/ipv4.o net/tcp.o
 all : $(BINARIES)
 
 clean :
-	rm -rf *.o *.d $(BINARIES)
+	rm -rf *.o net/*.o *.d $(BINARIES)
 
 shell : shell.o
 	$(CC) -o $@ $(CXXFLAGS) shell.o $(LDFLAGS) -lsupport

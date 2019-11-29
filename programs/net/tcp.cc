@@ -57,6 +57,7 @@ void tcp_recv(int interface, eth_frame *frame, ipv4_dgram *datagram, const char 
 
     connections[conn].recv(segment);
     connections.step_new_connections();
+    connections.destroy_finished_connections();
   }
   else {
     log(tcp, "no connections matched");
