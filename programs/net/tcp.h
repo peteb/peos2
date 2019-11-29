@@ -27,4 +27,6 @@ uint16_t tcp_checksum(uint32_t src_addr,
                       const char *data2,
                       size_t length2);
 
+void tcp_tick(int dt);
+
 #endif // !NET_TCP_H

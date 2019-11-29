@@ -46,11 +46,22 @@ void tcp_connection::recv(const tcp_segment &segment)
 
   _state->early_recv(*this, segment);
 
+  // Automatically use the ack seqnbr from remote to stop our
+  // retransmission of packets
   if (segment.flags & ACK)
-    _tx_queue.ack(segment.tcphdr->seq_nbr);
+    _tx_queue.ack(segment.tcphdr->ack_nbr);
 
-  char buffer[10 * 1024]; // Largest segment is 10K
+  // The sender's segment will be ack'd by the tx queue automatically
+  // on transmission or after a timeout
+  step();
+}
+
+void tcp_connection::step() {
+  static char buffer[20 * 1024]; // Largest segment is 10K
   // TODO: review this buffer size
+  // TODO: change static when this is multithreaded
+
+  const bool received_sequenced = _rx_queue.has_readable();
 
   while (_rx_queue.has_readable()) {
     tcp_recv_segment sequenced_segment;
@@ -61,33 +72,49 @@ void tcp_connection::recv(const tcp_segment &segment)
       return;
     }
 
-    _state->recv(*this, sequenced_segment, buffer, sequenced_segment.length);
+    _state->sequenced_recv(*this, sequenced_segment, buffer, sequenced_segment.length);
+  }
+
+  if (received_sequenced && !_tx_queue.has_readable()) {
+    // Nothing was added to the tx queue though we know we've received
+    // a sequenced message, so how will this message be ack'd to
+    // remote? It won't! So send an empty message -- this will carry
+    // the ACK.
+    // We're bypassing the TX queue because it might have more data
+    // than what the window allows, which would lead to the ACK
+    // getting queued
+
+    log(tcp_connection, "sending empty ack with seqnbr=% 12d", _next_outgoing_seqnbr);
+    tcp_send_segment segment;
+    segment.flags = 0;
+    segment.seqnbr = _next_outgoing_seqnbr;
+    send(segment, nullptr, 0);
+  }
+
+  // Send outgoing messages if we have any
+  while (_tx_queue.has_readable()) {
+    log(tcp_connection, "sending outstanding tx");
+    tcp_send_segment seg;
+    size_t bytes_read = _tx_queue.read_one_segment(&seg, buffer, sizeof(buffer));
+    send(seg, buffer, bytes_read);
   }
 }
 
-void tcp_connection::rx_enqueue(const tcp_segment &segment)
+void tcp_connection::sequence(const tcp_segment &segment, const char *data, size_t length)
 {
   tcp_recv_segment segment_;
   segment_.flags = segment.tcphdr->flags_hdrsz & 0x1FF;
   segment_.seqnbr = segment.tcphdr->seq_nbr;
-  _rx_queue.insert(segment_, segment.payload, segment.payload_size);
+
+  _rx_queue.insert(segment_, data, length);
   // TODO: handle result? What if the queue is full?
 }
 
-void tcp_connection::tx_enqueue(const tcp_send_segment &segment, const char *data, size_t length)
+void tcp_connection::transmit(const tcp_send_segment &segment, const char *data, size_t length, size_t send_length)
 {
-  static char buf[10 * 1024];
-  // TODO: if this is ever multithreaded, fix the static!!
-
-  _tx_queue.write_back(segment, data, length);
-
-  while (_tx_queue.has_readable()) {
-    tcp_send_segment seg;
-
-    if (size_t bytes_read = _tx_queue.read_one_segment(&seg, buf, sizeof(buf)); bytes_read > 0) {
-      send(seg, buf, bytes_read);
-    }
-  }
+  tcp_send_segment segment_(segment);
+  segment_.seqnbr = _tx_queue.write_cursor();
+  _tx_queue.write_back(segment_, data, length, send_length);
 }
 
 void tcp_connection::reset_tx(tcp_seqnbr outgoing_seqnbr)
@@ -109,11 +136,14 @@ void tcp_connection::send(const tcp_send_segment &segment, const char *data, siz
   uint8_t hdrsz = 5;
   uint16_t flags_hdrsrz = (flags & 0x1FF) | (hdrsz << 12);
 
+  tcp_seqnbr this_seqnbr = segment.seqnbr;
+  tcp_seqnbr remotes_last_seqnbr = _rx_queue.read_cursor();
+
   tcp_header hdr;
   hdr.src_port = htons(_local.port);
   hdr.dest_port = htons(_remote.port);
-  hdr.seq_nbr = htonl(segment.seqnbr);
-  hdr.ack_nbr = htonl(_rx_queue.read_cursor());
+  hdr.seq_nbr = htonl(this_seqnbr);
+  hdr.ack_nbr = htonl(remotes_last_seqnbr);
   hdr.flags_hdrsz = htons(flags_hdrsrz);
   hdr.wndsz = htons(10000); // TODO
   hdr.checksum = 0;
@@ -125,8 +155,13 @@ void tcp_connection::send(const tcp_send_segment &segment, const char *data, siz
   ipv4.dest_addr = _remote.ipaddr;
   ipv4.proto = PROTO_TCP;
 
-  if ((segment.flags & SYN) && length == 1) {
-    // Phantom byte, ignore it. TODO: flag for this?
+  if (((segment.flags & SYN) && length == 1) || length == 0) {
+    // Phantom byte (during handshake) or possibly an idle ack with
+    // empty payload
+    log(tcp_connection, "send: sending empty or phantom message, seqnbr=% 12d, ack=% 12d",
+        this_seqnbr,
+        remotes_last_seqnbr);
+
     hdr.checksum = tcp_checksum(ipv4.src_addr,
                                 ipv4.dest_addr,
                                 ipv4.proto,
@@ -148,9 +183,16 @@ void tcp_connection::send(const tcp_send_segment &segment, const char *data, siz
 
     ipv4_send(connection_table().interface(), ipv4, buffer, length + sizeof(hdr));
   }
+
+  _next_outgoing_seqnbr = this_seqnbr + length;
 }
 
 void tcp_connection::transition(const tcp_connection_state *new_state)
 {
   _state = new_state;
+}
+
+void tcp_connection::tick(int dt)
+{
+  (void)dt;
 }

@@ -7,23 +7,25 @@
 
 #include "tcp_proto.h"
 
+// TODO: clean up these intermediary segment types
 struct tcp_send_segment {
   uint16_t flags;
   tcp_seqnbr seqnbr;
-  uint32_t length;
+  uint32_t data_length, send_length;
 };
 
 class tcp_send_queue {
 public:
   tcp_send_queue();
 
-  bool write_back(const tcp_send_segment &segment, const char *data, size_t length);
+  bool write_back(const tcp_send_segment &segment, const char *data, size_t data_length, size_t send_length);
   size_t read_one_segment(tcp_send_segment *segment, char *data, size_t length);
   bool has_readable();
 
   void set_window(size_t wndsz);
   void ack(tcp_seqnbr new_ack_pos);
   void reset(tcp_seqnbr seqnbr);
+  tcp_seqnbr write_cursor() const { return _write_pos; }
 
 private:
   tcp_seqnbr _ack_pos, _write_pos;

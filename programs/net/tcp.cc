@@ -12,18 +12,13 @@ void tcp_init(int interface)
 {
   // TODO: fix multi-interface handling
   connections.set_interface(interface);
-  connections.create_connection({0, 0}, {0, 123}, tcp_connection_state::LISTEN);
+  connections.create_connection({0, 0}, {0, 5555}, tcp_connection_state::LISTEN);
 }
 
 void tcp_recv(int interface, eth_frame *frame, ipv4_dgram *datagram, const char *data, size_t length)
 {
   (void)interface;
-  (void)frame;
-  (void)datagram;
-  (void)data;
-  (void)length;
-
-  log(tcp, "rx datagram");
+  // TODO: multi interface support
 
   if (length < sizeof(tcp_header)) {
     log(tcp, "length less than header, dropping");
@@ -61,6 +56,7 @@ void tcp_recv(int interface, eth_frame *frame, ipv4_dgram *datagram, const char 
     segment.flags = flags;
 
     connections[conn].recv(segment);
+    connections.step_new_connections();
   }
   else {
     log(tcp, "no connections matched");
@@ -93,4 +89,9 @@ uint16_t tcp_checksum(uint32_t src_addr, uint32_t dest_addr, uint8_t proto, cons
     sum = (sum >> 16) + (sum & 0xFFFF);
 
   return ~(uint16_t)sum;
+}
+
+void tcp_tick(int dt)
+{
+  connections.tick(dt);
 }

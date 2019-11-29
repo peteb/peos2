@@ -7,6 +7,7 @@
 #include "ethernet.h"
 #include "arp.h"
 #include "ipv4.h"
+#include "tcp.h"
 
 struct header {
   uint8_t  mac_dest[6];
@@ -34,6 +35,7 @@ void eth_run(int fd)
     int timeout_consumed = timeout_duration - syscall0(get_timeout);
     arp_tick(timeout_consumed);
     ipv4_tick(timeout_consumed);
+    tcp_tick(timeout_consumed);
 
     if (ret == ETIMEOUT) {
       continue;

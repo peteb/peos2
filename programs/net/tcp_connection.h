@@ -33,7 +33,8 @@ public:
   // connection has non-wildcard fields that don't match, then the
   // function returns -1. Otherwise, it returns the number of
   // non-wildcard fields that match exactly.
-  int compare(const tcp_endpoint &remote, const tcp_endpoint &local);
+  int compare(const tcp_endpoint &remote,
+              const tcp_endpoint &local);
 
   // Handle a freshly arrived datagram from IPv4
   void recv(const tcp_segment &segment);
@@ -45,21 +46,34 @@ public:
   void reset_rx(tcp_seqnbr incoming_seqnbr);
 
   // Write a segment to the receive queue so that it'll get sorted and
-  // ack'd correctly
-  void rx_enqueue(const tcp_segment &segment);
+  // ack'd correctly. Length must be at least 1, you cannot sequence
+  // an empty segment, thus, you cannot sequence an empty ACK.
+  // Consuming a sequenced segment without writing something to the tx
+  // buffer will trigger an empty ack to be sent.
+  void sequence(const tcp_segment &segment,
+                const char *data,
+                size_t length);
 
   // Write a segment to the transmit queue so that it'll be sent off
   // and re-sent on timeout
-  void tx_enqueue(const tcp_send_segment &segment,
-                  const char *data,
-                  size_t length);
+  void transmit(const tcp_send_segment &segment,
+                const char *data,
+                size_t length,
+                size_t send_length);
 
   void transition(const tcp_connection_state *new_state);
 
   tcp_connection_table &connection_table() { return *_connection_table; }
 
+  // Advances internal timers and executes timeouts
+  void tick(int dt);
+
+  void step();
+
 private:
-  void send(const tcp_send_segment &segment, const char *data, size_t length);
+  void send(const tcp_send_segment &segment,
+            const char *data,
+            size_t length);
 
   tcp_connection_table *_connection_table;
   tcp_endpoint _remote, _local;
@@ -67,6 +81,8 @@ private:
 
   tcp_recv_queue _rx_queue;
   tcp_send_queue _tx_queue;
+
+  tcp_seqnbr _next_outgoing_seqnbr = 0;
 };
 
 #endif // !NET_TCP_CONNECTION_H
