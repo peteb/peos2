@@ -21,6 +21,7 @@
 #include "support/utils.h"
 #include "support/optional.h"
 #include "support/blocking_queue.h"
+#include "support/ring_buffer.h"
 
 // Registers
 #define IDR0        0x00
@@ -96,8 +97,7 @@ static volatile uint32_t tx_cur_send = 0;
 // Device driver state
 static p2::opt<proc_handle> process_opened;
 static p2::blocking_data_queue<10 * 1024> read_fifo;
-static uint8_t write_buffer[10 * 1024];
-static uint16_t write_pos = 0;
+static p2::ring_buffer<10 * 1024> pending_tx;
 
 // Declarations
 extern "C" void isr_rtl8139(isr_registers *);
@@ -327,42 +327,45 @@ static int read(int /*handle*/, char *data, int length)
 
 static int write(int /*handle*/, const char *data, int length)
 {
+  static char buf[1600];  // TODO/NB: global state
   assert(length > 0);
-  int bytes_writable = p2::min<int>(write_pos + length, sizeof(write_buffer)) - write_pos;
-  memcpy(write_buffer + write_pos, data, bytes_writable);
-  write_pos += bytes_writable;
 
-  dbg_puts(rtl8139, "wrote %d bytes to out buffer, pos=%d", bytes_writable, write_pos);
+  // write_buffer contains an unfinished outgoing packet, the packet
+  // is prefixed with a 16 bit length (like what the user writes on
+  // the fd)
+  int bytes_writable = p2::min<int>(pending_tx.capacity(), length);
+  if (!pending_tx.write(data, bytes_writable)) {
+    dbg_puts(rtl8139, "failed to write bytes to pending tx buffer, writable=%d", bytes_writable);
+    return 0;
+  }
 
-  if (write_pos <= sizeof(uint16_t))
-    return bytes_writable;
+  dbg_puts(rtl8139, "wrote %d bytes to out buffer", bytes_writable);
 
-  // We *might* have a full packet, so try consuming. TODO: move this
-  // to interrupt? But which one?
-  uint8_t *tx_pos = write_buffer, *buf_end = write_buffer + write_pos;
+  while (pending_tx.size() >= sizeof(uint16_t)) {
+    // We *might* have a full packet, so try consuming. TODO: move this
+    // to interrupt? But which one?
 
-  while (tx_pos < buf_end) {
     uint16_t packet_size = 0;
-    memcpy(&packet_size, tx_pos, sizeof(packet_size));
 
-    if (tx_pos + packet_size < buf_end) {
-      // We've received a full packet
-      tx_pos += sizeof(packet_size);
-      dbg_puts(rtl8139, "sending packet size=%d", packet_size);
-      transmit(dev, (char *)tx_pos, packet_size);
-      // TODO: check that we successfully tx'd the data
-      tx_pos += packet_size;
-    }
-    else {
-      // We're in the middle of a packet, but we can possibly compact
-      // the buffer and remove sent packets
-      // TODO: use memmove due to overlapping regions
-      dbg_puts(rtl8139, "incomplete packet");
-      size_t bytes_sent = tx_pos - write_buffer;
-      memcpy(write_buffer, tx_pos, write_pos - bytes_sent);
-      write_pos -= bytes_sent;
+    if (pending_tx.read((char *)&packet_size, 0, sizeof(packet_size)) != sizeof(packet_size))
       break;
-    }
+
+    // Check that there's enough to read for the whole packet
+    if (pending_tx.size() < sizeof(packet_size) + packet_size)
+      break;
+
+    // OK someone has written enough for a packet, consume
+    size_t consumed_header = pending_tx.consume(sizeof(packet_size));
+    assert(consumed_header == sizeof(packet_size) && "failed to consume pending tx packet size");
+
+    // TODO: can we get rid of the copy below? Yes, we can reference
+    // into the ring buffer immediately if the range doesn't wrap
+    // around
+    size_t consumed_payload = pending_tx.read_front(buf, packet_size);
+    assert(consumed_payload == packet_size && "failed to consume pending tx payload");
+
+    dbg_puts(rtl8139, "sending packet size=%d", packet_size);
+    transmit(dev, buf, packet_size);
   }
 
   return bytes_writable;

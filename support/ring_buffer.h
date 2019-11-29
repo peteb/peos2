@@ -46,6 +46,7 @@ namespace p2 {
       return bytes_read;
     }
 
+    // TODO: rename, peek?
     size_t read(char *data, int start, int length)
     {
       int max_length = p2::max(p2::min<int>(start + length, size()) - start, 0);
@@ -81,6 +82,11 @@ namespace p2 {
     size_t capacity() const
     {
       return _MaxLen;
+    }
+
+    size_t remaining() const
+    {
+      return capacity() - size();
     }
 
     void clear()
