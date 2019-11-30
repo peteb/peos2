@@ -1,0 +1,39 @@
+support: rename "blocking_data_queue" to "blocking_ring_buffer"
+support: improve ring_buffer performance using memcpy
+support: improve memcpy performance
+tcp: clean up the different *segment classes that are used by queues
+tcp: retransmission
+tcp: break up segments into sizes good for the current MTU
+ipv4: fragment messages when sending too large
+ramfs: implement read dir
+support: rename pool::push_back to pool::push, emplace instead of emplace_back
+tcp: remote and local window updates
+tcp: selective ack
+tcp: active open (client connect)
+net: improve buffer handling to minimize number of copies
+kernel: idle main should be run as supervisor so that it can hlt
+kernel: writable mmap
+kernel: use physical page allocator for page tables
+kernel: keyboard interrupt should be offloaded, too much stuff going on
+kernel: protection against page faults in the kernel stack during a syscall
+kernel: remove inline intel syntax asm, it's confusing to have two styles
+kernel: go through instability in test cases, fix them
+kernel: initial page structures setup in boot.s are hardcoded to a small size, should be dynamic
+kernel: `wait` should be able to fetch the exit status of the process
+kernel: process priorities
+testing: there can always be more integration tests
+testing: benchmarking of various functions (for example, the net stack, process creation) so that improvements can be seen
+support: optimize memcmp
+vfs: user permissions
+vfs/ramfs: extract filesystem datastructure
+kernel: use global pages for kernel area so that they wont be flushed from TLB
+kernel: CoW fork
+misc: go through TODOs
+kernel: handle errors/panics in IRQs (right now, the kernel will blame and kill the current process)
+misc: change build system
+misc: extract unittest framework code so that it can easily be reused in programs and libraries
+misc: setup CI
+net: extract code into a library
+misc: make everything work on real hardware
+misc: port a libc and stdc++lib
+tcp: improve resource handling so that the code isn't hardcoded to a low number of connections etc

@@ -69,7 +69,7 @@ void tcp_connection::mark_for_destruction()
 
 void tcp_connection::step()
 {
-  static char buffer[20 * 1024]; // Largest segment is 10K
+  static char buffer[20 * 1024];
   // TODO: review this buffer size
   // TODO: change static when this is multithreaded
 

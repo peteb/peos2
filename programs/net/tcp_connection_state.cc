@@ -19,11 +19,12 @@ static const class : public tcp_connection_state {
   {
     if (!(segment.flags & SYN)) {
       log(tcp, "LISTEN: received segment without SYN, dropping");
+      // TODO: RST
       return;
     }
 
     // Create a new connection for this pair of endpoints
-    // TODO: what if someone listens on the most specific pair of endpoints already?
+    // TODO: what if this connection is the most specific pair of endpoints already?
     tcp_connection_table &conntab = conn.connection_table();
     auto conn_idx = conntab.create_connection({segment.datagram->src_addr, segment.tcphdr->src_port},
                                               {segment.datagram->dest_addr, segment.tcphdr->dest_port},
