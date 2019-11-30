@@ -1,4 +1,5 @@
 #!/bin/bash
+sleep 1
 pid=$(bochs -q -f bochsrc.test) &
 sleep 1
 nc localhost 4455

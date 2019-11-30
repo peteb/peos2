@@ -21,14 +21,14 @@ tar xvf gcc-$GCC_VERSION.tar.xz
 # Build binutils
 mkdir build-binutils && pushd build-binutils
 ../binutils-$BINUTILS_VERSION/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot --disable-nls --disable-werror
-make && make install
+make -j4 && make install
 popd
 
 # Build gcc
 mkdir build-gcc && pushd build-gcc
 ../gcc-$GCC_VERSION/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
-make all-gcc
-make all-target-libgcc
+make -j4 all-gcc
+make -j4 all-target-libgcc
 make install-gcc
 make install-target-libgcc
 popd

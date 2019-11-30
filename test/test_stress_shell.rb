@@ -75,8 +75,9 @@ scenario "qemu i386 image" do
   it_successfully_runs "simple shell stress test"
 end
 
-scenario "bochs i386 image" do
-  builds KERNEL_BUILDS
-  command "./run-bochs"
-  it_successfully_runs "simple shell stress test"
-end
+#scenario "bochs i386 image" do
+#  builds KERNEL_BUILDS
+#  command "./run-bochs"
+#  it_successfully_runs "simple shell stress test"
+#end
+# TODO: Disabled Bochs due to general instability in the integration with Bochs

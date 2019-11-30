@@ -1,3 +1,11 @@
 #!/bin/bash
 cd `dirname $0`
-docker run -it --privileged -v "`pwd`/../":/opt/src i686-elf-compiler bash
+
+BUILD_PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cross/bin/
+
+if [ $# -eq 0 ]
+then
+  docker run -it --privileged -v "`pwd`/../":/opt/src ${IMAGE:-peos-env} bash
+else
+  docker run --privileged -e OPT_FLAGS="$OPT_FLAGS" -e DEFS="$DEFS" -e PATH="$BUILD_PATH" -v "`pwd`/../":/opt/src ${IMAGE:-peos-env} $*
+fi

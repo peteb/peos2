@@ -1,2 +1,0 @@
-#!/bin/bash
-docker run -it --privileged -e OPT_FLAGS="-g -O0" -e DEFS="$DEFS" -e PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cross/bin/ -v "`pwd`/../":/opt/src i686-elf-compiler support/run_unittests
