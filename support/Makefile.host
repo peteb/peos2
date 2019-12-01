@@ -1,6 +1,6 @@
 # -*- makefile -*-
 
-OPT_FLAGS ?= -O3
+OPT_FLAGS?=-O3
 CC=gcc
 CXX=g++
 AS=as
@@ -12,19 +12,23 @@ OBJDIR=.host
 
 TEST_SOURCES=$(wildcard unittests/test_*.cc)
 TEST_OBJECTS=$(TEST_SOURCES:.cc=.o) unittests/unittest.o
-OBJECT_PATHS=$(addprefix $(OBJDIR)/,$(TEST_OBJECTS)) $(addprefix $(OBJDIR)/,$(OBJECTS))
 
-all : unittest
+UT_OBJECT_PATHS=$(addprefix $(OBJDIR)/,$(TEST_OBJECTS))
+LIB_OBJECT_PATHS=$(addprefix $(OBJDIR)/,$(OBJECTS))
+
+all : $(OBJDIR)/unittest
 
 clean :
-	rm -rf $(OBJDIR) unittest
+	rm -rf $(OBJDIR)
 
-unittest : $(OBJECT_PATHS)
-	$(CXX) -o unittest -Werror $(OPT_FLAGS) $(OBJECT_PATHS)
+$(OBJDIR)/libsupport.a : $(LIB_OBJECT_PATHS)
+	ar rcs $(OBJDIR)/libsupport.a $(LIB_OBJECT_PATHS)
 
-check : unittest
-	@./unittest
+$(OBJDIR)/unittest : $(UT_OBJECT_PATHS) $(OBJDIR)/libsupport.a
+	$(CXX) -o $(OBJDIR)/unittest -Werror $(OPT_FLAGS) $(UT_OBJECT_PATHS) -lsupport -L$(OBJDIR)
+
+check : $(OBJDIR)/unittest
+	@$(OBJDIR)/unittest
 
 -include *.d
--include .host/*.d
--include .host/*/*.d
+-include $(OBJDIR)/**/*.d
