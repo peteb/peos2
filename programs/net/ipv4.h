@@ -37,13 +37,6 @@ size_t ipv4_send(int interface,
                  const char *data,
                  size_t length);
 
-uint64_t sum_words(const char *data, size_t length);
-
-uint16_t ipv4_checksum(const char *data,
-                       size_t length,
-                       const char *data2,
-                       size_t length2);
-
 // Advances the IPv4 world by @dt ticks, used for timeouts, etc
 void ipv4_tick(int dt);
 

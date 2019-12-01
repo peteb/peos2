@@ -71,4 +71,21 @@ static inline int list_dir(int fd, dirent_t *dirents, size_t count)
   return (out - (char *)dirents) / sizeof(*dirents);
 }
 
+static inline int read(int fd, char *buf, size_t length)
+{
+  size_t total = 0;
+  int ret;
+
+  while ((ret = syscall3(read, fd, buf, length)) > 0) {
+    length -= ret;
+    total += ret;
+  }
+
+  if (ret < 0)
+    return ret;
+  else
+    return total;
+}
+
+
 #endif // !PEOS2_SUPPORT_USERSPACE_H

@@ -25,11 +25,13 @@ public:
 
   void set_interface(int interface) {_interface = interface; }
   int interface() {return _interface; }
+  void set_ipv4(ipv4_interface *ipv4_if) {_ipv4_if = ipv4_if; }
 
 private:
-  int _interface;
+  int _interface = -1;
   p2::pool<tcp_connection, 10, handle> _connections;
   p2::pool<handle, 10> _new_connections, _finished_connections;
+  ipv4_interface *_ipv4_if = nullptr;
 };
 
 #endif // !NET_TCP_CONNECTION_TABLE_H

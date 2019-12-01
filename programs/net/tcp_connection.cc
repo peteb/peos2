@@ -182,7 +182,7 @@ void tcp_connection::send(const tcp_send_segment &segment, const char *data, siz
                                 nullptr,
                                 0);
 
-    ipv4_send(connection_table().interface(), ipv4, (char *)&hdr, sizeof(hdr));
+    _ipv4_if->send(connection_table().interface(), ipv4, (char *)&hdr, sizeof(hdr));
   }
   else {
     hdr.checksum = ipv4_checksum((char *)&hdr, sizeof(hdr), data, length);
@@ -193,7 +193,7 @@ void tcp_connection::send(const tcp_send_segment &segment, const char *data, siz
     memcpy(buffer, &hdr, sizeof(hdr));
     memcpy(buffer + sizeof(hdr), data, length);
 
-    ipv4_send(connection_table().interface(), ipv4, buffer, length + sizeof(hdr));
+    _ipv4_if->send(connection_table().interface(), ipv4, buffer, length + sizeof(hdr));
   }
 
   _next_outgoing_seqnbr = this_seqnbr + length;

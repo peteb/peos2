@@ -1,6 +1,10 @@
 #include "utils.h"
 #include "panic.h"
 
+#if __STDC_HOSTED__ == 0
+
+// TODO: clean up conflicting definitions of memset when built in hosted environment
+
 extern "C" void *memset(void *dest, int value, size_t len)
 {
   // TODO: optimize
@@ -10,6 +14,7 @@ extern "C" void *memset(void *dest, int value, size_t len)
   }
   return dest;
 }
+#endif
 
 extern "C" void *memcpy(void *dest, const void *src, size_t length)
 {

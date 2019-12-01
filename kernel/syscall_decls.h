@@ -5,6 +5,10 @@
 #ifndef PEOS2_SYSCALL_DECLS_H
 #define PEOS2_SYSCALL_DECLS_H
 
+#if __STDC_HOSTED__ == 1
+#warning "Including syscall_decls in host build"
+#endif
+
 #include <stdint.h>
 #include "syscall_macros.h"
 

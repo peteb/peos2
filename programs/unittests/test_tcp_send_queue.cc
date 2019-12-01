@@ -17,7 +17,7 @@ TESTSUITE(tcp_send_queue) {
     q.set_window(100);
 
     // when
-    ASSERT_EQ(q.write_back({0, 0, 1000}, buf, 1000), true);
+    ASSERT_EQ(q.write_back({0, 0, 1000, 1000}, buf, 1000, 1000), true);
   }
 
   TESTCASE("write_back cannot write a gap") {
@@ -25,10 +25,10 @@ TESTSUITE(tcp_send_queue) {
     char buf[1000];
 
     tcp_send_queue q;
-    q.write_back({0, 0, 1000}, buf, 1000);
+    q.write_back({0, 0, 1000, 1000}, buf, 1000, 1000);
 
     // when
-    ASSERT_EQ(q.write_back({0, 1002, 1000}, buf, 1000), false);
+    ASSERT_EQ(q.write_back({0, 1002, 1000, 1000}, buf, 1000, 1000), false);
   }
 
   TESTCASE("write_back can write back-to-back") {
@@ -36,18 +36,18 @@ TESTSUITE(tcp_send_queue) {
     char buf[1000];
 
     tcp_send_queue q;
-    q.write_back({0, 0, 1000}, buf, 1000);
+    q.write_back({0, 0, 1000, 1000}, buf, 1000, 1000);
 
     // when/then
-    ASSERT_EQ(q.write_back({0, 1000, 1000}, buf, 1000), true);
+    ASSERT_EQ(q.write_back({0, 1000, 1000, 1000}, buf, 1000, 1000), true);
     ASSERT_EQ(q.has_readable(), true);
   }
 
   TESTCASE("write_back can be read") {
     // given
     tcp_send_queue q;
-    ASSERT_EQ(q.write_back({1, 0, 0}, "AAA", 3), true);
-    ASSERT_EQ(q.write_back({2, 3, 0}, "BBBBB", 5), true);
+    ASSERT_EQ(q.write_back({1, 0, 0, 0}, "AAA", 3, 3), true);
+    ASSERT_EQ(q.write_back({2, 3, 0, 0}, "BBBBB", 5, 5), true);
 
     // when
     tcp_send_segment seg;
@@ -68,10 +68,10 @@ TESTSUITE(tcp_send_queue) {
     q.reset(0);
 
     // First add a couple of segments
-    ASSERT_EQ(q.write_back({1, 0, 0}, " ", 1), true);
-    ASSERT_EQ(q.write_back({2, 1, 0}, "ASD", 3), true);
-    ASSERT_EQ(q.write_back({1, 4, 0}, "AS", 2), true);
-    ASSERT_EQ(q.write_back({1, 6, 0}, "HEY", 3), true);
+    ASSERT_EQ(q.write_back({1, 0, 0, 0}, " ", 1, 1), true);
+    ASSERT_EQ(q.write_back({2, 1, 0, 0}, "ASD", 3, 3), true);
+    ASSERT_EQ(q.write_back({1, 4, 0, 0}, "AS", 2, 2), true);
+    ASSERT_EQ(q.write_back({1, 6, 0, 0}, "HEY", 3, 3), true);
 
     // Ack the first segment
     q.ack(1);

@@ -25,6 +25,7 @@ p2::string<32> hwaddr_str(const uint8_t *octets);
 int read(int fd, char *buf, size_t length);
 p2::string<16> ipaddr_str(uint32_t octets);
 uint32_t parse_ipaddr(const char *str);
+uint64_t sum_words(const char *data, size_t length);
 
 inline uint16_t ntohs(uint16_t net_bytes)
 {
@@ -45,5 +46,10 @@ inline uint32_t htonl(uint32_t host_bytes)
 {
   return ntohl(host_bytes);
 }
+
+uint16_t ipv4_checksum(const char *data,
+                       size_t length,
+                       const char *data2,
+                       size_t length2);
 
 #endif // !NET_UTILS_H

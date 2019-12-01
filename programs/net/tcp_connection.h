@@ -12,17 +12,27 @@
 
 class tcp_connection_table;
 
+class ipv4_interface {
+public:
+  virtual size_t send(int interface,
+                      const ipv4_dgram &ipv4,
+                      const char *data,
+                      size_t length) =0;
+};
+
 // Connects a local endpoint (which might or might not be a wildcard)
 // to a remote endpoint. The connection object handles retransmission,
 // acking, reassembly, etc, but it's controlled by the current
 // connection state.
 class tcp_connection {
 public:
-  tcp_connection(tcp_connection_table *connection_table,
+  tcp_connection(ipv4_interface *ipv4_if,
+                 tcp_connection_table *connection_table,
                  const tcp_endpoint &remote,
                  const tcp_endpoint &local,
                  const tcp_connection_state *state)
-    : _connection_table(connection_table),
+    : _ipv4_if(ipv4_if),
+      _connection_table(connection_table),
       _remote(remote),
       _local(local),
       _state(state)
@@ -80,6 +90,7 @@ private:
             const char *data,
             size_t length);
 
+  ipv4_interface *_ipv4_if;
   tcp_connection_table *_connection_table;
 
   tcp_endpoint _remote, _local;

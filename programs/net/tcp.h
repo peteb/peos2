@@ -18,15 +18,6 @@ void tcp_recv(int interface,
               const char *data,
               size_t length);
 
-// Calculate checksum that can be used in tcphdr::checksum
-uint16_t tcp_checksum(uint32_t src_addr,
-                      uint32_t dest_addr,
-                      uint8_t proto,
-                      const char *data1,
-                      size_t length1,
-                      const char *data2,
-                      size_t length2);
-
 void tcp_tick(int dt);
 
 #endif // !NET_TCP_H

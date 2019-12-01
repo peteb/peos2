@@ -8,3 +8,4 @@ unittest
 peos2.img
 *.pcap
 crapfile
+bochsout.txt

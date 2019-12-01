@@ -36,7 +36,7 @@ tcp_connection_table::handle tcp_connection_table::create_connection(const tcp_e
       ipaddr_str(local.ipaddr),
       local.port);
 
-  handle new_conn = _connections.emplace_back(this, remote, local, state);
+  handle new_conn = _connections.emplace_back(_ipv4_if, this, remote, local, state);
   _connections[new_conn].handle = new_conn;
   _new_connections.push_back(new_conn);
   return new_conn;
@@ -76,8 +76,9 @@ void tcp_connection_table::step_new_connections()
     }
   }
 
-  if (_new_connections.size() > 0)
+  if (_new_connections.size() > 0) {
     log(tcp_connection_table, "warning, recursively creating connections");
+  }
 }
 
 void tcp_connection_table::destroy_finished_connections()

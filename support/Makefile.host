@@ -1,6 +1,6 @@
 # -*- makefile -*-
 
-OPT_FLAGS?=-O3
+OPT_FLAGS ?= -O3
 CC=gcc
 CXX=g++
 AS=as
