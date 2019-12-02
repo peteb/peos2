@@ -33,6 +33,9 @@ tcp_connection_table::handle tcp_connection_table::create_connection(const tcp_e
       ipaddr_str(local.ipaddr),
       local.port);
 
+  if (_connections.full())
+    log(tcp_connection_table, "connection table is full!");
+
   handle new_conn = _connections.emplace_anywhere(_ipv4_if, this, remote, local, state);
   _connections[new_conn].handle = new_conn;
   _new_connections.emplace_anywhere(new_conn);

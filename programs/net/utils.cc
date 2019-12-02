@@ -66,15 +66,18 @@ uint64_t sum_words(const char *data, size_t length)
   const uint16_t *ptr16 = (const uint16_t *)ptr32;
 
   if (length >= 2) {
-    sum += *ptr16;
+    sum += *ptr16++;
     length -= 2;
   }
 
   // Might be even more leftovers (which should be padded)
   if (length > 0) {
     uint8_t byte = *(const uint8_t *)ptr16;
-    sum += ntohs(byte << 8);
+    sum += htons(byte << 8);
+    --length;
   }
+
+  assert(length == 0);
 
   return sum;
 }

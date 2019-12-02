@@ -29,7 +29,7 @@ public:
 
 private:
   int _interface = -1;
-  p2::pool<tcp_connection, 10, handle> _connections;
+  p2::pool<tcp_connection, 40, handle> _connections;
   p2::pool<handle, 10> _new_connections, _finished_connections;
   ipv4_interface *_ipv4_if = nullptr;
 };

@@ -55,6 +55,16 @@ case $1 in
     qemu-system-i386 -s ${EXTRA:-} -nographic -kernel kernel/vmpeoz -initrd init.tar -append init=/ramfs/bin/nsa $FLAGS $UD_MONITOR
     ;;
 
+  httpd)
+    FLAGS="-d pcall,cpu_reset,guest_errors \
+      -netdev user,id=mynet0,hostfwd=tcp::${PORT:-8080}-:5555 \
+      -device rtl8139,netdev=mynet0,mac=02:ca:fe:f0:0d:01 \
+      -object filter-dump,id=dp1,netdev=mynet0,file=vm0.pcap"
+
+    echo FLAGS=$FLAGS
+    qemu-system-i386 -nographic -kernel kernel/vmpeoz -initrd init.tar -append init=/ramfs/bin/nsa $FLAGS
+    ;;
+
   *)
     echo $"Usage: $0 {diskimage|debug|display|vnc|terminal|test-shell|test-cdrom}"
     exit 1

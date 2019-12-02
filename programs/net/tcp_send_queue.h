@@ -9,7 +9,7 @@
 
 // TODO: clean up these intermediary segment types
 struct tcp_send_segment {
-  uint16_t flags;
+  uint16_t flags = 0;
   tcp_seqnbr seqnbr;
   uint32_t data_length, send_length;
 };

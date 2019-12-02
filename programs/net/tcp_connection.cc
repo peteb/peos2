@@ -44,6 +44,12 @@ void tcp_connection::recv(const tcp_segment &segment)
 {
   assert(_state);
 
+  if (segment.flags & RST) {
+    log(tcp_connection, "received RST, dropping and destroying connection");
+    mark_for_destruction();
+    return;
+  }
+
   _state->early_recv(*this, segment);
 
   // Automatically use the ack seqnbr from remote to stop our
@@ -151,6 +157,8 @@ void tcp_connection::send(const tcp_send_segment &segment, const char *data, siz
   tcp_seqnbr this_seqnbr = segment.seqnbr;
   tcp_seqnbr remotes_last_seqnbr = _rx_queue.read_cursor();
 
+  log(tcp_connection, "send: sending segment with flags %04x:", flags);
+
   tcp_header hdr;
   hdr.src_port = htons(_local.port);
   hdr.dest_port = htons(_remote.port);
@@ -185,7 +193,15 @@ void tcp_connection::send(const tcp_send_segment &segment, const char *data, siz
     _ipv4_if->send(connection_table().interface(), ipv4, (char *)&hdr, sizeof(hdr));
   }
   else {
-    hdr.checksum = ipv4_checksum((char *)&hdr, sizeof(hdr), data, length);
+    log(tcp_connection, "send: sending segment with payload, length=%d", length);
+
+    hdr.checksum = tcp_checksum(ipv4.src_addr,
+                                ipv4.dest_addr,
+                                ipv4.proto,
+                                (char *)&hdr,
+                                sizeof(hdr),
+                                data,
+                                length);
 
     // TODO: there's a lot of copies all the way down to ethernet, improve that
     char buffer[1500];

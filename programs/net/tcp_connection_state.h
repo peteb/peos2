@@ -39,7 +39,8 @@ public:
     (void)connection;
   }
 
-  static const tcp_connection_state *LISTEN, *SYN_RCVD, *ESTABLISHED, *LAST_ACK;
+  static const tcp_connection_state *LISTEN, *SYN_RCVD, *ESTABLISHED,
+    *LAST_ACK, *FIN_WAIT_1, *FIN_WAIT_2, *CLOSING;
 };
 
 #endif // !NET_TCP_CONNECTION_STATE_H

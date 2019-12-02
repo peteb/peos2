@@ -68,10 +68,13 @@ static const class : public tcp_connection_state {
   {
     // TODO: extra check on sequence numbers?
 
-    if (segment.flags == ACK) {
+    if (segment.flags & ACK) {
       // TODO: Is it possible to append data to the handshake ACK? In
       // that case, we should sequence the ACK payload
       conn.transition(tcp_connection_state::ESTABLISHED);
+    }
+    else {
+      log(tcp, "SYN-RCVD: early_recv of non-ACK, flags=%04x, dropping", segment.flags);
     }
   }
 
@@ -86,7 +89,8 @@ static const class : public tcp_connection_state {
     }
 
     (void)data;
-    log(tcp, "SYN-RCVD: rx sequenced segment of size %d", length);
+    log(tcp, "SYN-RCVD: flags %04x", segment.flags);
+    log(tcp, "SYN-RCVD: rx sequenced SYN segment of size %d, sending back", length);
 
     // TODO: verify that this is a sequenced SYN
     tcp_send_segment response;
@@ -142,7 +146,29 @@ static const class : public tcp_connection_state {
     char buffer[256];
     memcpy(buffer, data, p2::min(length, sizeof(buffer)));
     buffer[p2::min(length, sizeof(buffer) - 1)] = 0;
-    log(tcp, "ESTABLISHED: rx sequenced segment %d bytes: %s", length, buffer);
+    log(tcp, "ESTABLISHED: rx seq segment %d bytes: %s", length, buffer);
+
+    // Send some dummy data
+    const char *message = "HTTP/1.1 200 OK\r\n"
+      "Server: peos2\r\n"
+      "Content-Length: 16\r\n"
+      "Content-Type: text/plain\r\n"
+      "Connection: Closed\r\n"
+      "\r\n"
+      "Handled by peos2";
+
+    (void)message;
+
+    tcp_send_segment http_segment;
+    http_segment.flags = PSH;
+    conn.transmit(http_segment, message, strlen(message), strlen(message));
+
+
+    // Close the connection
+    /*tcp_send_segment fin_segment;
+    fin_segment.flags = FIN;
+    conn.transmit(fin_segment, phantom, 1, 0);
+    conn.transition(tcp_connection_state::FIN_WAIT_1);*/
   }
 
 } established;
@@ -166,3 +192,100 @@ static const class : public tcp_connection_state {
 } last_ack;
 
 const tcp_connection_state *tcp_connection_state::LAST_ACK = &last_ack;
+
+
+// FIN_WAIT_1
+static const class : public tcp_connection_state {
+  const char *name() const
+  {
+    return "FIN-WAIT-1";
+  }
+
+  void early_recv(tcp_connection &conn, const tcp_segment &segment) const override
+  {
+    if ((segment.flags & FIN) && segment.payload_size == 0) {
+      // We need to sequence FINs with a phantom byte so that they
+      // increase the sequence number and can be ACKd
+
+      // TODO: if we don't implement the "recv_sequenced" function, we
+      // shouldn't consume from the rx queue. This would forward any
+      // FINs from the other side to the FIN-WAIT-2 state
+      log(tcp, "FIN-WAIT-1: received a FIN -- the other endpoint is shutting down at the same time");
+      conn.sequence(segment, phantom, 1);
+      conn.transition(tcp_connection_state::CLOSING);
+      return;
+    }
+
+    log(tcp, "FIN-WAIT-1: received non-FIN message, dropping...");
+    // TODO: what if we receive data here, should we do anything with it?
+  }
+
+  void remote_consumed_all(tcp_connection &conn) const
+  {
+    // Our FIN has been ACK'd
+    log(tcp, "FIN-WAIT-1: remote ACK'd our FIN, waiting for their FIN...");
+    conn.transition(tcp_connection_state::FIN_WAIT_2);
+  }
+
+} fin_wait_1;
+
+const tcp_connection_state *tcp_connection_state::FIN_WAIT_1 = &fin_wait_1;
+
+
+
+// CLOSING - when the endpoints are simultaneously closing down
+static const class : public tcp_connection_state {
+  const char *name() const
+  {
+    return "FIN-CLOSING";
+  }
+
+  void remote_consumed_all(tcp_connection &conn) const
+  {
+    log(tcp, "CLOSING: remote ACK'd all messages");
+    conn.mark_for_destruction();
+  }
+} closing;
+
+const tcp_connection_state *tcp_connection_state::CLOSING = &closing;
+
+
+
+// FIN_WAIT_2
+static const class : public tcp_connection_state {
+  const char *name() const
+  {
+    return "FIN-WAIT-2";
+  }
+
+  void early_recv(tcp_connection &conn, const tcp_segment &segment) const override
+  {
+    if ((segment.flags & FIN) && segment.payload_size == 0) {
+      // We need to sequence FINs with a phantom byte so that they
+      // increase the sequence number and can be ACKd
+      conn.sequence(segment, phantom, 1);
+      return;
+    }
+
+    log(tcp, "FIN-WAIT-2: received non-FIN message, dropping");
+    // TODO: what if we receive data here, should we do anything with it?
+  }
+
+  void sequenced_recv(tcp_connection &conn,
+                      const tcp_recv_segment &segment,
+                      const char *data,
+                      size_t length) const override
+  {
+    (void)data;
+    (void)length;
+    if (segment.flags & FIN) {
+      log(tcp, "FIN-WAIT-2: received remote FIN, shutting down...");
+      conn.mark_for_destruction();  // TODO: use the CLOSED state instead
+    }
+    else {
+      log(tcp, "FIN-WAIT-2: received non-FIN segment, dropping");
+    }
+  }
+} fin_wait_2;
+
+const tcp_connection_state *tcp_connection_state::FIN_WAIT_2 = &fin_wait_2;
