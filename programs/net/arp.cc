@@ -121,13 +121,10 @@ void arp_recv(int eth_fd, eth_frame */*frame*/, const char *data, size_t length)
 
 void arp_tick(int ticks)
 {
-  for (size_t i = 0; i < ipv4_probes.watermark(); ++i) {
-    if (!ipv4_probes.valid(i))
-      continue;
-
-    if (!ipv4_probes[i].value.tick(ticks)) {
-      ipv4_probes[i].value.notify_all(PROBE_TIMEOUT);
-      ipv4_probes.erase(i);
+  for (auto probe_it = ipv4_probes.begin(); probe_it != ipv4_probes.end(); ++probe_it) {
+    if (!probe_it->value.tick(ticks)) {
+      probe_it->value.notify_all(PROBE_TIMEOUT);
+      ipv4_probes.erase(probe_it.index());
     }
   }
 }

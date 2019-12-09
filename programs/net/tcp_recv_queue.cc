@@ -80,20 +80,17 @@ tcp_seqnbr tcp_recv_queue::read_cursor() const
 size_t tcp_recv_queue::find_front_segment() const
 {
   tcp_seqnbr lowest_seq = p2::numeric_limits<tcp_seqnbr>::max();
-  size_t lowest_seq_segment = _segments.end_sentinel();
+  auto lowest_it = _segments.end();
 
-  for (size_t i = 0; i < _segments.watermark(); ++i) {
-    if (!_segments.valid(i))
-      continue;
-
-    if (_segments[i].seqnbr < lowest_seq) {
-      lowest_seq = _segments[i].seqnbr;
-      lowest_seq_segment = i;
+  for (auto it = _segments.begin(); it != _segments.end(); ++it) {
+    if (it->seqnbr < lowest_seq) {
+      lowest_seq = it->seqnbr;
+      lowest_it = it;
     }
   }
 
-  assert(lowest_seq_segment != _segments.end_sentinel() && "cannot call find_front_segment on empty queue");
-  return lowest_seq_segment;
+  assert(lowest_it != _segments.end() && "cannot call find_front_segment on empty queue");
+  return lowest_it.index();
 }
 
 void tcp_recv_queue::reset(tcp_seqnbr seqnbr)

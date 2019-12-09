@@ -81,6 +81,11 @@ namespace p2 {
         return _container[_idx];
       }
 
+      T *operator ->() const
+      {
+        return &_container[_idx];
+      }
+
       iterator operator ++()
       {
         iterator copy(*this);
@@ -97,6 +102,11 @@ namespace p2 {
       bool operator !=(const iterator &other) const
       {
         return !(*this == other);
+      }
+
+      _IndexT index() const
+      {
+        return _idx;
       }
 
 #if __STDC_HOSTED__ == 1
@@ -121,6 +131,69 @@ namespace p2 {
 
       pool &_container;
       _IndexT _idx;
+
+      friend class pool;
+    };
+
+
+    class const_iterator {
+    public:
+      const T &operator *() const
+      {
+        return (*_container)[_idx];
+      }
+
+      const T *operator ->() const
+      {
+        return &(*_container)[_idx];
+      }
+
+      const_iterator operator ++()
+      {
+        const_iterator copy(*this);
+        ++_idx;
+        jump_to_valid();
+        return copy;
+      }
+
+      bool operator ==(const const_iterator &other) const
+      {
+        return _container == other._container && _idx == other._idx;
+      }
+
+      bool operator !=(const const_iterator &other) const
+      {
+        return !(*this == other);
+      }
+
+      _IndexT index() const
+      {
+        return _idx;
+      }
+
+#if __STDC_HOSTED__ == 1
+      // Lets hosted unit tests write out the expected and actual values
+      friend std::ostream &operator <<(std::ostream &out, const const_iterator &rhs)
+      {
+        out << rhs._idx;
+        return out;
+      }
+#endif // __STDC_HOSTED__ == 1
+
+    private:
+      const_iterator(const pool *container, _IndexT idx) : _container(container), _idx(idx) {jump_to_valid(); }
+      const_iterator(const iterator &other) : _container(other._container), _idx(other._idx) {}
+
+      // Jumps over gaps in indexes and stops at the watermark. Cannot decrease idx
+      void jump_to_valid()
+      {
+        while (_idx != _container->watermark() && !_container->valid(_idx))
+          ++_idx;
+      }
+
+      const pool *_container;
+      _IndexT _idx;
+
       friend class pool;
     };
 
@@ -291,6 +364,16 @@ namespace p2 {
     iterator end()
     {
       return iterator(*this, _watermark);
+    }
+
+    const_iterator begin() const
+    {
+      return const_iterator(this, 0);
+    }
+
+    const_iterator end() const
+    {
+      return const_iterator(this, _watermark);
     }
 
   private:

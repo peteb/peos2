@@ -20,11 +20,8 @@ int main(int, char *[])
   // TODO: enumerate terminals and spawn one shell for each
   pool<int, 16> child_pids;
 
-  for (int i = 0; i < terminals.watermark(); ++i) {
-    if (!terminals.valid(i))
-      continue;
-
-    const char *filename = terminals[i].c_str();
+  for (const auto &term_name : terminals) {
+    const char *filename = term_name.c_str();
     puts(0, format<64>("starting shell for %s\n", filename));
 
     int child_pid = syscall0(fork);
@@ -39,9 +36,9 @@ int main(int, char *[])
     }
   }
 
-  for (size_t i = 0; i < child_pids.watermark(); ++i) {
+  for (int child_pid : child_pids) {
     // TODO: restart shells if they exit?
-    syscall1(wait, child_pids[i]);
+    syscall1(wait, child_pid);
   }
 
   puts("All shells have terminated");

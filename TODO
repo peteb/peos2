@@ -1,6 +1,8 @@
 support: rename "blocking_data_queue" to "blocking_ring_buffer"
 support: improve ring_buffer performance using memcpy
 support: improve memcpy performance
+support: dictionary class (use for arp.cc/ipv4_probes)
+support: call destructors in p2::pool
 tcp: clean up the different *segment classes that are used by queues
 tcp: retransmission
 tcp: break up segments into sizes good for the current MTU
