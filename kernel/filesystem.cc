@@ -42,21 +42,21 @@ static vfs_node_handle local_driver_handle;
 // Definitions
 vfs_node_handle vfs_create_node(uint8_t type)
 {
-  return nodes.emplace_back(type, directories.end_sentinel());
+  return nodes.emplace_anywhere(type, directories.end_sentinel());
 }
 
 void vfs_add_dirent(vfs_node_handle dir_node, const char *name, vfs_node_handle node)
 {
   vfs_node &parent = nodes[dir_node];
   assert(parent.type == VFS_DIRECTORY);
-  parent.info_node = directories.emplace_back(name, node, parent.info_node);
+  parent.info_node = directories.emplace_anywhere(name, node, parent.info_node);
 }
 
 void vfs_set_driver(vfs_node_handle driver_node, vfs_device_driver *driver, void *opaque)
 {
   vfs_node &node = nodes[driver_node];
   assert(node.type & VFS_DRIVER);
-  node.info_node = drivers.push_back({driver, opaque});
+  node.info_node = drivers.emplace_anywhere(driver, opaque);
 }
 
 void vfs_init()
@@ -343,8 +343,8 @@ p2::res<vfs_fd> vfs_open(vfs_context context_handle, const char *filename, uint3
   if (device_local_handle < 0)
     return p2::failure(device_local_handle);
 
-  opened_file_handle ofh = opened_files.emplace_back(&device_node, device_local_handle, flags);
-  vfs_fd fd = context_.descriptors.emplace_back(ofh);
+  opened_file_handle ofh = opened_files.emplace_anywhere(&device_node, device_local_handle, flags);
+  vfs_fd fd = context_.descriptors.emplace_anywhere(ofh);
   dbg_puts(vfs, "opened %s at %d.%d", filename, context_handle, fd);
   return p2::success(fd);
 }
@@ -366,7 +366,7 @@ p2::res<vfs_context> vfs_create_context()
 {
   if (contexts.full())
     return p2::failure(ENOSPACE);
-  return p2::success(contexts.emplace_back());
+  return p2::success(contexts.emplace_anywhere());
 }
 
 void vfs_destroy_context(vfs_context context_handle)
@@ -573,7 +573,7 @@ static int open_locally(vfs_device */*device*/, const char *path, uint32_t /*fla
 
   dbg_puts(vfs, "opened %s (node %d)", path, dir_handle);
 
-  return locally_opened_files.emplace_back(dir_handle);
+  return locally_opened_files.emplace_anywhere(dir_handle);
 }
 
 static int close_locally(int handle)

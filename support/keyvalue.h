@@ -55,7 +55,7 @@ namespace p2 {
           continue;
 
         const char *value = parse_value();
-        _attribs.push_back({key, value});
+        _attribs.emplace_anywhere(attribute{key, value});
       }
     }
 

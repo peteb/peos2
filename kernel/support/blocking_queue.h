@@ -23,9 +23,7 @@ namespace p2 {
   template<size_t _MaxLen>
   class blocking_data_queue {
   public:
-    //
     // Returns how many bytes were pushed
-    //
     size_t push_back(const char *data, size_t length)
     {
       size_t bytes_written = 0;

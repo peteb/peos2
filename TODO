@@ -6,7 +6,6 @@ tcp: retransmission
 tcp: break up segments into sizes good for the current MTU
 ipv4: fragment messages when sending too large
 ramfs: implement read dir
-support: rename pool::push_back to pool::push, emplace instead of emplace_back
 tcp: remote and local window updates
 tcp: selective ack
 tcp: active open (client connect)

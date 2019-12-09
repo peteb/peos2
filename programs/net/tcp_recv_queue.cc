@@ -25,7 +25,7 @@ bool tcp_recv_queue::insert(const tcp_recv_segment &segment, const char *data, s
 
   // TODO: implement protection against duplicates
 
-  int idx = _segments.push_back(segment);
+  int idx = _segments.emplace_anywhere(segment);
   _segments[idx].length = length;
   return true;
 }

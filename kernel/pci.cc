@@ -76,7 +76,7 @@ void pci_init()
             mmio,
             dev.irq);
 
-        devices.push_back(dev);
+        devices.emplace_anywhere(dev);
       }
     }
   }

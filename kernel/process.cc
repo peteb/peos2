@@ -93,9 +93,9 @@ proc_handle proc_create(uint32_t flags)
 
   mem_map_kernel(space_handle, mapping_flags|MEM_AREA_RETAIN_EXEC);
 
-  proc_handle pid = processes.emplace_back(space_handle,
-                                           *vfs_create_context(),
-                                           flags);
+  proc_handle pid = processes.emplace_anywhere(space_handle,
+                                               *vfs_create_context(),
+                                               flags);
   processes[pid].setup_kernel_stack(nullptr);
   return pid;
 }
@@ -440,7 +440,7 @@ static int syscall_fork(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, isr_re
   mem_space space_handle = *mem_fork_space(proc_get_space(parent_pid));
   vfs_context file_context = *vfs_fork_context(proc_get_file_context(parent_pid));
 
-  proc_handle child_pid = processes.emplace_back(space_handle, file_context, 0);
+  proc_handle child_pid = processes.emplace_anywhere(space_handle, file_context, 0);
   dbg_puts(proc, "... forked child pid: %d", child_pid);
 
   processes[child_pid].setup_kernel_stack(regs);

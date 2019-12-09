@@ -36,15 +36,15 @@ tcp_connection_table::handle tcp_connection_table::create_connection(const tcp_e
       ipaddr_str(local.ipaddr),
       local.port);
 
-  handle new_conn = _connections.emplace_back(_ipv4_if, this, remote, local, state);
+  handle new_conn = _connections.emplace_anywhere(_ipv4_if, this, remote, local, state);
   _connections[new_conn].handle = new_conn;
-  _new_connections.push_back(new_conn);
+  _new_connections.emplace_anywhere(new_conn);
   return new_conn;
 }
 
 void tcp_connection_table::finish_connection(handle conn_handle)
 {
-  _finished_connections.push_back(conn_handle);
+  _finished_connections.emplace_anywhere(conn_handle);
 }
 
 void tcp_connection_table::tick(int dt)

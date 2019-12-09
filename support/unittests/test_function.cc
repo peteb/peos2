@@ -18,8 +18,8 @@ TESTSUITE(p2::inline_fun) {
 
   TESTCASE("can be stored in other containers") {
     p2::pool<p2::inline_fun<16, int(int, int)>, 10> funs;
-    funs.push_back([](int a, int b) {return a + b; });
-    funs.push_back([](int a, int b) {return a * b; });
+    funs.emplace_anywhere([](int a, int b) {return a + b; });
+    funs.emplace_anywhere([](int a, int b) {return a * b; });
 
     ASSERT_EQ(funs[0](3, 6), 9);
     ASSERT_EQ(funs[1](3, 6), 18);

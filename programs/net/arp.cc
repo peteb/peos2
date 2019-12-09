@@ -159,7 +159,7 @@ int arp_request_lookup_ipv4(int fd, uint32_t ipaddr, probe::await_fun callback)
   else {
     // TODO: get rid of all copies
     probe::op_fun op = [=]() {send_ipv4_request(fd, ipaddr); };
-    int idx = ipv4_probes.emplace_back(ipaddr, op);
+    int idx = ipv4_probes.emplace_anywhere(ipaddr, op);
     ipv4_probes[idx].value.await(callback);
     ipv4_probes[idx].value.tick(0);
   }

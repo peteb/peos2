@@ -55,7 +55,7 @@ public:
 
   void await(const await_fun &fun)
   {
-    _waiters.push_back(fun);
+    _waiters.emplace_anywhere(fun);
   }
 
 private:

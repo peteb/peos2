@@ -19,7 +19,7 @@ public:
 
     while (const char *component = parse_component()) {
       if (*component != '\0')
-        _args.emplace_back(component);
+        _args.emplace_anywhere(component);
     }
 
     return 0;

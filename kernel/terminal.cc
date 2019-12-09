@@ -44,7 +44,7 @@ void create_terminal(const char *name, screen_buffer buffer)
     .mkdir = nullptr
   };
 
-  uintptr_t term_id = terminals.emplace_back(buffer);
+  uintptr_t term_id = terminals.emplace_anywhere(buffer);
 
   vfs_node_handle term_driver = vfs_create_node(VFS_CHAR_DEVICE);
   vfs_set_driver(term_driver, &interface, (void *)term_id);

@@ -30,7 +30,7 @@ int main(int, char *[])
     int child_pid = syscall0(fork);
 
     if (child_pid != 0) {
-      child_pids.push_back(child_pid);
+      child_pids.emplace_anywhere(child_pid);
     }
     else {
       setup_std_fds(filename);
@@ -81,7 +81,7 @@ static void list_terminals(pool<string<32>, 16> *terminals)
     if (strncmp(entries[i].name, "term", 4) == 0 &&
         strncmp(entries[i].name, "term0", strlen(entries[i].name)) != 0) {
       p2::format<32> path("/dev/%s", entries[i].name);
-      terminals->emplace_back(path.str());
+      terminals->emplace_anywhere(path.str());
     }
   }
 }

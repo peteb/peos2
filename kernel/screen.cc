@@ -30,7 +30,7 @@ void screen_init()
 
 screen_buffer screen_create_buffer()
 {
-  return buffers.emplace_back();
+  return buffers.emplace_anywhere();
 }
 
 void screen_switch_buffer(screen_buffer buffer_handle)

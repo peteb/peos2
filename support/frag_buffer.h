@@ -17,7 +17,7 @@ namespace p2 {
     void reset()
     {
       _holes.clear();
-      _holes.emplace_back(0, p2::numeric_limits<int>::max());
+      _holes.emplace_anywhere(0, p2::numeric_limits<int>::max());
     }
 
     void insert(int start_pos, const char *data, int length)
@@ -53,10 +53,10 @@ namespace p2 {
           _holes.erase(i);
 
           if (leftover_left > 0)
-            _holes.emplace_back(existing_hole.start, existing_hole.start + leftover_left);
+            _holes.emplace_anywhere(existing_hole.start, existing_hole.start + leftover_left);
 
           if (leftover_right > 0)
-            _holes.emplace_back(existing_hole.end - leftover_right, existing_hole.end);
+            _holes.emplace_anywhere(existing_hole.end - leftover_right, existing_hole.end);
 
           removed_holes = true;
         }

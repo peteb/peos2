@@ -47,7 +47,7 @@ void ramfs_init()
   vfs_set_driver(mountpoint, &interface, nullptr);
   vfs_add_dirent(vfs_lookup("/"), "ramfs", mountpoint);
 
-  root = nodes.emplace_back(TYPE_DIRECTORY, directories.end_sentinel());
+  root = nodes.emplace_anywhere(TYPE_DIRECTORY, directories.end_sentinel());
 }
 
 static dirent *find_dirent(node_handle dir_node, const p2::string<16> &name)
@@ -129,14 +129,14 @@ static int create_file(const char *parent_path, const char *filename, uint8_t ty
     file = directories.end_sentinel();
   }
   else if (type == TYPE_MEM_RANGE_FILE) {
-    file = mem_range_files.emplace_back(0, 0);
+    file = mem_range_files.emplace_anywhere(0, 0);
   }
   else {
     panic("invalid type");
   }
 
-  node_handle file_node = nodes.emplace_back(type, file);
-  file_handle dir_entry = directories.emplace_back(filename, file_node, parent_node.file);
+  node_handle file_node = nodes.emplace_anywhere(type, file);
+  file_handle dir_entry = directories.emplace_anywhere(filename, file_node, parent_node.file);
   parent_node.file = dir_entry;
 
   return file_node;
@@ -162,7 +162,7 @@ static int open(vfs_device *, const char *path, uint32_t flags)
     dbg_puts(ramfs, "created file '%s' in '%s' as node %d", base.c_str(), dir.c_str(), node);
   }
 
-  return opened_files.emplace_back(node, 0);
+  return opened_files.emplace_anywhere(node, 0);
 }
 
 static int control(int handle, uint32_t function, uint32_t param1, uint32_t param2)

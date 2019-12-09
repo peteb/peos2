@@ -109,7 +109,7 @@ void mem_init()
 mem_space mem_create_space()
 {
   page_dir_entry *page_dir = (page_dir_entry *)page_dir_allocator.alloc_page_zero();
-  mem_space space_handle = spaces.emplace_back(page_dir);
+  mem_space space_handle = spaces.emplace_anywhere(page_dir);
   dbg_puts(mem, "created space %d with page dir %p", space_handle, (uintptr_t)page_dir);
   return space_handle;
 }
@@ -537,8 +537,8 @@ mem_area mem_map_linear(mem_space space_handle,
 {
   assert(!overlaps_existing_area(space_handle, start, end));
   space_info *space = &spaces[space_handle];
-  uint16_t map_handle = space->linear_maps.push_back({phys_start});
-  return space->areas.push_back({start, end, AREA_LINEAR_MAP, flags, map_handle});
+  uint16_t map_handle = space->linear_maps.emplace_anywhere(linear_map_info{phys_start});
+  return space->areas.emplace_anywhere(area_info{start, end, AREA_LINEAR_MAP, flags, map_handle});
 }
 
 mem_area mem_map_linear_eager(mem_space space_handle,
@@ -559,8 +559,8 @@ mem_area mem_map_linear_eager(mem_space space_handle,
   }
 
   space_info *space = &spaces[space_handle];
-  uint16_t map_handle = space->linear_maps.push_back({phys_start});
-  return space->areas.push_back({start, end, AREA_LINEAR_MAP, flags, map_handle});
+  uint16_t map_handle = space->linear_maps.emplace_anywhere(linear_map_info{phys_start});
+  return space->areas.emplace_anywhere(area_info{start, end, AREA_LINEAR_MAP, flags, map_handle});
 }
 
 mem_area mem_map_alloc(mem_space space_handle, uintptr_t start, uintptr_t end, uint16_t flags)
@@ -579,7 +579,7 @@ mem_area mem_map_alloc(mem_space space_handle, uintptr_t start, uintptr_t end, u
   // higher risk of a mistake in the kernel leading to user space
   // pages getting unmapped.  Using AREA_ALLOC doesn't require any
   // extra space over an mmap -- it's actually more memory efficient.
-  return spaces[space_handle].areas.push_back({start, end, AREA_ALLOC, flags, 0});
+  return spaces[space_handle].areas.emplace_anywhere(area_info{start, end, AREA_ALLOC, flags, 0});
 }
 
 mem_area mem_map_fd(mem_space space_handle,
@@ -595,8 +595,8 @@ mem_area mem_map_fd(mem_space space_handle,
 
   space_info &space = spaces[space_handle];
   // TODO: check reference
-  uint16_t map_handle = space.file_maps.push_back({fd, offset, file_size});
-  return space.areas.push_back({start, end, AREA_FILE, flags, map_handle});
+  uint16_t map_handle = space.file_maps.emplace_anywhere(file_map_info{fd, offset, file_size});
+  return space.areas.emplace_anywhere(area_info{start, end, AREA_FILE, flags, map_handle});
 }
 
 p2::opt<mem_area> mem_find_area(mem_space space_handle, uintptr_t address)

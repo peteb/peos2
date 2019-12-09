@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+
 #include "assert.h"
 #include "support/limits.h"
 #include "support/utils.h"
@@ -29,6 +30,8 @@ namespace p2 {
   // data, leading to fewer cache misses. This solution has been
   // measured to be faster than a stack based allocator but more tests
   // need to be done to conclusively say so.
+  //
+  // NB: no destructors are called
   //
   // Time complexity:
   // push_back: O(1)
@@ -69,6 +72,8 @@ namespace p2 {
     };
 
   public:
+    // A special iterator is needed due to the possibility of gap indexes -- positions
+    // that don't have a value
     class iterator {
     public:
       T &operator *() const
@@ -95,6 +100,7 @@ namespace p2 {
       }
 
 #if __STDC_HOSTED__ == 1
+      // Lets hosted unit tests write out the expected and actual values
       friend std::ostream &operator <<(std::ostream &out, const iterator &rhs)
       {
         out << rhs._idx;
@@ -106,6 +112,7 @@ namespace p2 {
       iterator(pool &container, _IndexT idx) : _container(container), _idx(idx) {jump_to_valid(); }
       iterator(const iterator &other) : _container(other._container), _idx(other._idx) {}
 
+      // Jumps over gaps in indexes and stops at the watermark. Cannot decrease idx
       void jump_to_valid()
       {
         while (_idx != _container.watermark() && !_container.valid(_idx))
@@ -133,15 +140,12 @@ namespace p2 {
       _count = 0;
     }
 
-    _IndexT push_back(const T &value)
-    {
-      return emplace_back(value);
-    }
-
-    // TODO: rename this function: we're not necessarily pushing on
-    // the "back".
+    // Picks a free position and assigns it. The free list
+    // is checked first to avoid having to increase the watermark,
+    // leading to more compact space usage. If no items have been erased,
+    // allocated indexes will be continuously increasing by 1
     template<typename... _Args>
-    _IndexT emplace_back(_Args&&... args)
+    _IndexT emplace_anywhere(_Args&&... args)
     {
       _IndexT idx;
 
@@ -171,23 +175,6 @@ namespace p2 {
 
       free_list_prepend(idx);
       --_count;
-    }
-
-    bool valid(_IndexT idx) const
-    {
-      if (idx >= _watermark)
-        return false;
-
-      if (element(idx)->next_free != END_SENTINEL)
-        return false;
-
-      if (idx == _free_list_head)
-        return false;
-
-      if (idx == _free_list_tail)
-        return false;
-
-      return true;
     }
 
     template<typename... _Args>
@@ -227,6 +214,23 @@ namespace p2 {
 
       new (element(idx)) node(forward<_Args>(args)...);
       ++_count;
+    }
+
+    bool valid(_IndexT idx) const
+    {
+      if (idx >= _watermark)
+        return false;
+
+      if (element(idx)->next_free != END_SENTINEL)
+        return false;
+
+      if (idx == _free_list_head)
+        return false;
+
+      if (idx == _free_list_tail)
+        return false;
+
+      return true;
     }
 
     T &operator [](_IndexT idx)
@@ -272,6 +276,8 @@ namespace p2 {
       return _watermark;
     }
 
+    // Returns the highest possible value, useful as a null index due to
+    // the pool being 0-indexed
     _IndexT end_sentinel() const
     {
       return END_SENTINEL;

@@ -256,7 +256,7 @@ static uint16_t fetch_or_create_buffer(const buffer_id &bufid)
       return i;
   }
 
-  uint16_t idx = used_buffers.push_back({bufid, 250});
+  uint16_t idx = used_buffers.emplace_anywhere(buffer{bufid, 250});
   buffers[idx].reset();
   return idx;
 }
