@@ -108,7 +108,7 @@ void arp_recv(int eth_fd, eth_frame */*frame*/, const char *data, size_t length)
 
     add_cache_entry(spa, hdr.sha);
 
-    if (size_t probe_idx = find_ipv4_probe(spa); probe_idx != ipv4_probes.end()) {
+    if (size_t probe_idx = find_ipv4_probe(spa); probe_idx != ipv4_probes.end_sentinel()) {
       ipv4_probes[probe_idx].value.notify_all(PROBE_REPLY);
       ipv4_probes.erase(probe_idx);
     }
@@ -152,7 +152,7 @@ int arp_request_lookup_ipv4(int fd, uint32_t ipaddr, probe::await_fun callback)
     return 1;
   }
 
-  if (size_t probe_idx = find_ipv4_probe(ipaddr); probe_idx != ipv4_probes.end()) {
+  if (size_t probe_idx = find_ipv4_probe(ipaddr); probe_idx != ipv4_probes.end_sentinel()) {
     ipv4_probes[probe_idx].value.reset();
     ipv4_probes[probe_idx].value.await(callback);
   }
@@ -245,5 +245,5 @@ static size_t find_ipv4_probe(uint32_t ipaddr)
       return i;
   }
 
-  return ipv4_probes.end();
+  return ipv4_probes.end_sentinel();
 }

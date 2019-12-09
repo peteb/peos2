@@ -161,7 +161,7 @@ void ipv4_recv(int interface, eth_frame *frame, const char *data, size_t length)
   else {
     // Got to reassemble the datagram from fragments
     uint16_t buf_idx = fetch_or_create_buffer({hdr.src_addr, hdr.dest_addr, hdr.id});
-    assert(buf_idx != used_buffers.end());
+    assert(buf_idx != used_buffers.end_sentinel());
     buffers[buf_idx].insert(frag_offset, payload, payload_size);
 
     if (!(flags & FLAGS_MF)) {

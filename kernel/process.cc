@@ -45,9 +45,9 @@ static void        idle_main();
 // Global state
 static p2::pool<process, 128, proc_handle> processes;
 
-static proc_handle current_pid = processes.end();
-static proc_handle running_head = processes.end(), suspended_head = processes.end();
-static proc_handle idle_process = processes.end();
+static proc_handle current_pid = processes.end_sentinel();
+static proc_handle running_head = processes.end_sentinel(), suspended_head = processes.end_sentinel();
+static proc_handle idle_process = processes.end_sentinel();
 
 static uint64_t tick_count;
 
@@ -129,7 +129,7 @@ static void destroy_process(proc_handle pid)
 
 p2::opt<proc_handle> proc_current_pid()
 {
-  if (current_pid != processes.end())
+  if (current_pid != processes.end_sentinel())
     return current_pid;
 
   return {};
@@ -151,7 +151,7 @@ extern "C" void int_timer(isr_registers *)
   proc_handle proc = suspended_head;
   irq_eoi(IRQ_SYSTEM_TIMER);
 
-  while (proc != processes.end()) {
+  while (proc != processes.end_sentinel()) {
     process &process_ = processes[proc];
 
     if (process_.suspension_timeout > 0) {
@@ -265,24 +265,24 @@ void proc_resume(proc_handle pid)
 static void enqueue_front(proc_handle pid, proc_handle *head)
 {
   // TODO: extract linked list logic
-  if (*head != processes.end()) {
+  if (*head != processes.end_sentinel()) {
     processes[*head].prev_process = pid;
   }
 
   process &proc = processes[pid];
   proc.next_process = *head;
-  proc.prev_process = processes.end();
+  proc.prev_process = processes.end_sentinel();
   *head = pid;
 }
 
 static void dequeue(proc_handle pid, proc_handle *head)
 {
   process &proc = processes[pid];
-  if (proc.prev_process != processes.end()) {
+  if (proc.prev_process != processes.end_sentinel()) {
     processes[proc.prev_process].next_process = proc.next_process;
   }
 
-  if (proc.next_process != processes.end()) {
+  if (proc.next_process != processes.end_sentinel()) {
     processes[proc.next_process].prev_process = proc.prev_process;
   }
 
@@ -296,10 +296,10 @@ static proc_handle decide_next_process()
   // TODO: this algorithm has a bias towards the front of the list due
   // to the < comparison. Make it more fair.
   uint64_t minimum_tick = p2::numeric_limits<uint64_t>::max();
-  proc_handle minimum_pid = processes.end();
+  proc_handle minimum_pid = processes.end_sentinel();
   proc_handle node = running_head;
 
-  while (node != processes.end()) {
+  while (node != processes.end_sentinel()) {
     process &proc = processes[node];
     if (proc.last_tick < minimum_tick) {
       minimum_tick = proc.last_tick;
@@ -309,7 +309,7 @@ static proc_handle decide_next_process()
     node = proc.next_process;
   }
 
-  if (minimum_pid == processes.end()) {
+  if (minimum_pid == processes.end_sentinel()) {
     return idle_process;
   }
 

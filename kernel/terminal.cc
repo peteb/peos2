@@ -18,7 +18,7 @@ static void create_terminal(const char *name, screen_buffer buffer);
 
 // Global state
 static p2::pool<terminal, 16> terminals;
-static uint16_t current_terminal = terminals.end();
+static uint16_t current_terminal = terminals.end_sentinel();
 
 // Definitions
 void term_init()
@@ -50,7 +50,7 @@ void create_terminal(const char *name, screen_buffer buffer)
   vfs_set_driver(term_driver, &interface, (void *)term_id);
   vfs_add_dirent(vfs_lookup("/dev/"), name, term_driver);
 
-  if (current_terminal == terminals.end()) {
+  if (current_terminal == terminals.end_sentinel()) {
     current_terminal = term_id;
   }
 

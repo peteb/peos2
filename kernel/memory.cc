@@ -38,7 +38,7 @@ static p2::internal_page_allocator<sizeof(page_table_entry) * 1024 * 100, 0x1000
 static p2::page_allocator *user_space_allocator;
 
 static p2::pool<space_info, 128, mem_space> spaces;
-static mem_space current_space = spaces.end();
+static mem_space current_space = spaces.end_sentinel();
 static mem_space start_space;
 
 
@@ -272,12 +272,7 @@ p2::res<mem_space> mem_fork_space(mem_space space_handle)
   // Copy all linear and file maps directly
   // ALLOC needs to be copied page by page, immediately
   // so we need to map both source and dest pages in current space
-  for (int i = 0; i < source_space.areas.watermark(); ++i) {
-    if (!source_space.areas.valid(i))
-      continue;
-
-    area_info &source_area = source_space.areas[i];
-
+  for (auto &source_area : source_space.areas) {
     if (source_area.flags & MEM_AREA_NO_FORK)
       continue;
 

@@ -5,7 +5,7 @@ tcp_connection_table::handle tcp_connection_table::find_best_match(const tcp_end
                                                                    const tcp_endpoint &local)
 {
   int most_specific_match = -1;
-  tcp_connection_table::handle most_specific = _connections.end();
+  tcp_connection_table::handle most_specific = _connections.end_sentinel();
 
   for (size_t i = 0; i < _connections.watermark(); ++i) {
     if (!_connections.valid(i))
@@ -19,7 +19,7 @@ tcp_connection_table::handle tcp_connection_table::find_best_match(const tcp_end
     }
   }
 
-  if (most_specific == _connections.end())
+  if (most_specific == _connections.end_sentinel())
     return {};
   else
     return most_specific;
@@ -57,7 +57,7 @@ void tcp_connection_table::tick(int dt)
 
 tcp_connection_table::handle tcp_connection_table::end() const
 {
-  return _connections.end();
+  return _connections.end_sentinel();
 }
 
 tcp_connection &tcp_connection_table::operator [](handle idx)

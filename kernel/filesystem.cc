@@ -42,7 +42,7 @@ static vfs_node_handle local_driver_handle;
 // Definitions
 vfs_node_handle vfs_create_node(uint8_t type)
 {
-  return nodes.emplace_back(type, directories.end());
+  return nodes.emplace_back(type, directories.end_sentinel());
 }
 
 void vfs_add_dirent(vfs_node_handle dir_node, const char *name, vfs_node_handle node)
@@ -95,7 +95,7 @@ static vfs_dirent *find_dirent(vfs_node_handle dir_node, const p2::string<32> &n
   assert(node.type == VFS_DIRECTORY);
 
   uint16_t dirent_idx = node.info_node;
-  while (dirent_idx != directories.end()) {
+  while (dirent_idx != directories.end_sentinel()) {
     vfs_dirent &dirent = directories[dirent_idx];
 
     // TODO: compare strings without doing a copy
@@ -119,7 +119,7 @@ static vfs_node_handle vfs_lookup_aux(vfs_node_handle parent, const char *path)
   }
 
   if (path[0] != '/')
-    return nodes.end();
+    return nodes.end_sentinel();
 
   // TODO: cleanup string handling using string_view or similar
   const char *seg_start = path + 1;
@@ -133,12 +133,12 @@ static vfs_node_handle vfs_lookup_aux(vfs_node_handle parent, const char *path)
     return vfs_lookup_aux(dirent->node, next_segment);
   }
 
-  return nodes.end();
+  return nodes.end_sentinel();
 }
 
 vfs_node_handle vfs_lookup(const char *path)
 {
-  // TODO: a better way to return "path not found" than nodes.end()
+  // TODO: a better way to return "path not found" than nodes.end_sentinel()
   return vfs_lookup_aux(root_dir, path);
 }
 
@@ -155,7 +155,7 @@ static void vfs_print_aux(vfs_node_handle parent, int level)
 
   if (node.type == VFS_DIRECTORY) {
     uint16_t dirent_idx = node.info_node;
-    while (dirent_idx != directories.end()) {
+    while (dirent_idx != directories.end_sentinel()) {
       const vfs_dirent &dirent = directories[dirent_idx];
       print(prefix);
       print(dirent.name);
@@ -330,7 +330,7 @@ p2::res<vfs_fd> vfs_open(vfs_context context_handle, const char *filename, uint3
 
   const vfs_node &driver_node = nodes[driver->node_idx];
   assert(driver_node.type & VFS_DRIVER);
-  assert(driver_node.info_node != drivers.end());
+  assert(driver_node.info_node != drivers.end_sentinel());
 
   vfs_device &device_node = drivers[driver_node.info_node];
   assert(device_node.driver);
@@ -441,7 +441,7 @@ static int syscall_mkdir(const char *path)
 
   const vfs_node &driver_node = nodes[driver->node_idx];
   assert(driver_node.type & VFS_DRIVER);
-  assert(driver_node.info_node != drivers.end());
+  assert(driver_node.info_node != drivers.end_sentinel());
 
   vfs_device &device_node = drivers[driver_node.info_node];
   assert(device_node.driver);
@@ -528,7 +528,7 @@ static int read_locally(int handle, char *data, int length)
   vfs_node &node_ = nodes[opened_file.node];
   assert(node_.type & VFS_DIRECTORY);
 
-  if (node_.info_node == directories.end()) {
+  if (node_.info_node == directories.end_sentinel()) {
     // No entries to read
     return 0;
   }
@@ -537,7 +537,7 @@ static int read_locally(int handle, char *data, int length)
   int byte_offset = 0;
   int bytes_written = 0;
 
-  while (dirent_idx != directories.end() && length > 0) {
+  while (dirent_idx != directories.end_sentinel() && length > 0) {
     vfs_dirent &entry = directories[dirent_idx];
 
     if (opened_file.position >= byte_offset &&
@@ -568,7 +568,7 @@ static int open_locally(vfs_device */*device*/, const char *path, uint32_t /*fla
 {
   // TODO: rename these handles according to style, and use p2::opt
   vfs_node_handle dir_handle = vfs_lookup(path);
-  if (dir_handle == nodes.end())
+  if (dir_handle == nodes.end_sentinel())
     return ENOENT;
 
   dbg_puts(vfs, "opened %s (node %d)", path, dir_handle);

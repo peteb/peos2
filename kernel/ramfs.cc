@@ -47,7 +47,7 @@ void ramfs_init()
   vfs_set_driver(mountpoint, &interface, nullptr);
   vfs_add_dirent(vfs_lookup("/"), "ramfs", mountpoint);
 
-  root = nodes.emplace_back(TYPE_DIRECTORY, directories.end());
+  root = nodes.emplace_back(TYPE_DIRECTORY, directories.end_sentinel());
 }
 
 static dirent *find_dirent(node_handle dir_node, const p2::string<16> &name)
@@ -58,7 +58,7 @@ static dirent *find_dirent(node_handle dir_node, const p2::string<16> &name)
 
   uint16_t dirent_idx = node.file;
 
-  while (dirent_idx != directories.end()) {
+  while (dirent_idx != directories.end_sentinel()) {
     dirent &entry = directories[dirent_idx];
 
     // TODO: compare strings without doing a copy
@@ -93,7 +93,7 @@ static node_handle lookup(node_handle parent, const char *path)
     return lookup(entry->node, next_segment);
   }
 
-  return nodes.end();
+  return nodes.end_sentinel();
 }
 
 static int read(int handle, char *data, int length)
@@ -114,7 +114,7 @@ static int read(int handle, char *data, int length)
 static int create_file(const char *parent_path, const char *filename, uint8_t type)
 {
   node_handle parent = lookup(root, parent_path);
-  if (parent == nodes.end())
+  if (parent == nodes.end_sentinel())
     return ENOENT;
 
   file_node &parent_node = nodes[parent];
@@ -126,7 +126,7 @@ static int create_file(const char *parent_path, const char *filename, uint8_t ty
   file_handle file;
 
   if (type == TYPE_DIRECTORY) {
-    file = directories.end();
+    file = directories.end_sentinel();
   }
   else if (type == TYPE_MEM_RANGE_FILE) {
     file = mem_range_files.emplace_back(0, 0);
@@ -147,7 +147,7 @@ static int open(vfs_device *, const char *path, uint32_t flags)
   // TODO: handle longer strings than 128 chars
   node_handle node = lookup(root, path);
 
-  if (node == nodes.end()) {
+  if (node == nodes.end_sentinel()) {
     if (!(flags & OPEN_CREATE))
       return ENOENT;
 

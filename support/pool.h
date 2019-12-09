@@ -9,6 +9,19 @@
 #include "support/limits.h"
 #include "support/utils.h"
 
+#if __STDC_HOSTED__ == 1
+#include <iostream>
+#undef assert
+
+// TODO: don't redefine assert here, use assert.h but without the guards
+#define assert(exp)                                                     \
+  {                                                                     \
+    if (!(exp)) {                                                       \
+      panic("ASSERT " __FILE__ ":" TOSTRING(__LINE__) ": " #exp);       \
+    }                                                                   \
+  }
+#endif // __STDC_HOSTED__ == 1
+
 namespace p2 {
   //
   // Pool allocator with a linked list free list. A benefit of the
@@ -39,12 +52,12 @@ namespace p2 {
 
       T *value()
       {
-        return (T *)_value;
+        return p2::launder((T *)_value);
       }
 
       const T *value() const
       {
-        return (T *)_value;
+        return p2::launder((T *)_value);
       }
 
       char _value[sizeof(T)] alignas(T);
@@ -56,6 +69,54 @@ namespace p2 {
     };
 
   public:
+    class iterator {
+    public:
+      T &operator *() const
+      {
+        return _container[_idx];
+      }
+
+      iterator operator ++()
+      {
+        iterator copy(*this);
+        ++_idx;
+        jump_to_valid();
+        return copy;
+      }
+
+      bool operator ==(const iterator &other) const
+      {
+        return &_container == &other._container && _idx == other._idx;
+      }
+
+      bool operator !=(const iterator &other) const
+      {
+        return !(*this == other);
+      }
+
+#if __STDC_HOSTED__ == 1
+      friend std::ostream &operator <<(std::ostream &out, const iterator &rhs)
+      {
+        out << rhs._idx;
+        return out;
+      }
+#endif // __STDC_HOSTED__ == 1
+
+    private:
+      iterator(pool &container, _IndexT idx) : _container(container), _idx(idx) {jump_to_valid(); }
+      iterator(const iterator &other) : _container(other._container), _idx(other._idx) {}
+
+      void jump_to_valid()
+      {
+        while (_idx != _container.watermark() && !_container.valid(_idx))
+          ++_idx;
+      }
+
+      pool &_container;
+      _IndexT _idx;
+      friend class pool;
+    };
+
     pool()
     {
       // TODO: make these checks compile-time
@@ -211,9 +272,19 @@ namespace p2 {
       return _watermark;
     }
 
-    _IndexT end() const
+    _IndexT end_sentinel() const
     {
       return END_SENTINEL;
+    }
+
+    iterator begin()
+    {
+      return iterator(*this, 0);
+    }
+
+    iterator end()
+    {
+      return iterator(*this, _watermark);
     }
 
   private:

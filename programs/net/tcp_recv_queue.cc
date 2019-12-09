@@ -80,7 +80,7 @@ tcp_seqnbr tcp_recv_queue::read_cursor() const
 size_t tcp_recv_queue::find_front_segment() const
 {
   tcp_seqnbr lowest_seq = p2::numeric_limits<tcp_seqnbr>::max();
-  size_t lowest_seq_segment = _segments.end();
+  size_t lowest_seq_segment = _segments.end_sentinel();
 
   for (size_t i = 0; i < _segments.watermark(); ++i) {
     if (!_segments.valid(i))
@@ -92,7 +92,7 @@ size_t tcp_recv_queue::find_front_segment() const
     }
   }
 
-  assert(lowest_seq_segment != _segments.end() && "cannot call find_front_segment on empty queue");
+  assert(lowest_seq_segment != _segments.end_sentinel() && "cannot call find_front_segment on empty queue");
   return lowest_seq_segment;
 }
 

@@ -254,4 +254,28 @@ TESTSUITE(p2::pool) {
     ASSERT_EQ(items[1], 555);
     ASSERT_EQ(items[2], 666);
   }
+
+  TESTCASE("iterator can be used to get all values") {
+    p2::pool<int, 5> items;
+    items.push_back(3);
+    items.push_back(7);
+    items.push_back(11);
+    items.push_back(13);
+    items.erase(1);
+
+    auto it = items.begin();
+    ASSERT_EQ(*it, 3);
+    ASSERT_NEQ(it, items.end());
+
+    ++it;
+    ASSERT_EQ(*it, 11);
+    ASSERT_NEQ(it, items.end());
+
+    ++it;
+    ASSERT_EQ(*it, 13);
+    ASSERT_NEQ(it, items.end());
+
+    ++it;
+    ASSERT_EQ(it, items.end());
+  }
 }
