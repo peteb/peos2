@@ -6,12 +6,19 @@
 #ifndef PEOS2_SUPPORT_RESULT_H
 #define PEOS2_SUPPORT_RESULT_H
 
-#include "assert.h"
+#include "support/utils.h"
+#include "support/assert.h"
+
+#define bubble(result) if (!(result)) {return p2::failure((result).error());}
 
 namespace p2 {
   class failure {
   public:
     failure(int code) : _code(code) {}
+
+    // For casting to int in functions that only return an error code
+    operator int() const {return _code; }
+
     int _code;
   };
 
@@ -40,13 +47,13 @@ namespace p2 {
     T &operator *()
     {
       assert(_successful);
-      return *reinterpret_cast<T *>(_storage);
+      return *p2::launder(reinterpret_cast<T *>(_storage));
     }
 
     const T &operator *() const
     {
       assert(_successful);
-      return *reinterpret_cast<const T *>(_storage);
+      return *p2::launder(reinterpret_cast<const T *>(_storage));
     }
 
     explicit operator bool() const

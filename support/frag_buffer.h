@@ -35,7 +35,7 @@ namespace p2 {
       // item can turn up, so it's important that holes that are
       // edge-to-edge aren't considered overlapping.
 
-      // TODO: remove O(1), binary search? Though might be too much
+      // TODO: remove O(n), maybe binary search? Though might be too much
       // overhead, and can't use p2::pool
 
       bool removed_holes = false;

@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include "memory.h"
 
-class stack_portal {
+class stack_portal : public p2::non_copyable {
 public:
   stack_portal(mem_space target_space, uintptr_t target_stack_base, size_t size_bytes)
     : _entry_mem_start(KERNEL_SCRATCH_BASE),

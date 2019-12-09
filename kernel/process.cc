@@ -396,12 +396,11 @@ static int syscall_exec(const char *filename, const char *argv[])
   mem_space space = proc_get_space(*proc_current_pid());
 
   {
+    // Verify that the file exists
     // TODO: open the file but keep it open and send it to elf_map_process! Then remove RETAIN_EXEC
-    p2::res<vfs_fd> result = vfs_open(file_context, filename, 0);
-    if (!result)
-      return result.error();
-    else
-      vfs_close(file_context, *result);
+    p2::result<vfs_fd> opened_file = vfs_open(file_context, filename, 0);
+    bubble(opened_file);
+    vfs_close(file_context, *opened_file);
   }
 
   // Copy strings to the kernel stack so we can swap out user space
