@@ -65,37 +65,38 @@ namespace p2 {
   public:
     // A special iterator is needed due to the possibility of gap indexes -- positions
     // that don't have a value
-    class iterator {
+    template<typename _ItemT, typename _IterT, typename _ContainerT>
+    class iterator_base {
     public:
-      T &operator *() const
+      _ItemT &operator *() const
       {
         return (*_container)[_idx];
       }
 
-      T *operator ->() const
+      _ItemT *operator ->() const
       {
         return &(*_container)[_idx];
       }
 
-      iterator operator ++()
+      _IterT operator ++()
       {
-        iterator copy(*this);
+        _IterT copy(*static_cast<_IterT *>(this));
         ++_idx;
         jump_to_valid();
         return copy;
       }
 
-      bool operator ==(const iterator &other) const
+      bool operator ==(const _IterT &other) const
       {
         return _container == other._container && _idx == other._idx;
       }
 
-      bool operator !=(const iterator &other) const
+      bool operator !=(const _IterT &other) const
       {
         return !(*this == other);
       }
 
-      iterator &operator =(const iterator &rhs)
+      _IterT &operator =(const _IterT &rhs)
       {
         _container = rhs._container;
         _idx = rhs._idx;
@@ -109,7 +110,7 @@ namespace p2 {
 
 #if __STDC_HOSTED__ == 1
       // Lets hosted unit tests write out the expected and actual values
-      friend std::ostream &operator <<(std::ostream &out, const iterator &rhs)
+      friend std::ostream &operator <<(std::ostream &out, const _IterT &rhs)
       {
         out << rhs._idx;
         return out;
@@ -117,8 +118,8 @@ namespace p2 {
 #endif // __STDC_HOSTED__ == 1
 
     private:
-      iterator(pool *container, _IndexT idx) : _container(container), _idx(idx) {jump_to_valid(); }
-      iterator(const iterator &other) : _container(other._container), _idx(other._idx) {}
+      iterator_base(_ContainerT *container, _IndexT idx) : _container(container), _idx(idx) {jump_to_valid(); }
+      iterator_base(const _IterT &other) : _container(other._container), _idx(other._idx) {}
 
       // Jumps over gaps in indexes and stops at the watermark. Cannot decrease idx
       void jump_to_valid()
@@ -127,79 +128,18 @@ namespace p2 {
           ++_idx;
       }
 
-      pool *_container;
+      _ContainerT *_container;
       _IndexT _idx;
 
       friend class pool;
     };
 
+    class iterator : public iterator_base<T, iterator, pool> {
+      using iterator_base<T, iterator, pool>::iterator_base;
+    };
 
-    class const_iterator {
-    public:
-      const T &operator *() const
-      {
-        return (*_container)[_idx];
-      }
-
-      const T *operator ->() const
-      {
-        return &(*_container)[_idx];
-      }
-
-      const_iterator operator ++()
-      {
-        const_iterator copy(*this);
-        ++_idx;
-        jump_to_valid();
-        return copy;
-      }
-
-      const_iterator &operator =(const const_iterator &rhs)
-      {
-        _container = rhs._container;
-        _idx = rhs._idx;
-        return *this;
-      }
-
-      bool operator ==(const const_iterator &other) const
-      {
-        return _container == other._container && _idx == other._idx;
-      }
-
-      bool operator !=(const const_iterator &other) const
-      {
-        return !(*this == other);
-      }
-
-      _IndexT index() const
-      {
-        return _idx;
-      }
-
-#if __STDC_HOSTED__ == 1
-      // Lets hosted unit tests write out the expected and actual values
-      friend std::ostream &operator <<(std::ostream &out, const const_iterator &rhs)
-      {
-        out << rhs._idx;
-        return out;
-      }
-#endif // __STDC_HOSTED__ == 1
-
-    private:
-      const_iterator(const pool *container, _IndexT idx) : _container(container), _idx(idx) {jump_to_valid(); }
-      const_iterator(const const_iterator &other) : _container(other._container), _idx(other._idx) {}
-
-      // Jumps over gaps in indexes and stops at the watermark. Cannot decrease idx
-      void jump_to_valid()
-      {
-        while (_idx != _container->watermark() && !_container->valid(_idx))
-          ++_idx;
-      }
-
-      const pool *_container;
-      _IndexT _idx;
-
-      friend class pool;
+    class const_iterator : public iterator_base<const T, const_iterator, const pool> {
+      using iterator_base<const T, const_iterator, const pool>::iterator_base;
     };
 
     pool()
