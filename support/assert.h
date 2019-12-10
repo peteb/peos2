@@ -8,11 +8,11 @@
 
 #ifdef NDEBUG
 #define assert(exp)                                                     \
-  {                                                                     \
+  do {                                                                  \
     if (!(exp)) {                                                       \
       panic("ASSERT " __FILE__ ":" TOSTRING(__LINE__) ": " #exp);       \
     }                                                                   \
-  }
+  } while(0)
 
 #else
 #define assert(exp)

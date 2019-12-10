@@ -5,6 +5,7 @@ support: dictionary class (use for arp.cc/ipv4_probes)
 support: call destructors in p2::pool
 tcp: clean up the different *segment classes that are used by queues
 tcp: retransmission
+tcp: don't accept messages over window size
 tcp: break up segments into sizes good for the current MTU
 ipv4: fragment messages when sending too large
 ramfs: implement read dir
