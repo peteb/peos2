@@ -7,7 +7,7 @@ class ExpectCommandRunner
   def initialize(command, script)
     @script = <<~EOS
       set timeout 10
-      log_user 0
+      log_user 1
 
       spawn #{command}
 
@@ -20,7 +20,15 @@ class ExpectCommandRunner
   end
 
   def run
-    IO.popen("expect", "w+") { |io| io.write(@script) }
+    IO.popen("expect", "w+") do |io|
+      io.write(@script)
+      io.close_write
+
+      if ENV.fetch('OUTPUT', 'NO') != 'NO'
+        io.each_line { |line| puts line }
+      end
+    end
+
     $?.to_i == 0
   end
 

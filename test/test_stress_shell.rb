@@ -80,4 +80,4 @@ end
 #  command "./run-bochs"
 #  it_successfully_runs "simple shell stress test"
 #end
-# TODO: Disabled Bochs due to general instability in the integration with Bochs
+# TODO: Disabled Bochs due to general integration instability

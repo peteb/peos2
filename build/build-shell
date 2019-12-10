@@ -2,7 +2,7 @@
 cd `dirname $0`
 
 BUILD_PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cross/bin/
-ENV_VARS="-e OPT_FLAGS -e DEFS -e PATH=$BUILD_PATH"
+ENV_VARS="-e OPT_FLAGS -e DEFS -e OUTPUT -e PATH=$BUILD_PATH"
 
 if [ -t 1 ]
 then
