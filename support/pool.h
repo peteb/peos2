@@ -69,12 +69,12 @@ namespace p2 {
     public:
       T &operator *() const
       {
-        return _container[_idx];
+        return (*_container)[_idx];
       }
 
       T *operator ->() const
       {
-        return &_container[_idx];
+        return &(*_container)[_idx];
       }
 
       iterator operator ++()
@@ -87,12 +87,19 @@ namespace p2 {
 
       bool operator ==(const iterator &other) const
       {
-        return &_container == &other._container && _idx == other._idx;
+        return _container == other._container && _idx == other._idx;
       }
 
       bool operator !=(const iterator &other) const
       {
         return !(*this == other);
+      }
+
+      iterator &operator =(const iterator &rhs)
+      {
+        _container = rhs._container;
+        _idx = rhs._idx;
+        return *this;
       }
 
       _IndexT index() const
@@ -110,17 +117,17 @@ namespace p2 {
 #endif // __STDC_HOSTED__ == 1
 
     private:
-      iterator(pool &container, _IndexT idx) : _container(container), _idx(idx) {jump_to_valid(); }
+      iterator(pool *container, _IndexT idx) : _container(container), _idx(idx) {jump_to_valid(); }
       iterator(const iterator &other) : _container(other._container), _idx(other._idx) {}
 
       // Jumps over gaps in indexes and stops at the watermark. Cannot decrease idx
       void jump_to_valid()
       {
-        while (_idx != _container.watermark() && !_container.valid(_idx))
+        while (_idx != _container->watermark() && !_container->valid(_idx))
           ++_idx;
       }
 
-      pool &_container;
+      pool *_container;
       _IndexT _idx;
 
       friend class pool;
@@ -145,6 +152,13 @@ namespace p2 {
         ++_idx;
         jump_to_valid();
         return copy;
+      }
+
+      const_iterator &operator =(const const_iterator &rhs)
+      {
+        _container = rhs._container;
+        _idx = rhs._idx;
+        return *this;
       }
 
       bool operator ==(const const_iterator &other) const
@@ -173,7 +187,7 @@ namespace p2 {
 
     private:
       const_iterator(const pool *container, _IndexT idx) : _container(container), _idx(idx) {jump_to_valid(); }
-      const_iterator(const iterator &other) : _container(other._container), _idx(other._idx) {}
+      const_iterator(const const_iterator &other) : _container(other._container), _idx(other._idx) {}
 
       // Jumps over gaps in indexes and stops at the watermark. Cannot decrease idx
       void jump_to_valid()
@@ -349,12 +363,12 @@ namespace p2 {
 
     iterator begin()
     {
-      return iterator(*this, 0);
+      return iterator(this, 0);
     }
 
     iterator end()
     {
-      return iterator(*this, _watermark);
+      return iterator(this, _watermark);
     }
 
     const_iterator begin() const

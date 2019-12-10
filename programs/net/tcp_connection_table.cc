@@ -5,24 +5,21 @@ tcp_connection_table::handle tcp_connection_table::find_best_match(const tcp_end
                                                                    const tcp_endpoint &local)
 {
   int most_specific_match = -1;
-  tcp_connection_table::handle most_specific = _connections.end_sentinel();
+  auto most_specific_it = _connections.end();
 
-  for (size_t i = 0; i < _connections.watermark(); ++i) {
-    if (!_connections.valid(i))
-      continue;
-
-    int score = _connections[i].compare(remote, local);
+  for (auto it = _connections.begin(); it != _connections.end(); ++it) {
+    int score = it->compare(remote, local);
 
     if (score > most_specific_match) {
       most_specific_match = score;
-      most_specific = i;
+      most_specific_it = it;
     }
   }
 
-  if (most_specific == _connections.end_sentinel())
+  if (most_specific_it == _connections.end())
     return {};
   else
-    return most_specific;
+    return most_specific_it.index();
 }
 
 
@@ -49,9 +46,8 @@ void tcp_connection_table::finish_connection(handle conn_handle)
 
 void tcp_connection_table::tick(int dt)
 {
-  for (size_t i = 0; i < _connections.watermark(); ++i) {
-    if (_connections.valid(i))
-      _connections[i].tick(dt);
+  for (auto &connection : _connections) {
+    connection.tick(dt);
   }
 }
 
@@ -67,13 +63,11 @@ tcp_connection &tcp_connection_table::operator [](handle idx)
 
 void tcp_connection_table::step_new_connections()
 {
-  for (size_t i = 0; i < _new_connections.watermark(); ++i) {
-    if (_new_connections.valid(i)) {
-      if (_connections.valid(_new_connections[i]))
-        _connections[_new_connections[i]].step();
+  for (auto it = _new_connections.begin(); it != _new_connections.end(); ++it) {
+    if (_connections.valid(it.index()))
+      _connections[it.index()].step();
 
-      _new_connections.erase(i);
-    }
+    _new_connections.erase(it.index());
   }
 
   if (_new_connections.size() > 0) {
@@ -83,18 +77,14 @@ void tcp_connection_table::step_new_connections()
 
 void tcp_connection_table::destroy_finished_connections()
 {
-  for (size_t i = 0; i < _finished_connections.watermark(); ++i) {
-    if (_finished_connections.valid(i)) {
-      handle handle_ = _finished_connections[i];
-
-      if (!_connections.valid(handle_)) {
-        log(tcp_connection_table, "double finish for handle %d", handle_);
-        break;
-      }
-
-      log(tcp_connection_table, "removing connection");
-      _connections.erase(handle_);
+  for (auto &conn_handle : _finished_connections) {
+    if (!_connections.valid(conn_handle)) {
+      log(tcp_connection_table, "double finish for handle %d", conn_handle);
+      break;
     }
+
+    log(tcp_connection_table, "removing connection");
+    _connections.erase(conn_handle);
   }
 
   _finished_connections.clear();

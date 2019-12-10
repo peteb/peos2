@@ -234,12 +234,9 @@ static inline const cache_entry *fetch_cache_entry(uint32_t ipaddr)
 
 static size_t find_ipv4_probe(uint32_t ipaddr)
 {
-  for (int i = 0; i < ipv4_probes.watermark(); ++i) {
-    if (!ipv4_probes.valid(i))
-      continue;
-
-    if (ipv4_probes[i].key == ipaddr)
-      return i;
+  for (auto it = ipv4_probes.begin(); it != ipv4_probes.end(); ++it) {
+    if (it->key == ipaddr)
+      return it.index();
   }
 
   return ipv4_probes.end_sentinel();
