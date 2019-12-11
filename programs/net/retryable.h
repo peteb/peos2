@@ -45,11 +45,8 @@ public:
 
   void notify_all(const _Result &result)
   {
-    for (size_t i = 0; i < _waiters.watermark(); ++i) {
-      if (!_waiters.valid(i))
-        continue;
-
-      _waiters[i](result);
+    for (auto &waiter : _waiters) {
+      waiter(result);
     }
   }
 

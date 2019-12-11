@@ -82,10 +82,9 @@ namespace p2 {
         return 0;
       }
 
-      // Find the single hole. TODO: make this O(1)
-      for (int i = 0; i < _holes.watermark(); ++i) {
-        if (_holes.valid(i))
-          return _holes[i].start;
+      // Find the single hole (which is the first one). TODO: make this O(1)
+      for (auto &hole : _holes) {
+        return hole.start;
       }
 
       assert(!"unreachable");

@@ -84,12 +84,9 @@ void pci_init()
 
 pci_device *pci_find_device(uint16_t vendor, uint16_t device)
 {
-  for (size_t i = 0; i < devices.watermark(); ++i) {
-    if (!devices.valid(i))
-      continue;
-
-    if (devices[i].vendor == vendor && devices[i].device == device)
-      return &devices[i];
+  for (auto &dev : devices) {
+    if (dev.vendor == vendor && dev.device == device)
+      return &dev;
   }
 
   return nullptr;

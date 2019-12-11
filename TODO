@@ -3,16 +3,19 @@ support: improve ring_buffer performance using memcpy
 support: improve memcpy performance
 support: dictionary class (use for arp.cc/ipv4_probes)
 support: call destructors in p2::pool
+support: optimize memcmp
+net: extract code into a library
+net: improve buffer handling to minimize number of copies
 tcp: clean up the different *segment classes that are used by queues
 tcp: retransmission
 tcp: don't accept messages over window size
 tcp: break up segments into sizes good for the current MTU
-ipv4: fragment messages when sending too large
-ramfs: implement read dir
 tcp: remote and local window updates
 tcp: selective ack
 tcp: active open (client connect)
-net: improve buffer handling to minimize number of copies
+tcp: improve resource handling so that the code isn't hardcoded to a low number of connections etc
+ipv4: fragment messages when sending too large
+ramfs: implement read dir
 kernel: idle main should be run as supervisor so that it can hlt
 kernel: writable mmap
 kernel: use physical page allocator for page tables
@@ -23,19 +26,16 @@ kernel: go through instability in test cases, fix them
 kernel: initial page structures setup in boot.s are hardcoded to a small size, should be dynamic
 kernel: `wait` should be able to fetch the exit status of the process
 kernel: process priorities
-testing: there can always be more integration tests
-testing: benchmarking of various functions (for example, the net stack, process creation) so that improvements can be seen
-support: optimize memcmp
-vfs: user permissions
-vfs/ramfs: extract filesystem datastructure
 kernel: use global pages for kernel area so that they wont be flushed from TLB
 kernel: CoW fork
-misc: go through TODOs
 kernel: handle errors/panics in IRQs (right now, the kernel will blame and kill the current process)
+testing: there can always be more integration tests
+testing: benchmarking of various functions (for example, the net stack, process creation) so that improvements can be seen
+vfs: user permissions
+vfs/ramfs: extract filesystem datastructure
+misc: go through TODOs
 misc: change build system
 misc: extract unittest framework code so that it can easily be reused in programs and libraries
 misc: setup CI
-net: extract code into a library
 misc: make everything work on real hardware
 misc: port a libc and stdc++lib
-tcp: improve resource handling so that the code isn't hardcoded to a low number of connections etc

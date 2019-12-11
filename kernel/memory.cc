@@ -514,14 +514,7 @@ void mem_map_kernel(mem_space space_handle, uint16_t flags)
 
 static bool overlaps_existing_area(mem_space space_handle, uintptr_t start, uintptr_t end)
 {
-  space_info &space = spaces[space_handle];
-
-  for (size_t i = 0; i < space.areas.watermark(); ++i) {
-    if (!space.areas.valid(i))
-      continue;
-
-    area_info &area = space.areas[i];
-
+  for (auto &area : spaces[space_handle].areas) {
     if (start < area.end && end > area.start)
       return true;
   }
