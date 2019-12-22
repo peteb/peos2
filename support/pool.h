@@ -182,7 +182,7 @@ public:
       return;
     }
 
-    free_list_prepend(idx);
+    prepend_to_free_list(idx);
     --_count;
   }
 
@@ -193,7 +193,7 @@ public:
 
     if (valid(idx)) {
       // Something's in there already, just write over
-      new (element(idx)) node(forward<_Args>(args)...);
+      _data.emplace(idx, forward<_Args>(args)...);
       return;
     }
 
@@ -203,14 +203,14 @@ public:
     }
     else {
       // Remove element from the free list
-      _IndexT next_free = element(idx)->next_free;
-      _IndexT prev_free = element(idx)->prev_free;
+      _IndexT next_free = _data[idx].next_free;
+      _IndexT prev_free = _data[idx].prev_free;
 
       if (prev_free != END_SENTINEL)
-        element(prev_free)->next_free = next_free;
+        _data[prev_free].next_free = next_free;
 
       if (next_free != END_SENTINEL)
-        element(next_free)->prev_free = prev_free;
+        _data[next_free].prev_free = prev_free;
 
       if (_free_list_head == idx)
         _free_list_head = next_free;
@@ -218,10 +218,10 @@ public:
       if (_free_list_tail == idx)
         _free_list_tail = prev_free;
 
-      element(idx)->prev_free = element(idx)->next_free = END_SENTINEL;
+      _data[idx].prev_free = _data[idx].next_free = END_SENTINEL;
     }
 
-    new (element(idx)) node(forward<_Args>(args)...);
+    _data.emplace(idx, forward<_Args>(args)...);
     ++_count;
   }
 
@@ -230,7 +230,7 @@ public:
     if (idx >= _watermark)
       return false;
 
-    if (element(idx)->next_free != END_SENTINEL)
+    if (_data[idx].next_free != END_SENTINEL)
       return false;
 
     if (idx == _free_list_head)
@@ -245,13 +245,13 @@ public:
   T &operator [](_IndexT idx)
   {
     assert(valid(idx));
-    return *element(idx)->value();
+    return *_data[idx].value();
   }
 
   const T &operator [](_IndexT idx) const
   {
     assert(valid(idx));
-    return *element(idx)->value();
+    return *_data[idx].value();
   }
 
   T *at(_IndexT idx)
@@ -259,7 +259,7 @@ public:
     if (!valid(idx))
       return nullptr;
 
-    return element(idx)->value();
+    return _data[idx].value();
   }
 
   const T *at(_IndexT idx) const
@@ -267,30 +267,13 @@ public:
     if (!valid(idx))
       return nullptr;
 
-    return element(idx)->value();
+    return _data[idx].value();
   }
 
-  size_t size() const
-  {
-    return _count;
-  }
-
-  bool full() const
-  {
-    return _count >= _MaxLen - 1;
-  }
-
-  _IndexT watermark() const
-  {
-    return _watermark;
-  }
-
-  // Returns the highest possible value, useful as a null index due to
-  // the pool being 0-indexed
-  _IndexT end_sentinel() const
-  {
-    return END_SENTINEL;
-  }
+  size_t size() const          {return _count; }
+  bool full() const            {return _count >= _MaxLen - 1; }
+  _IndexT watermark() const    {return _watermark; }
+  _IndexT end_sentinel() const {return END_SENTINEL; }
 
   iterator begin()             {return iterator(this, 0); }
   iterator end()               {return iterator(this, _watermark); }
@@ -298,34 +281,24 @@ public:
   const_iterator end() const   {return const_iterator(this, _watermark); }
 
 private:
-  // Updates the watermark to `idx`, similar to calling `push_back`
+  // Updates the watermark to `idx`, similar to calling `emplace_anywhere`
   // and then immediately erasing the items
   void resize(_IndexT idx)
   {
     assert(idx < _MaxLen);
 
     while (_watermark < idx) {
-      free_list_prepend(_watermark);
+      prepend_to_free_list(_watermark);
       ++_watermark;
     }
   }
 
-  node *element(_IndexT idx)
-  {
-    return p2::launder(reinterpret_cast<node *>(_element_data)) + idx;
-  }
-
-  const node *element(_IndexT idx) const
-  {
-    return p2::launder(reinterpret_cast<const node *>(_element_data)) + idx;
-  }
-
-  void free_list_prepend(_IndexT idx)
+  void prepend_to_free_list(_IndexT idx)
   {
     if (_free_list_head != END_SENTINEL)
-      element(_free_list_head)->prev_free = idx;
+      _data[_free_list_head].prev_free = idx;
 
-    element(idx)->next_free = _free_list_head;
+    _data[idx].next_free = _free_list_head;
     _free_list_head = idx;
 
     if (_free_list_tail == END_SENTINEL)
@@ -337,8 +310,10 @@ private:
     _free_list_tail = END_SENTINEL,
     _count = 0;
 
-  char _element_data[_MaxLen * sizeof(node)] alignas(node);
+  inplace_array<node, _MaxLen> _data;
 
+  // The highest possible value, useful as a null index due to the
+  // pool being 0-indexed
   static const _IndexT END_SENTINEL = p2::numeric_limits<_IndexT>::max();
 };
 

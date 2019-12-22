@@ -55,8 +55,6 @@ template<typename T>
 
 template<typename T>
 class inplace_object {
-  non_copyable _n;
-
 public:
   template<typename... _Args>
   inplace_object(_Args&&... args)
@@ -80,6 +78,34 @@ public:
 
 private:
   char _data[sizeof(T)] alignas(T);
+};
+
+template<typename T, size_t _MaxLen>
+class inplace_array {
+public:
+  T &operator [](size_t idx)
+  {
+    return *(p2::launder(reinterpret_cast<T *>(_data)) + idx);
+  }
+
+  const T &operator [](size_t idx) const
+  {
+    return *(p2::launder(reinterpret_cast<const T *>(_data)) + idx);
+  }
+
+  template<typename... _Args>
+  void emplace(size_t idx, _Args&&... args)
+  {
+    new (&(*this)[idx]) T(p2::forward<_Args>(args)...);
+  }
+
+  void destruct(size_t idx)
+  {
+    (*this)[idx].~T();
+  }
+
+private:
+  char _data[_MaxLen * sizeof(T)] alignas(T[1]);
 };
 
 }
