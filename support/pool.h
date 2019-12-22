@@ -133,11 +133,11 @@ public:
     using iterator_base<const T, const_iterator, const pool>::iterator_base;
   };
 
+  static_assert(_MaxLen <= p2::numeric_limits<_IndexT>::max(), "max value of _IndexT is reserved as a sentinel");
+  static_assert(_MaxLen > 0);
+
   pool()
   {
-    // TODO: make these checks compile-time
-    assert(_MaxLen <= p2::numeric_limits<_IndexT>::max() && "max value of _IndexT is reserved as a sentinel");
-    assert(_MaxLen > 0);
     clear();
   }
 
