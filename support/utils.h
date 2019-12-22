@@ -7,50 +7,81 @@
 #include <stddef.h>
 
 namespace p2 {
-  template<typename T>
-  inline T min(const T &lhs, const T &rhs) {
-    return (lhs > rhs ? rhs : lhs);
-  }
 
-  template<typename T>
-  inline T max(const T &lhs, const T &rhs) {
-    return (lhs > rhs ? lhs : rhs);
-  }
+template<typename T>
+inline T min(const T &lhs, const T &rhs) {
+  return (lhs > rhs ? rhs : lhs);
+}
 
-  template<typename T>
-  inline T clamp(const T &val, const T &low, const T &high) {
-    return max(min(val, high), low);
-  }
+template<typename T>
+inline T max(const T &lhs, const T &rhs) {
+  return (lhs > rhs ? lhs : rhs);
+}
 
-  template<typename T> struct remove_reference      {typedef T type; };
-  template<typename T> struct remove_reference<T&>  {typedef T type; };
-  template<typename T> struct remove_reference<T&&> {typedef T type; };
+template<typename T>
+inline T clamp(const T &val, const T &low, const T &high) {
+  return max(min(val, high), low);
+}
 
-  template<class T>
-  T&& forward(typename remove_reference<T>::type& t) noexcept {
-    return static_cast<T&&>(t);
-  }
+template<typename T> struct remove_reference      {typedef T type; };
+template<typename T> struct remove_reference<T&>  {typedef T type; };
+template<typename T> struct remove_reference<T&&> {typedef T type; };
 
-  template <class T>
-  T&& forward(typename remove_reference<T>::type&& t) noexcept {
-    return static_cast<T&&>(t);
-  }
+template<class T>
+T&& forward(typename remove_reference<T>::type& t) noexcept {
+  return static_cast<T&&>(t);
+}
 
-  class non_copyable {
-  public:
-    non_copyable() = default;
-    ~non_copyable() = default;
+template <class T>
+T&& forward(typename remove_reference<T>::type&& t) noexcept {
+  return static_cast<T&&>(t);
+}
 
-  private:
-    non_copyable(const non_copyable &) = delete;
-    non_copyable &operator =(const non_copyable &) = delete;
-  };
+class non_copyable {
+public:
+  non_copyable() = default;
+  ~non_copyable() = default;
 
-  template<typename T>
-  [[nodiscard]] constexpr T *launder(T* t) noexcept
+private:
+  non_copyable(const non_copyable &) = delete;
+  non_copyable &operator =(const non_copyable &) = delete;
+};
+
+template<typename T>
+[[nodiscard]] constexpr T *launder(T* t) noexcept
+{
+  return __builtin_launder(t);
+}
+
+template<typename T>
+class inplace_object {
+  non_copyable _n;
+
+public:
+  template<typename... _Args>
+  inplace_object(_Args&&... args)
   {
-    return __builtin_launder(t);
+    new (_data) T(p2::forward<_Args>(args)...);
   }
+
+  template<typename _CtorT>
+  inplace_object(const _CtorT &value)
+  {
+    new (_data) T(value);
+  }
+
+  void destruct()
+  {
+    (**this).~T();
+  }
+
+  T *operator *() {return p2::launder(reinterpret_cast<T *>(_data)); }
+  const T *operator *() const {return p2::launder(reinterpret_cast<const T *>(_data)); }
+
+private:
+  char _data[sizeof(T)] alignas(T);
+};
+
 }
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))

@@ -31,34 +31,26 @@ template<typename T, size_t _MaxLen, typename _IndexT = uint16_t>
 class pool {
   struct node {
     template<typename... _Args>
-    node(_Args&&... args)
-      : next_free(END_SENTINEL), prev_free(END_SENTINEL)
-    {
-      new (value()) T(forward<_Args>(args)...);
-    }
-
-    node(const T &o)
-      : next_free(END_SENTINEL), prev_free(END_SENTINEL)
-    {
-      new (value()) T(o);
-    }
+    node(_Args&&... args) : _value(p2::forward<_Args>(args)...) {}
+    node(const T &o) : _value(o) {}
 
     T *value()
     {
-      return p2::launder((T *)_value);
+      return *_value;
     }
 
     const T *value() const
     {
-      return p2::launder((T *)_value);
+      return *_value;
     }
 
-    char _value[sizeof(T)] alignas(T);
-    _IndexT next_free, prev_free;
+    inplace_object<T> _value;
+
     // prev_free is needed for `emplace`, which might un-free an
     // item in the middle of the free list. NB: _free_list_tail is
     // still needed for other things and isn't related to the
     // double-linked list.
+    _IndexT next_free = END_SENTINEL, prev_free = END_SENTINEL;
   };
 
 public:
