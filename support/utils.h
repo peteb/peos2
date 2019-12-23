@@ -53,9 +53,14 @@ template<typename T>
   return __builtin_launder(t);
 }
 
+struct no_construct_t {};
+extern no_construct_t no_construct;
+
 template<typename T>
 class inplace_object {
 public:
+  inplace_object(no_construct_t) {}
+
   template<typename... _Args>
   inplace_object(_Args&&... args)
   {
@@ -73,8 +78,11 @@ public:
     (**this).~T();
   }
 
-  T *operator *() {return p2::launder(reinterpret_cast<T *>(_data)); }
-  const T *operator *() const {return p2::launder(reinterpret_cast<const T *>(_data)); }
+  T *get()             {return p2::launder(reinterpret_cast<T *>(_data)); }
+  const T *get() const {return p2::launder(reinterpret_cast<const T *>(_data)); }
+
+  T &operator *()             {return *get(); }
+  const T &operator *() const {return *get(); }
 
 private:
   char _data[sizeof(T)] alignas(T);

@@ -36,12 +36,12 @@ class pool {
 
     T *value()
     {
-      return *_value;
+      return _value.get();
     }
 
     const T *value() const
     {
-      return *_value;
+      return _value.get();
     }
 
     inplace_object<T> _value;

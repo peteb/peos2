@@ -1,6 +1,8 @@
 #include "utils.h"
 #include "panic.h"
 
+p2::no_construct_t p2::no_construct;
+
 #if __STDC_HOSTED__ == 0
 
 // TODO: clean up conflicting definitions of memset when built in hosted environment
