@@ -189,7 +189,7 @@ public:
   template<typename... _Args>
   void emplace(_IndexT idx, _Args&&... args)
   {
-    resize(idx);
+    increase_size(idx);
 
     if (valid(idx)) {
       // Something's in there already, just write over
@@ -283,7 +283,7 @@ public:
 private:
   // Updates the watermark to `idx`, similar to calling `emplace_anywhere`
   // and then immediately erasing the items
-  void resize(_IndexT idx)
+  void increase_size(_IndexT idx)
   {
     assert(idx < _MaxLen);
 
