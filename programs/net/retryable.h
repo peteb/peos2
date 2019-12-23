@@ -11,8 +11,8 @@
 template<typename _Result>
 class retryable {
 public:
-  typedef p2::inline_fun<64, void(_Result)> await_fun;
-  typedef p2::inline_fun<32, void()> op_fun;
+  using await_fun = p2::inplace_fun<64, void(_Result)>;
+  using op_fun = p2::inplace_fun<32, void()>;
 
   retryable(op_fun fun)
     : _fun(fun)
