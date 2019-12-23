@@ -42,7 +42,7 @@ size_t tcp_send_queue::read_one_segment(tcp_send_segment *segment, char *data, s
   if (active_segment.seqnbr + active_segment.send_length > _ack_pos + _wndsz)
     return 0;
 
-  size_t bytes_read = _data_buffer.read(data, active_segment.seqnbr - _ack_pos, p2::min<size_t>(active_segment.data_length, length));
+  size_t bytes_read = _data_buffer.peek(data, active_segment.seqnbr - _ack_pos, p2::min<size_t>(active_segment.data_length, length));
   assert(bytes_read == active_segment.data_length && "read less than segment size");
 
   *segment = active_segment;

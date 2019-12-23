@@ -347,7 +347,7 @@ static int write(int /*handle*/, const char *data, int length)
 
     uint16_t packet_size = 0;
 
-    if (pending_tx.read((char *)&packet_size, 0, sizeof(packet_size)) != sizeof(packet_size))
+    if (pending_tx.peek((char *)&packet_size, 0, sizeof(packet_size)) != sizeof(packet_size))
       break;
 
     // Check that there's enough to read for the whole packet
