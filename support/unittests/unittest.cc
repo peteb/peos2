@@ -22,9 +22,11 @@ extern testsuite_info __start_TESTSUITES;
 extern testsuite_info __stop_TESTSUITES;
 
 // Entry point when running in the host environment
-int main() {
+int main()
+{
   const testsuite_info *ts = &__start_TESTSUITES;
 
+  // Run all test suites linked into the binary
   while (ts != &__stop_TESTSUITES) {
     suite_begin(ts->name);
     ts->fun();
@@ -34,9 +36,9 @@ int main() {
 }
 
 // Implements the `panic` function declared in the kernel so we can
-// catch it in our tests. We need to use a longjmp here because the
-// rest of the code expects `panic` to not return.
-void panic(const char *explanation) {
+// catch it in our tests.
+void panic(const char *explanation)
+{
   if (panic_jmp_env) {
     longjmp(*panic_jmp_env, 1);
     return;
@@ -45,26 +47,31 @@ void panic(const char *explanation) {
   case_report(false, explanation);
 }
 
-void set_panic_jmp(jmp_buf *env) {
+void set_panic_jmp(jmp_buf *env)
+{
   panic_jmp_env = env;
 }
 
-static std::ostream &green_header(const char *header_text) {
+static std::ostream &green_header(const char *header_text)
+{
   std::cout << GREEN << header_text << " " << COLOR_RESET << " ";
   return std::cout;
 }
 
-static std::ostream &red_header(const char *header_text) {
+static std::ostream &red_header(const char *header_text)
+{
   std::cout << RED << header_text << " " << COLOR_RESET << " ";
   return std::cout;
 }
 
-void suite_begin(const char *name) {
+void suite_begin(const char *name)
+{
   green_header("[------------]") << name << std::endl;;
   current_case = nullptr;
 }
 
-void suite_end() {
+void suite_end()
+{
   if (current_case) {
     case_report(true, "");
   }
@@ -72,7 +79,8 @@ void suite_end() {
   green_header("[------------]") << "all tests passed" << std::endl << std::endl;
 }
 
-void testcase(const char *name) {
+void testcase(const char *name)
+{
   if (current_case) {
     case_report(true, "");
   }
@@ -82,7 +90,8 @@ void testcase(const char *name) {
   testcase_start = std::chrono::high_resolution_clock::now();
 }
 
-void case_report(bool succeeded, const char *exp) {
+void case_report(bool succeeded, const char *exp)
+{
   std::chrono::duration<double> elapsed_time = std::chrono::high_resolution_clock::now() - testcase_start;
 
   if (succeeded) {

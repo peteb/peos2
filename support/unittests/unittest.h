@@ -42,7 +42,8 @@ void case_report(bool succeeded, const char *exp);
 void set_panic_jmp(jmp_buf *env);
 
 template<typename A, typename B>
-void assert_eq(const A &value, const B &expected, const char *file, int line) {
+void assert_eq(const A &value, const B &expected, const char *file, int line)
+{
   if (!(value == expected)) {
     std::stringstream ss;
     ss << file << ":" << line << ": expected " << value << " to equal " << expected;
@@ -51,7 +52,8 @@ void assert_eq(const A &value, const B &expected, const char *file, int line) {
 }
 
 template<typename A, typename B>
-void assert_neq(const A &value, const B &expected, const char *file, int line) {
+void assert_neq(const A &value, const B &expected, const char *file, int line)
+{
   if (!(value != expected)) {
     std::stringstream ss;
     ss << "[" << file << ":" << line << "] expected " << value << " to not equal " << expected;
