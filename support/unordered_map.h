@@ -33,10 +33,14 @@ public:
     return end();
   }
 
-  void insert(const _Key &key, const _Value &value)
+  // Doesn't overwrite existing entries
+  bool insert(const _Key &key, const _Value &value)
   {
-    // TODO: check if key already exists
+    if (find(key) != end())
+      return false;
+
     _storage.emplace_anywhere(key, value);
+    return true;
   }
 
   _Value &operator [](const _Key &key)
@@ -52,6 +56,7 @@ public:
     return it->value;
   }
 
+  size_t size() const          {return _storage.size(); }
   iterator begin()             {return _storage.begin(); }
   iterator end()               {return _storage.end(); }
   const_iterator begin() const {return _storage.begin(); }
