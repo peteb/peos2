@@ -36,7 +36,7 @@ $(OBJDIR)/%.o : %.cc
 	$(CXX) -c $< -o $@ $(CXXFLAGS) -MMD -MP
 
 vmpeoz : $(OBJECTS) linker.ld
-	$(CC) -T linker.ld -o vmpeoz -ffreestanding $(OPT_FLAGS) -Werror -nostdlib $(OBJECTS) -L../support -lgcc -lsupport
+	$(CC) -T linker.ld -o vmpeoz -ffreestanding $(OPT_FLAGS) -Werror -nostdlib $(OBJECTS) -L../support/$(OBJDIR) -lgcc -lsupport
 
 -include $(OBJDIR)/*.d
 -include $(OBJDIR)/*/*.d

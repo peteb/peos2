@@ -9,13 +9,3 @@ CXXFLAGS=-std=c++17 -ffreestanding $(OPT_FLAGS) -Wall -Wextra -Werror -fno-excep
 OBJDIR=.target
 
 -include Makefile
-
-OBJECT_PATHS=$(addprefix $(OBJDIR)/,$(OBJECTS))
-
-all : libsupport.a
-
-clean :
-	rm -rf $(OBJDIR) libsupport.a
-
-libsupport.a : $(OBJECT_PATHS)
-	ar rcs libsupport.a $(OBJECT_PATHS)
