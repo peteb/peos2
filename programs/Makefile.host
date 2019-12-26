@@ -36,12 +36,8 @@ clean :
 check : unittest
 	@./unittest
 
-# Hacky hack!! TODO: clean up sharing of unittest framework
-$(OBJDIR)/unittest.o : ../support/unittests/unittest.cc
-	$(CXX) -c $< -o $@ $(CXXFLAGS) -MMD -MP
-
-unittest : $(OBJECT_PATHS) $(OBJDIR)/unittest.o
-	$(CXX) -o unittest -Werror $(OPT_FLAGS) $(OBJECT_PATHS) $(OBJDIR)/unittest.o -L../support/.host -lsupport
+unittest : $(OBJECT_PATHS)
+	$(CXX) -o unittest -Werror $(OPT_FLAGS) $(OBJECT_PATHS) -L../support/.host -lsupport -lunittest
 
 -include *.d
 -include .host/**/*.d

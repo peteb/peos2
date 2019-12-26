@@ -1,5 +1,5 @@
+#include "support/unittest.h"
 #include "support/pool.h"
-#include "unittest.h"
 
 TESTSUITE(p2::pool) {
   TESTCASE("created pool has zero size") {

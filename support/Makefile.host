@@ -11,21 +11,24 @@ OBJDIR=.host
 -include Makefile
 
 TEST_SOURCES=$(wildcard unittests/test_*.cc)
-TEST_OBJECTS=$(TEST_SOURCES:.cc=.o) unittests/unittest.o
+TEST_OBJECTS=$(TEST_SOURCES:.cc=.o)
 
 UT_OBJECT_PATHS=$(addprefix $(OBJDIR)/,$(TEST_OBJECTS))
 LIB_OBJECT_PATHS=$(addprefix $(OBJDIR)/,$(OBJECTS))
 
-all : $(OBJDIR)/unittest
+all : $(OBJDIR)/unittest $(OBJDIR)/libunittest.a
 
 clean :
 	rm -rf $(OBJDIR)
 
+$(OBJDIR)/libunittest.a : $(OBJDIR)/unittest.o
+	ar rcs $(OBJDIR)/libunittest.a $(OBJDIR)/unittest.o
+
 $(OBJDIR)/libsupport.a : $(LIB_OBJECT_PATHS)
 	ar rcs $(OBJDIR)/libsupport.a $(LIB_OBJECT_PATHS)
 
-$(OBJDIR)/unittest : $(UT_OBJECT_PATHS) $(OBJDIR)/libsupport.a
-	$(CXX) -o $(OBJDIR)/unittest -Werror $(OPT_FLAGS) $(UT_OBJECT_PATHS) -lsupport -L$(OBJDIR)
+$(OBJDIR)/unittest : $(UT_OBJECT_PATHS) $(OBJDIR)/libsupport.a $(OBJDIR)/libunittest.a
+	$(CXX) -o $(OBJDIR)/unittest -Werror $(OPT_FLAGS) $(UT_OBJECT_PATHS) -lsupport -lunittest -L$(OBJDIR)
 
 check : $(OBJDIR)/unittest
 	@$(OBJDIR)/unittest
