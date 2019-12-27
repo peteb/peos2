@@ -1,5 +1,6 @@
 # -*- makefile -*-
 
+TARGETDIR=.$(shell $(CC) -dumpmachine)
 OPT_FLAGS ?= -O3
 CC=gcc
 CXX=g++
@@ -37,7 +38,7 @@ check : unittest
 	@./unittest
 
 unittest : $(OBJECT_PATHS)
-	$(CXX) -o unittest -Werror $(OPT_FLAGS) $(OBJECT_PATHS) -L../support/.host -lsupport -lunittest
+	$(CXX) -o unittest -Werror $(OPT_FLAGS) $(OBJECT_PATHS) -L../support/$(TARGETDIR) -lsupport -lunittest
 
 -include *.d
--include .host/**/*.d
+-include $(OBJDIR)/**/*.d

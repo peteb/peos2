@@ -23,6 +23,6 @@ class ScenarioCollectionBuilder
   def make_kernel(env)
     env = {'GRUB_CFG' => 'grub-shell.cfg', 'DEFS' => '-DNODEBUG'}.merge(env)
     joined_env = env.map { |k, v| "#{k}=\"#{v}\"" }.join(' ')
-    "#{joined_env} make clean all image"
+    "#{joined_env} build/setenv target make clean all image"
   end
 end

@@ -24,7 +24,7 @@ init.tar : programs kernel/vmpeoz
 	cd .initar && tar cf ../init.tar *
 
 libsupport :
-	$(MAKE) -C support -f Makefile.target
+	$(MAKE) -C support
 
 kernel/vmpeoz : libsupport
 	$(MAKE) -C kernel
@@ -32,13 +32,18 @@ kernel/vmpeoz : libsupport
 programs : libsupport kernel/vmpeoz
 	$(MAKE) -C programs
 
-.PHONY : clean kernel/vmpeoz programs/first_program check
+.PHONY : clean kernel/vmpeoz programs/first_program check unittest
 
 clean :
 	$(MAKE) -C kernel clean
 	$(MAKE) -C programs clean
-	$(MAKE) -C support -f Makefile.target clean
+	$(MAKE) -C programs -f Makefile.host clean
+	$(MAKE) -C support clean
 	rm -rf .initar .image init.tar
+
+unittest : libsupport
+	$(MAKE) -C support unittest
+	$(MAKE) -C programs -f Makefile.host unittest
 
 check :
 	@test/runner.rb

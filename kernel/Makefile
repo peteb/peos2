@@ -1,6 +1,7 @@
 # -*- makefile -*-
 
-OPT_FLAGS ?= -O3
+TARGETDIR=.$(shell $(CC) -dumpmachine)
+OPT_FLAGS?=-O3
 CC=i686-elf-gcc
 CXX=i686-elf-g++
 AS=i686-elf-as
@@ -36,7 +37,7 @@ $(OBJDIR)/%.o : %.cc
 	$(CXX) -c $< -o $@ $(CXXFLAGS) -MMD -MP
 
 vmpeoz : $(OBJECTS) linker.ld
-	$(CC) -T linker.ld -o vmpeoz -ffreestanding $(OPT_FLAGS) -Werror -nostdlib $(OBJECTS) -L../support/$(OBJDIR) -lgcc -lsupport
+	$(CC) -T linker.ld -o vmpeoz -ffreestanding $(OPT_FLAGS) -Werror -nostdlib $(OBJECTS) -L../support/$(TARGETDIR) -lgcc -lsupport
 
 -include $(OBJDIR)/*.d
 -include $(OBJDIR)/*/*.d

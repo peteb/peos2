@@ -1,0 +1,19 @@
+#!/bin/bash
+set -e
+
+case $1 in
+  host)
+    export CC=gcc
+    export CXX=g++
+    export AS=as
+    ;;
+
+  target)
+    export CC=i686-elf-gcc
+    export CXX=i686-elf-g++
+    export AS=i686-elf-as
+    ;;
+esac
+
+${@:2}
+
