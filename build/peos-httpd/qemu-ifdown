@@ -1,0 +1,5 @@
+#!/bin/bash
+
+ip link set ${BRIDGE_IF:-eth0} nomaster
+ip link set tap0 nomaster
+ip link delete br0 type bridge

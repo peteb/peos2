@@ -94,9 +94,20 @@ void arp_recv(int eth_fd, eth_frame */*frame*/, const char *data, size_t length)
 
     uint32_t local_addr;
 
-    if (ipv4_local_address(&local_addr) >= 0) {
-      send_ipv4_reply(eth_fd, spa, hdr.tha);
+    if (ipv4_local_address(&local_addr) < 0) {
+      local_addr = 0;
+      log(arp, "warning: failed to get local ipv4 address");
     }
+
+    if (local_addr == tpa) {
+      // Someone is requesting our MAC address
+      send_ipv4_reply(eth_fd, spa, hdr.sha);
+    }
+
+    // TODO: should we respond on behalf of others?
+
+    // SPA=sender ip address
+    // TPA=target ip address == us
   }
   else if (oper == 2) {
     // Reply

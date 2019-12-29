@@ -32,8 +32,6 @@ kernel/vmpeoz : libsupport
 programs : libsupport kernel/vmpeoz
 	$(MAKE) -C programs
 
-.PHONY : clean kernel/vmpeoz programs/first_program check unittest
-
 clean :
 	$(MAKE) -C kernel clean
 	$(MAKE) -C programs clean
@@ -47,3 +45,20 @@ unittest : libsupport
 
 check :
 	@test/runner.rb
+
+# TODO: clean up docker image building
+dist-docker :
+	docker build . -t peos-release
+
+dist-docker-httpd :
+	docker build build/peos-httpd -t peos-httpd
+
+publish-docker-httpd :
+	docker tag peos-httpd eu.gcr.io/the-big-dump/peos-httpd:latest
+	docker push eu.gcr.io/the-big-dump/peos-httpd:latest
+
+run-docker-httpd :
+	docker run --privileged -it -p 8080:12345 peos-httpd:latest bash
+
+.PHONY : clean kernel/vmpeoz programs/first_program check unittest dist-docker dist-docker-httpd \
+	publish-docker-httpd run-docker-httpd

@@ -65,8 +65,22 @@ case $1 in
     qemu-system-i386 -nographic -kernel kernel/vmpeoz -initrd init.tar -append init=/ramfs/bin/nsa $FLAGS
     ;;
 
+  httpd-tap)
+    # We "transplant" the NIC's hwaddr so that we pretend to be the
+    # machine with that NIC. The qemu-ifup script makes sure that the
+    # bridge will forward frames destined for that address
+    MAC=`ifconfig ${BRIDGE_IF:-eth0}|sed -n 's/.*ether \(\S*\).*/\1/p'`
+    FLAGS="-d pcall,cpu_reset,guest_errors \
+      -netdev tap,id=mynet0 \
+      -device rtl8139,netdev=mynet0,mac=$MAC \
+      -object filter-dump,id=dp1,netdev=mynet0,file=vm0.pcap"
+
+    echo FLAGS=$FLAGS
+    # TODO: send in IP address, gw and netmask
+    qemu-system-i386 -nographic -kernel kernel/vmpeoz -initrd init.tar -append init=/ramfs/bin/nsa $FLAGS
+    ;;
+
   *)
     echo $"Usage: $0 {diskimage|debug|display|vnc|terminal|test-shell|test-cdrom}"
     exit 1
 esac
-

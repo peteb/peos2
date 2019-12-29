@@ -6,6 +6,7 @@ support: call destructors in p2::pool
 support: optimize memcmp
 net: extract code into a library
 net: improve buffer handling to minimize number of copies
+ethernet: disable promisc mode
 tcp: clean up the different *segment classes that are used by queues
 tcp: retransmission
 tcp: don't accept messages over window size

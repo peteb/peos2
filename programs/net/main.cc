@@ -24,9 +24,9 @@ int main(int argc, char *argv[])
   int fd = verify(syscall2(open, "/dev/eth0", 0));
 
   ipv4_configure(fd,
-                 parse_ipaddr("10.0.2.15"),
-                 parse_ipaddr("255.255.255.0"),
-                 parse_ipaddr("10.0.2.2"));
+                 parse_ipaddr("10.14.0.3"),
+                 parse_ipaddr("255.255.255.255"),
+                 parse_ipaddr("10.14.0.1"));
   tcp_init(fd);
 
   eth_run(fd);

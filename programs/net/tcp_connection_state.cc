@@ -148,27 +148,29 @@ static const class : public tcp_connection_state {
     buffer[p2::min(length, sizeof(buffer) - 1)] = 0;
     log(tcp, "ESTABLISHED: rx seq segment %d bytes: %s", length, buffer);
 
-    // Send some dummy data
-    const char *message = "HTTP/1.1 200 OK\r\n"
-      "Server: peos2\r\n"
-      "Content-Length: 16\r\n"
-      "Content-Type: text/plain\r\n"
-      "Connection: Closed\r\n"
-      "\r\n"
-      "Handled by peos2";
+    if (length > 0) {
+      // Send some dummy data
+      const char *message = "HTTP/1.1 200 OK\r\n"
+        "Server: peos2\r\n"
+        "Content-Length: 16\r\n"
+        "Content-Type: text/plain\r\n"
+        "Connection: Closed\r\n"
+        "\r\n"
+        "Handled by peos2";
 
-    (void)message;
+      (void)message;
 
-    tcp_send_segment http_segment;
-    http_segment.flags = PSH;
-    conn.transmit(http_segment, message, strlen(message), strlen(message));
+      tcp_send_segment http_segment;
+      http_segment.flags = PSH;
+      conn.transmit(http_segment, message, strlen(message), strlen(message));
 
+      // Close the connection
+      tcp_send_segment fin_segment;
+      fin_segment.flags = FIN;
+      conn.transmit(fin_segment, phantom, 1, 0);
+      conn.transition(tcp_connection_state::FIN_WAIT_1);
+    }
 
-    // Close the connection
-    /*tcp_send_segment fin_segment;
-    fin_segment.flags = FIN;
-    conn.transmit(fin_segment, phantom, 1, 0);
-    conn.transition(tcp_connection_state::FIN_WAIT_1);*/
   }
 
 } established;
