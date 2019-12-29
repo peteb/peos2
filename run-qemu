@@ -70,14 +70,22 @@ case $1 in
     # machine with that NIC. The qemu-ifup script makes sure that the
     # bridge will forward frames destined for that address
     MAC=`ifconfig ${BRIDGE_IF:-eth0}|sed -n 's/.*ether \(\S*\).*/\1/p'`
+    #IP=`ifconfig ${BRIDGE_IF:-eth0}|sed -n 's/.*inet \(\S*\).*/\1/p'`
+    #NETMASK=`ifconfig ${BRIDGE_IF:-eth0}|sed -n 's/.*netmask \(\S*\).*/\1/p'`
+
+    # The dynamic ipv4 config fetching above won't work when run-qemu
+    # is run twice: the device loses its configuration
+
     FLAGS="-d pcall,cpu_reset,guest_errors \
       -netdev tap,id=mynet0 \
       -device rtl8139,netdev=mynet0,mac=$MAC \
       -object filter-dump,id=dp1,netdev=mynet0,file=vm0.pcap"
 
-    echo FLAGS=$FLAGS
+    set -x
+
     # TODO: send in IP address, gw and netmask
-    qemu-system-i386 -nographic -kernel kernel/vmpeoz -initrd init.tar -append init=/ramfs/bin/nsa $FLAGS
+    qemu-system-i386 -s -nographic -kernel kernel/vmpeoz -initrd init.tar $FLAGS \
+                     -append "init=/ramfs/bin/nsa ipaddr=10.14.0.3 netmask=255.255.255.255"
     ;;
 
   *)

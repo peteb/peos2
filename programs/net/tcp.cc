@@ -25,7 +25,7 @@ void tcp_init(int interface)
 
   // TODO: fix multi-interface handling
   connections.set_interface(interface);
-  connections.create_connection({0, 0}, {0, 5555}, tcp_connection_state::LISTEN);
+  connections.create_connection({0, 0}, {0, 8080}, tcp_connection_state::LISTEN);
 }
 
 void tcp_recv(int interface, eth_frame *frame, ipv4_dgram *datagram, const char *data, size_t length)

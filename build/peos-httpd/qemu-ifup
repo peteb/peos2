@@ -4,7 +4,8 @@ EXT_IF=${BRIDGE_IF:-eth0}
 INT_IF=$1
 MAC=`ifconfig ${EXT_IF}|sed -n 's/.*ether \(\S*\).*/\1/p'`
 
-echo Bridging $EXT_IF-$INT_IF and forward $MAC...
+ip route show
+echo Bridging $EXT_IF-$INT_IF and forwarding $MAC...
 
 ip link set $EXT_IF down
 ip addr flush dev $EXT_IF
