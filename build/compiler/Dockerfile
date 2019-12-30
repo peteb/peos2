@@ -12,6 +12,8 @@ RUN ./make-cross-compiler
 COPY make-bochs .
 RUN ./make-bochs
 
+COPY setenv /opt/cross/bin
+
 RUN echo "export PATH=\$PATH:/opt/cross/bin/" >> ~/.bashrc && chmod +x ~/.bashrc
 
 WORKDIR /opt/src/

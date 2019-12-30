@@ -40,7 +40,7 @@ flags, boots it and runs tests. It'll also build and run all
 unittests.
 
 ```bash
-make check
+./build-shell make check
 ```
 
 ## Building and running bootable binaries
@@ -51,7 +51,7 @@ CD-ROM disk image with GRUB that can be booted using Bochs and other
 emulators (and possibly even real machines!)
 
 ```bash
-DEFS=-DNODEBUG OPT_FLAGS="-O0 -g" build-shell build/setenv target make all image
+DEFS=-DNODEBUG OPT_FLAGS="-O0 -g" build-shell setenv target make all image
 ```
 
 To run the kernel in QEMU with "user networking", ie, the guest will
@@ -74,16 +74,15 @@ can be used.
 
 ## Building and running unittests
 ```bash
-build-shell build/setenv host make -C support unittest check
+build-shell setenv host make -C support unittest check
 ```
 
 ## Building and running the live environment image
-For better performance and full exposure of the network stack towards
-the Internet, QEMU's TAP networking support is used in the live
-environment. This is implemented by taking the bridged NIC's MAC
-address and using it for the virtual NIC within QEMU. All packets
-heading for that MAC address will be forwarded over the NIC-TAP
-bridge and handled by the guest.
+For better performance and full exposure to the Internet, QEMU's TAP
+networking support is used in the live environment. This is
+implemented by taking the bridged NIC's MAC address and using it for
+the virtual NIC within QEMU. All packets heading for that MAC address
+will be forwarded over the NIC-TAP bridge and handled by the guest.
 
 This can be tested safely locally using Docker port forward networking:
 

@@ -5,4 +5,4 @@ ENV DEFS -DNODEBUG
 
 COPY . /opt/src/
 
-RUN build/setenv target make clean all
+RUN setenv target make clean all

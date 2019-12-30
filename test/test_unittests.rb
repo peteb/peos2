@@ -1,7 +1,7 @@
 scenario "libsupport unittest" do
   builds [
-    %q(OPT_FLAGS="-O0" build/setenv host make clean unittest),
-    %q(OPT_FLAGS="-O3" build/setenv host make clean unittest),
+    %q(OPT_FLAGS="-O0" setenv host make clean unittest),
+    %q(OPT_FLAGS="-O3" setenv host make clean unittest),
   ]
 
   # TODO: remove hard coded host triplet
@@ -14,8 +14,8 @@ end
 
 scenario "programs unittest" do
   builds [
-    %q(OPT_FLAGS="-O0" build/setenv host make clean unittest),
-    %q(OPT_FLAGS="-O3" build/setenv host make clean unittest),
+    %q(OPT_FLAGS="-O0" setenv host make clean unittest),
+    %q(OPT_FLAGS="-O3" setenv host make clean unittest),
   ]
 
   command "programs/unittest"
