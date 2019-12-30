@@ -16,4 +16,4 @@ else
   COMMAND="$*"
 fi
 
-docker run $INTERACTIVE --privileged $ENV_VARS -v "`pwd`/../":/opt/src ${IMAGE:-peos-env} $COMMAND
+docker run $INTERACTIVE --privileged $ENV_VARS -v "`pwd`":/opt/src ${IMAGE:-peos-env} $COMMAND

@@ -51,7 +51,7 @@ CD-ROM disk image with GRUB that can be booted using Bochs and other
 emulators (and possibly even real machines!)
 
 ```bash
-DEFS=-DNODEBUG OPT_FLAGS="-O0 -g" build/build-shell build/setenv target make all image
+DEFS=-DNODEBUG OPT_FLAGS="-O0 -g" build-shell build/setenv target make all image
 ```
 
 To run the kernel in QEMU with "user networking", ie, the guest will
@@ -74,7 +74,7 @@ can be used.
 
 ## Building and running unittests
 ```bash
-build/build-shell build/setenv host make -C support unittest check
+build-shell build/setenv host make -C support unittest check
 ```
 
 ## Building and running the live environment image
