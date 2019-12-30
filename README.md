@@ -87,8 +87,8 @@ will be forwarded over the NIC-TAP bridge and handled by the guest.
 This can be tested safely locally using Docker port forward networking:
 
 ```bash
-make dist-docker dist-docker-httpd
-make run-docker-httpd
+make dist-docker dist-docker-live
+make run-docker-live
 curl http://localhost:8080  # Verification
 ```
 

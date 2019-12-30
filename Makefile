@@ -46,18 +46,18 @@ unittest : libsupport
 check :
 	@test/runner.rb
 
-# TODO: clean up docker image building
 dist-docker :
 	docker build . -t peos-release
 
-dist-docker-httpd :
-	docker build build/peos-httpd -t peos-httpd
+# TODO: rename peos-httpd peos-live
+dist-docker-live :
+	docker build live -t peos-httpd
 
-publish-docker-httpd :
+publish-docker-live :
 	docker tag peos-httpd eu.gcr.io/the-big-dump/peos-httpd:latest
 	docker push eu.gcr.io/the-big-dump/peos-httpd:latest
 
-run-docker-httpd :
+run-docker-live :
 	docker run --privileged -it -p 8080:8080 peos-httpd:latest ./run-qemu httpd-tap
 
 .PHONY : clean kernel/vmpeoz programs/first_program check unittest dist-docker dist-docker-httpd \
