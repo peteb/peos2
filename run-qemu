@@ -1,5 +1,6 @@
 #!/bin/bash
 cd `dirname $0`
+set -x
 
 # Note that networking uses qemu's "user networking" mode rather than a TAP interface. I tried
 # to get a TAP up and running on macOS, but bridging it with an Ethernet interface would cause
@@ -56,13 +57,13 @@ case $1 in
     ;;
 
   httpd)
-    FLAGS="-d pcall,cpu_reset,guest_errors \
-      -netdev user,id=mynet0,hostfwd=tcp::${PORT:-8080}-:5555 \
+    FLAGS="$UD_MONITOR -s -nographic -d pcall,cpu_reset,guest_errors \
+      -netdev user,id=mynet0,hostfwd=tcp:127.0.0.1:8080-:8080 \
       -device rtl8139,netdev=mynet0,mac=02:ca:fe:f0:0d:01 \
       -object filter-dump,id=dp1,netdev=mynet0,file=vm0.pcap"
 
-    echo FLAGS=$FLAGS
-    qemu-system-i386 -nographic -kernel kernel/vmpeoz -initrd init.tar -append init=/ramfs/bin/nsa $FLAGS
+    qemu-system-i386 -kernel kernel/vmpeoz -initrd init.tar $FLAGS \
+                     -append "init=/ramfs/bin/nsa ipaddr=10.0.2.15 netmask=255.255.255.0 gw=10.0.2.2"
     ;;
 
   httpd-tap)
@@ -90,15 +91,13 @@ case $1 in
       echo $GW > .saved-gateway
     fi
 
-    FLAGS="-d pcall,cpu_reset,guest_errors \
+    FLAGS="$UD_MONITOR -d pcall,cpu_reset,guest_errors \
       -netdev tap,id=mynet0 \
       -device rtl8139,netdev=mynet0,mac=$MAC \
       -object filter-dump,id=dp1,netdev=mynet0,file=vm0.pcap"
 
-    set -x
-
-    qemu-system-i386 -s -nographic -kernel kernel/vmpeoz -initrd init.tar $FLAGS $UD_MONITOR \
-                     -append "init=/ramfs/bin/nsa ipaddr=$IP netmask=$NETMASK gwipaddr=$GW"
+    qemu-system-i386 -s -nographic -kernel kernel/vmpeoz -initrd init.tar $FLAGS \
+                     -append "init=/ramfs/bin/nsa ipaddr=$IP netmask=$NETMASK gw=$GW"
     ;;
 
   *)
