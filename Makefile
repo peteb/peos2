@@ -58,7 +58,7 @@ publish-docker-httpd :
 	docker push eu.gcr.io/the-big-dump/peos-httpd:latest
 
 run-docker-httpd :
-	docker run --privileged -it -p 8080:12345 peos-httpd:latest bash
+	docker run --privileged -it -p 8080:8080 peos-httpd:latest bash
 
 .PHONY : clean kernel/vmpeoz programs/first_program check unittest dist-docker dist-docker-httpd \
 	publish-docker-httpd run-docker-httpd

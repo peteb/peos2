@@ -8,7 +8,6 @@ ip route show
 echo Bridging $EXT_IF-$INT_IF and forwarding $MAC...
 
 ip link set $EXT_IF down
-ip addr flush dev $EXT_IF
 
 # Create bridge
 ip link add br0 type bridge
