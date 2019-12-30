@@ -28,7 +28,7 @@ There are probably more reasons, but I'm not looking to make anything "useful". 
 Everything needed to build and run is encapsulated by a Docker image that can be built like so:
 
 ```bash
-toolchain/build-compiler-image
+make toolchain
 ```
 
 ## Running integration tests

@@ -60,5 +60,8 @@ publish-docker-live :
 run-docker-live :
 	docker run --privileged -it -p 8080:8080 peos-httpd:latest ./run-qemu httpd-tap
 
-.PHONY : clean kernel/vmpeoz programs/first_program check unittest dist-docker dist-docker-httpd \
-	publish-docker-httpd run-docker-httpd
+toolchain :
+	docker build toolchain -t peos-toolchain:latest
+
+.PHONY : clean kernel/vmpeoz programs/first_program check unittest dist-docker dist-docker-live \
+	publish-docker-live run-docker-live toolchain

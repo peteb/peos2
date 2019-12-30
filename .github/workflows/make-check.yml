@@ -6,7 +6,7 @@ on:
       - 'build/compiler/**'
 
 env:
-  IMAGE_NAME: peos-env
+  IMAGE_NAME: peos-toolchain
 
 jobs:
   test:

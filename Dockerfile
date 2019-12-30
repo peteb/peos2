@@ -1,4 +1,4 @@
-FROM docker.pkg.github.com/peteb/peos2/peos-env:latest
+FROM docker.pkg.github.com/peteb/peos2/peos-toolchain:latest
 
 ENV PATH /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cross/bin/
 ENV DEFS -DNODEBUG

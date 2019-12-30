@@ -6,7 +6,7 @@ on:
       - 'build/compiler/**'
 
 env:
-  IMAGE_NAME: peos-env
+  IMAGE_NAME: peos-toolchain
 
 jobs:
   build:
@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v1
 
       - name: Build image
-        run: toolchain/build-compiler-image
+        run: make toolchain
 
       - name: Log into registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
@@ -32,5 +32,5 @@ jobs:
           [ "$VERSION" == "master" ] && VERSION=latest
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
-          docker tag peos-env $IMAGE_ID:$VERSION
+          docker tag peos-toolchain $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
