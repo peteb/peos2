@@ -58,10 +58,10 @@ publish-docker-live :
 	docker push eu.gcr.io/the-big-dump/peos-httpd:latest
 
 run-docker-live :
-	docker run --privileged -it -p 8080:8080 peos-httpd:latest ./run-qemu httpd-tap
+	docker run --privileged -it -p 8080:8080 peos-httpd:latest
 
 toolchain :
-	docker build toolchain -t peos-toolchain:latest
+	docker build toolchain -t docker.pkg.github.com/peteb/peos2/peos-toolchain:latest
 
 .PHONY : clean kernel/vmpeoz programs/first_program check unittest dist-docker dist-docker-live \
 	publish-docker-live run-docker-live toolchain

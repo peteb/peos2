@@ -29,11 +29,9 @@ fi
 NETWORK="-netdev tap,id=mynet0 \
          -device rtl8139,netdev=mynet0,mac=$MAC \
          -object filter-dump,id=dp1,netdev=mynet0,file=vm0.pcap"
-
 DEBUG="-s -d pcall,cpu_reset,guest_errors \
        -monitor unix:/tmp/qemu-monitor,server,nowait"
+STARTUP="-kernel kernel/vmpeoz -initrd init.tar"
+ARGS="-nographic $STARTUP $NETWORK $DEBUG"
 
-STARTUP="-kernel kernel/vmpeoz -initrd init.tar \
-         -append \"init=/ramfs/bin/nsa ipaddr=$IP netmask=$NETMASK gw=$GW\""
-
-qemu-system-i386 -nographic $STARTUP $NETWORK $DEBUG
+qemu-system-i386 $ARGS -append "init=/ramfs/bin/nsa ipaddr=$IP netmask=$NETMASK gw=$GW"
