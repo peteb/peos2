@@ -1,9 +1,9 @@
-name: Build environment
+name: Toolchain
 
 on:
   push:
     paths:
-      - 'build/compiler/**'
+      - 'toolchain/**'
 
 env:
   IMAGE_NAME: peos-toolchain
