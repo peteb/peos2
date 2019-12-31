@@ -4,5 +4,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y net-tools bridge-utils net
 
 COPY qemu-ifup /etc/qemu-ifup
 COPY qemu-ifdown /etc/qemu-ifdown
+COPY run-live .
 
-CMD ["./run-qemu", "httpd-tap"]
+CMD ["./run-live"]

@@ -1,0 +1,39 @@
+#!/bin/bash
+set -x
+
+# We "transplant" the NIC's hwaddr so that we pretend to be the
+# machine with that NIC. The qemu-ifup script makes sure that the
+# bridge will forward frames destined for that address
+EXT_IF=${BRIDGE_IF:-eth0}
+MAC=`ifconfig $EXT_IF | awk '/ether/ { print $2 }'`
+IP=`ifconfig $EXT_IF | awk '/inet / { print $2 }'`
+NETMASK=`ifconfig $EXT_IF | awk '/netmask/ { print $4 }'`
+
+# $GWIP should be set by a higher level, ie, GCE
+GW=$GWIP
+
+if [ -z "$GW" ]
+then
+  GW=`ip route show dev $EXT_IF | awk '/default/ { print $3 }'`
+fi
+
+if [ -z "$GW" ]
+then
+  GW=`cat .saved-gateway`
+else
+  # Bridging $EXT_IF will make it lose its routes, and I haven't found a better
+  # way to preserve it other than saving to a file
+  echo $GW > .saved-gateway
+fi
+
+NETWORK="-netdev tap,id=mynet0 \
+         -device rtl8139,netdev=mynet0,mac=$MAC \
+         -object filter-dump,id=dp1,netdev=mynet0,file=vm0.pcap"
+
+DEBUG="-s -d pcall,cpu_reset,guest_errors \
+       -monitor unix:/tmp/qemu-monitor,server,nowait"
+
+STARTUP="-kernel kernel/vmpeoz -initrd init.tar \
+         -append \"init=/ramfs/bin/nsa ipaddr=$IP netmask=$NETMASK gw=$GW\""
+
+qemu-system-i386 -nographic $STARTUP $NETWORK $DEBUG
