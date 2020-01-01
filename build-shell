@@ -16,5 +16,5 @@ else
   COMMAND="$*"
 fi
 
-${IMAGE:=docker.pkg.github.com/peteb/peos2/peos-toolchain}
+IMAGE=${IMAGE:-docker.pkg.github.com/peteb/peos2/peos-toolchain}
 docker run $INTERACTIVE --privileged $ENV_VARS -v "`pwd`":/opt/src $IMAGE $COMMAND
