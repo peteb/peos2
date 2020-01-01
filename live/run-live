@@ -9,6 +9,11 @@ MAC=`ifconfig $EXT_IF | awk '/ether/ { print $2 }'`
 IP=`ifconfig $EXT_IF | awk '/inet / { print $2 }'`
 NETMASK=`ifconfig $EXT_IF | awk '/netmask/ { print $4 }'`
 
+if [ -z "$IP" ]
+then
+  IP=$IPADDR
+fi
+
 # $GWIP should be set by a higher level, ie, GCE
 GW=$GWIP
 

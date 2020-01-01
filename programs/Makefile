@@ -13,7 +13,7 @@ CRTBEGIN_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
 NSA_OBJECTS=net/main.o net/ethernet.o net/utils.o net/arp.o net/ipv4.o net/tcp.o net/udp.o \
 	net/tcp_connection.o net/tcp_connection_table.o net/tcp_recv_queue.o \
-	net/tcp_connection_state.o net/tcp_send_queue.o net/tcp_proto.o
+	net/tcp_connection_state.o net/tcp_send_queue.o net/tcp_proto.o net/ipv4_protocol.o
 
 .PHONY : clean
 

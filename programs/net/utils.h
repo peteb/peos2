@@ -47,9 +47,4 @@ inline uint32_t htonl(uint32_t host_bytes)
   return ntohl(host_bytes);
 }
 
-uint16_t ipv4_checksum(const char *data,
-                       size_t length,
-                       const char *data2,
-                       size_t length2);
-
 #endif // !NET_UTILS_H

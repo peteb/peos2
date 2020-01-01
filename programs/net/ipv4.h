@@ -26,10 +26,10 @@ void ipv4_configure(int interface,
                     uint32_t gwaddr);
 
 // Forward a PDU from a lower layer
-void ipv4_recv(int interface,
-               struct eth_frame *frame,
-               const char *data,
-               size_t length);
+void ipv4_on_receive(int interface,
+                     struct eth_frame *frame,
+                     const char *data,
+                     size_t length);
 
 // Send a datagram
 size_t ipv4_send(int interface,

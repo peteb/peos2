@@ -81,15 +81,3 @@ uint64_t sum_words(const char *data, size_t length)
 
   return sum;
 }
-
-uint16_t ipv4_checksum(const char *data, size_t length, const char *data2, size_t length2)
-{
-  uint32_t sum = 0;
-  sum += sum_words(data, length);
-  sum += sum_words(data2, length2);
-
-  while (sum > 0xFFFF)
-    sum = (sum >> 16) + (sum & 0xFFFF);
-
-  return ~(uint16_t)sum;
-}

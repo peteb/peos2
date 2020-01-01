@@ -66,7 +66,7 @@ void eth_run(int fd)
     switch (ether_type) {
     case ET_IPV4:
       // TODO: handle ipv4
-      ipv4_recv(fd, &frame, pdu, pdu_size);
+      ipv4_on_receive(fd, &frame, pdu, pdu_size);
       break;
 
     case ET_IPV6:

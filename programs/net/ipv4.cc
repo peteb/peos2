@@ -4,6 +4,7 @@
 #include <support/frag_buffer.h>
 #include <support/flip_buffer.h>
 
+#include "ipv4_protocol.h"
 #include "ipv4.h"
 #include "arp.h"
 #include "utils.h"
@@ -12,23 +13,6 @@
 #include "udp.h"
 
 #define NUM_BUFFERS 32
-
-#define FLAGS_DF  0x01
-#define FLAGS_MF  0x02
-
-struct header {
-  uint8_t  ihl:4;
-  uint8_t  version:4;
-  uint8_t  ecn_dscp;
-  uint16_t total_len;
-  uint16_t id;
-  uint16_t frag_ofs;
-  uint8_t  ttl;
-  uint8_t  protocol;
-  uint16_t checksum;
-  uint32_t src_addr;
-  uint32_t dest_addr;
-} __attribute__((packed));
 
 struct buffer_id {
   uint32_t src, dest;
@@ -95,12 +79,12 @@ void ipv4_configure(int interface, uint32_t ipaddr, uint32_t netmask, uint32_t g
   });
 }
 
-void ipv4_recv(int interface, eth_frame *frame, const char *data, size_t length)
+void ipv4_on_receive(int interface, eth_frame *frame, const char *data, size_t length)
 {
-  assert(length > sizeof(header));
+  ipv4_header hdr;
+  assert(length > sizeof(hdr));
+  memcpy(&hdr, data, sizeof(hdr));
 
-  header hdr;
-  memcpy(&hdr, data, sizeof(header));
   hdr.total_len = ntohs(hdr.total_len);
   hdr.id = ntohs(hdr.id);
   hdr.frag_ofs = ntohs(hdr.frag_ofs);
@@ -270,7 +254,7 @@ static void send_single_datagram(int interface,
                                  const char *data,
                                  size_t length)
 {
-  header hdr;
+  ipv4_header hdr;
   hdr.ihl = 5; // 5 * 4 = 20 bytes
   hdr.version = 4;
   hdr.ecn_dscp = 0;
@@ -282,7 +266,7 @@ static void send_single_datagram(int interface,
   hdr.checksum = 0;  // Checksum needs to be 0 when calculating the checksum
   hdr.src_addr = htonl(src_addr);
   hdr.dest_addr = htonl(dest_addr);
-  hdr.checksum = ipv4_checksum((char *)&hdr, sizeof(hdr), nullptr, 0);
+  hdr.checksum = ipv4_checksum(hdr);
 
   uint8_t dest[6], src[6];
   eth_hwaddr(interface, src);
