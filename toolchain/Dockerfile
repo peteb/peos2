@@ -2,7 +2,8 @@ FROM ubuntu:19.10
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends \
     build-essential bison flex libgmp3-dev libmpc-dev \
     libmpfr-dev texinfo wget grub-pc-bin xorriso mtools \
-    qemu-kvm expect ruby netcat
+    qemu-kvm expect ruby netcat-openbsd bridge-utils net-tools \
+    iproute2 tshark gdb
 
 WORKDIR /opt/cross/
 

@@ -249,10 +249,14 @@ static void receive(pci_device *dev)
 static int transmit(pci_device *dev, const char *data, size_t length)
 {
   if (tx_cur_write >= tx_cur_send + 4) {
-    dbg_puts(rtl8139, "waiting for free packet slot...");
+    //dbg_puts(rtl8139, "waiting for free packet slot...");
 
     // TODO: better wait mechanism
-    while (tx_cur_write >= tx_cur_send + 4);
+    //while (tx_cur_write >= tx_cur_send + 4);
+
+    // TODO: log warning
+    log(rtl8139, "no transmit buffer ready");
+    return -1;
   }
 
   uint8_t write_desc = tx_cur_write % 4;
