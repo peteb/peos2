@@ -1,0 +1,5 @@
+#!/usr/bin/env expect
+log_user 0
+spawn ./ssh-live
+send "CONTAINER=\$(docker ps -aqf 'name=.*peos-vm2.*') && docker exec -it \$CONTAINER bash\n"
+interact

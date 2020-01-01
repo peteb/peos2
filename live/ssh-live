@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  gcloud compute ssh --zone "europe-north1-a" peos-vm2
+else
+  gcloud compute ssh --zone "europe-north1-a" peos-vm2 --command="$*"
+fi
+

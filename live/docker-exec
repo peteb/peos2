@@ -1,0 +1,5 @@
+#!/bin/bash
+cd `dirname $0`
+
+./ssh-live "CONTAINER=\$(docker ps -aqf "name=.*peos-vm2.*") && docker exec \$CONTAINER $*"
+
