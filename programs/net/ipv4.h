@@ -11,7 +11,7 @@
 #define PROTO_UDP   17
 
 // Information about an IPv4 datagram
-struct ipv4_dgram {
+struct ipv4_info {
   uint8_t ttl;
   uint32_t src_addr, dest_addr;
   uint8_t proto;
@@ -33,7 +33,7 @@ void ipv4_recv(int interface,
 
 // Send a datagram
 size_t ipv4_send(int interface,
-                 const ipv4_dgram &ipv4,
+                 const ipv4_info &ipv4,
                  const char *data,
                  size_t length);
 

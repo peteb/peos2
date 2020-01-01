@@ -15,7 +15,7 @@ class tcp_connection_table;
 class ipv4_interface {
 public:
   virtual size_t send(int interface,
-                      const ipv4_dgram &ipv4,
+                      const ipv4_info &ipv4,
                       const char *data,
                       size_t length) =0;
 };

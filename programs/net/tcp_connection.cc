@@ -164,7 +164,7 @@ void tcp_connection::send(const tcp_send_segment &segment, const char *data, siz
   hdr.checksum = 0;
   hdr.urgptr = 0;
 
-  ipv4_dgram ipv4;
+  ipv4_info ipv4;
   ipv4.ttl = 65;
   ipv4.src_addr = _local.ipaddr;
   ipv4.dest_addr = _remote.ipaddr;

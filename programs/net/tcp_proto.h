@@ -36,7 +36,7 @@ struct tcp_endpoint {
 
 struct tcp_segment {
   eth_frame *frame;
-  ipv4_dgram *datagram;
+  ipv4_info *datagram;
   tcp_header *tcphdr;
   const char *payload;
   size_t payload_size;

@@ -10,7 +10,7 @@ struct header {
   uint16_t length, checksum;
 } __attribute__((packed));
 
-void udp_recv(int interface, eth_frame *frame, ipv4_dgram *datagram, const char *data, size_t length)
+void udp_recv(int interface, eth_frame *frame, ipv4_info *datagram, const char *data, size_t length)
 {
   (void)interface;
   (void)frame;

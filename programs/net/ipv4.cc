@@ -129,7 +129,7 @@ void ipv4_recv(int interface, eth_frame *frame, const char *data, size_t length)
     return;
   }
 
-  void (*recv_function)(int, eth_frame *, ipv4_dgram *, const char *, size_t);
+  void (*recv_function)(int, eth_frame *, ipv4_info *, const char *, size_t);
 
   switch (hdr.protocol) {
   case PROTO_TCP:
@@ -148,7 +148,7 @@ void ipv4_recv(int interface, eth_frame *frame, const char *data, size_t length)
   const char *payload = data + 4 * hdr.ihl;
   size_t payload_size = hdr.total_len - 4 * hdr.ihl;
 
-  ipv4_dgram info;
+  ipv4_info info;
   info.ttl = hdr.ttl;
   info.src_addr = hdr.src_addr;
   info.dest_addr = hdr.dest_addr;
@@ -177,7 +177,7 @@ void ipv4_recv(int interface, eth_frame *frame, const char *data, size_t length)
   }
 }
 
-size_t ipv4_send(int interface, const ipv4_dgram &ipv4, const char *data, size_t length)
+size_t ipv4_send(int interface, const ipv4_info &ipv4, const char *data, size_t length)
 {
   uint32_t ethernet_dest_ipaddr = 0;
 

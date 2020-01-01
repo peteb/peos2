@@ -14,7 +14,7 @@ void tcp_init(int interface);
 // Send data to the TCP subsystem (from a lower layer)
 void tcp_recv(int interface,
               eth_frame *frame,
-              ipv4_dgram *datagram,
+              ipv4_info *datagram,
               const char *data,
               size_t length);
 

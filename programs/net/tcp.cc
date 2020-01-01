@@ -7,7 +7,7 @@
 class ipv4_impl : public ipv4_interface {
 public:
   size_t send(int interface,
-              const ipv4_dgram &ipv4,
+              const ipv4_info &ipv4,
               const char *data,
               size_t length)
   {
@@ -28,7 +28,7 @@ void tcp_init(int interface)
   connections.create_connection({0, 0}, {0, 8080}, tcp_connection_state::LISTEN);
 }
 
-void tcp_recv(int interface, eth_frame *frame, ipv4_dgram *datagram, const char *data, size_t length)
+void tcp_recv(int interface, eth_frame *frame, ipv4_info *datagram, const char *data, size_t length)
 {
   (void)interface;
   // TODO: multi interface support
