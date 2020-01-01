@@ -294,6 +294,7 @@ static void send_single_datagram(int interface,
   ethernet.type = ET_IPV4;
 
   char buffer[1500];
+  // TODO: fetch MTU from ethernet, but hard code to jumbo frames?
 
   if (sizeof(hdr) + length > sizeof(buffer)) {
     log(ipv4, "datagram too large for one packet, dropping");

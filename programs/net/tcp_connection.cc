@@ -6,26 +6,28 @@
 #include "tcp.h"
 
 namespace {
-  int count_specific_matches(const tcp_endpoint &filter, const tcp_endpoint &endpoint)
-  {
-    int matching_fields = 0;
 
-    if (filter.ipaddr != 0) {
-      if (endpoint.ipaddr == filter.ipaddr)
-        ++matching_fields;
-      else
-        return -1;
-    }
+int count_specific_matches(const tcp_endpoint &filter, const tcp_endpoint &endpoint)
+{
+  int matching_fields = 0;
 
-    if (filter.port != 0) {
-      if (endpoint.port == filter.port)
-        ++matching_fields;
-      else
-        return -1;
-    }
-
-    return matching_fields;
+  if (filter.ipaddr != 0) {
+    if (endpoint.ipaddr == filter.ipaddr)
+      ++matching_fields;
+    else
+      return -1;
   }
+
+  if (filter.port != 0) {
+    if (endpoint.port == filter.port)
+      ++matching_fields;
+    else
+      return -1;
+  }
+
+  return matching_fields;
+}
+
 }
 
 
@@ -43,13 +45,6 @@ int tcp_connection::compare(const tcp_endpoint &remote, const tcp_endpoint &loca
 void tcp_connection::recv(const tcp_segment &segment)
 {
   assert(_state);
-
-  if (segment.flags & RST) {
-    log(tcp_connection, "received RST, dropping and destroying connection");
-    mark_for_destruction();
-    return;
-  }
-
   _state->early_recv(*this, segment);
 
   // Automatically use the ack seqnbr from remote to stop our
