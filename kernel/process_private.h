@@ -30,9 +30,8 @@ public:
   process(mem_space space_handle, vfs_context file_context, uint32_t flags)
     : space_handle(space_handle), file_context(file_context), _flags(flags) {}
 
-  //
-  // setup_stacks - allocates and initializes kernel stack
-  //
+  // Sets up the kernel stack so that it'll return to user space with
+  // iretd
   void setup_kernel_stack(isr_registers *regs)
   {
     const size_t stack_area_size = 0x1000 * 10;
@@ -143,17 +142,16 @@ private:
   uintptr_t write_kernel_stack(isr_registers *regs)
   {
     stack_portal kernel_stack(space_handle, PROC_KERNEL_STACK_BASE, kernel_initial_stack_size);
-
     // We need a stack that can invoke iret as soon as possible, without
     // invoking any gcc function epilogues or prologues.  First, we need
     // a stack good for `switch_task`. As we set the return address to
     // be `switch_task_iret`, we also need to push values for IRET.
-    kernel_stack.push(USER_DATA_SEL);                          // SS
-    kernel_stack.push(regs ? regs->user_esp : 0);              // ESP
+    kernel_stack.push(regs ? regs->ds : USER_DATA_SEL);        // SS (only user space)
+    kernel_stack.push(regs ? regs->user_esp : 0);              // ESP (only user space)
     kernel_stack.push(0x202);                                  // EFLAGS, IF
-    kernel_stack.push(USER_CODE_SEL);                          // CS
+    kernel_stack.push(regs ? regs->cs : USER_CODE_SEL);        // CS
     kernel_stack.push(regs ? regs->eip : 0);                   // Return EIP from switch_task_iret
-    kernel_stack.push(USER_DATA_SEL);                          // DS, ES, FS, GS, SS
+    kernel_stack.push(regs ? regs->ds : USER_DATA_SEL);        // DS, ES, FS, GS, SS
     kernel_stack.push((uint32_t)switch_task_iret);             // Return EIP from switch_task
     kernel_stack.push(0);                                      // EAX
     kernel_stack.push(regs ? regs->ecx : 0);                   // ECX

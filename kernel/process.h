@@ -18,7 +18,7 @@
 typedef uint16_t proc_handle;
 
 void                 proc_init();
-proc_handle          proc_create(uint32_t flags);
+proc_handle          proc_create(uint32_t flags, uintptr_t entrypoint);
 void                 proc_enqueue(proc_handle pid);
 void                 proc_switch(proc_handle pid);
 void                 proc_suspend(proc_handle pid);

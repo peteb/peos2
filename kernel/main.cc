@@ -71,8 +71,7 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   rtl8139_init();  // deps: pci
 
   log(main, "initializing init");
-  proc_handle init_pid = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE);
-  proc_set_syscall_ret(init_pid, (uintptr_t)init_main);
+  proc_handle init_pid = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE, (uintptr_t)init_main);
 
   const char *args[] = {nullptr};
   proc_setup_user_stack(init_pid, 0, args);

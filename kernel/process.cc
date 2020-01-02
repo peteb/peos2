@@ -70,14 +70,11 @@ void proc_init()
   irq_enable(IRQ_SYSTEM_TIMER);
   int_register(IRQ_BASE_INTERRUPT + IRQ_SYSTEM_TIMER, isr_timer, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
 
-  idle_process = proc_create(PROC_USER_SPACE|PROC_KERNEL_ACCESSIBLE);
-
-  const char *args[] = {};
-  proc_setup_user_stack(idle_process, 0, args);
-  proc_set_syscall_ret(idle_process, (uintptr_t)idle_main);
+  idle_process = proc_create(PROC_KERNEL_ACCESSIBLE, (uintptr_t)idle_main);
+  // TODO: support for kernel stack arguments
 }
 
-proc_handle proc_create(uint32_t flags)
+proc_handle proc_create(uint32_t flags, uintptr_t entrypoint)
 {
   // TODO: support multiple arguments
   mem_space space_handle = mem_create_space();
@@ -85,8 +82,6 @@ proc_handle proc_create(uint32_t flags)
 
   // We must always map the kernel as RW; it's going to be used in
   // syscalls and other interrupts even if the U bit isn't set.
-  assert(flags & PROC_USER_SPACE);
-
   if (flags & PROC_KERNEL_ACCESSIBLE) {
     mapping_flags |= (MEM_AREA_USER|MEM_AREA_SYSCALL);
   }
@@ -96,7 +91,23 @@ proc_handle proc_create(uint32_t flags)
   proc_handle pid = processes.emplace_anywhere(space_handle,
                                                *vfs_create_context(),
                                                flags);
-  processes[pid].setup_kernel_stack(nullptr);
+  if (flags & PROC_USER_SPACE) {
+    isr_registers regs = {};
+    regs.cs = USER_CODE_SEL;
+    regs.ds = USER_DATA_SEL;
+    regs.eip = entrypoint;
+
+    processes[pid].setup_kernel_stack(&regs);
+  }
+  else {
+    isr_registers regs = {};
+    regs.cs = KERNEL_CODE_SEL;
+    regs.ds = KERNEL_DATA_SEL;
+    regs.eip = entrypoint;
+
+    processes[pid].setup_kernel_stack(&regs);
+  }
+
   return pid;
 }
 
@@ -512,7 +523,7 @@ static void idle_main()
   while (true) {
     *(volatile char *)PHYS2KERNVIRT(0xB8000) = 'A' + count;
     count = (count + 1) % 26;
-    __builtin_ia32_pause();
+    asm volatile("sti\nhlt");
   }
 
   // NB: this should *never* return -- the CPU will just continue and execute random stuff
