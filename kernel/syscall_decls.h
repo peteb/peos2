@@ -37,6 +37,8 @@
 
 #define SYSCALL_NUM_MMAP        300
 
+#define SYSCALL_NUM_CURRENTTIME 401
+
 #define SYSCALL_NUM_MAX         999
 
 // Flags
@@ -107,6 +109,7 @@ SYSCALL_DEF2(exec, SYSCALL_NUM_EXEC, const char *, const char **);
 // Memory definitions
 SYSCALL_DEF5(mmap,    SYSCALL_NUM_MMAP, void *, void *, int, uint32_t, uint8_t);
 
+SYSCALL_DEF1(currenttime, SYSCALL_NUM_CURRENTTIME, uint64_t *);
 
 // Structs
 typedef struct {

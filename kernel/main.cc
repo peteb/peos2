@@ -14,6 +14,7 @@
 #include "serial.h"
 #include "pci.h"
 #include "rtl8139.h"
+#include "timer.h"
 
 #include "syscall_decls.h"
 
@@ -50,6 +51,7 @@ extern "C" void kernel_main(uint32_t multiboot_magic, multiboot_info *multiboot_
   int_init();
   pic_init();
   syscalls_init();
+  timer_init(); // deps: syscalls
 
   asm volatile("int 3");  // Test debug int
 

@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "elf.h"
 #include "syscall_utils.h"
+#include "timer.h"
 
 #include "support/pool.h"
 #include "support/format.h"
@@ -18,9 +19,6 @@
 #include "process_private.h"
 
 SYSCALL_DEF1(exit, SYSCALL_NUM_EXIT, uint32_t);
-
-// Externals
-extern "C" void isr_timer(isr_registers *);
 
 // Statics
 static uint32_t    syscall_yield();
@@ -41,6 +39,7 @@ static void        enqueue_front(proc_handle pid, proc_handle *head);
 static void        dequeue(proc_handle pid, proc_handle *head);
 
 static void        idle_main();
+static void        on_timer_tick(int milliseconds);
 
 // Global state
 static p2::pool<process, 128, proc_handle> processes;
@@ -66,9 +65,7 @@ void proc_init()
   syscall_register(SYSCALL_NUM_GET_TIMEOUT, (syscall_fun)syscall_get_timeout);
 
   // Timer for preemptive task switching
-  pit_set_phase(10);  // 9 is high freq, 10 is lower
-  irq_enable(IRQ_SYSTEM_TIMER);
-  int_register(IRQ_BASE_INTERRUPT + IRQ_SYSTEM_TIMER, isr_timer, KERNEL_CODE_SEL, IDT_TYPE_INTERRUPT|IDT_TYPE_D|IDT_TYPE_P);
+  timer_register_tick_callback(on_timer_tick);
 
   idle_process = proc_create(PROC_KERNEL_ACCESSIBLE, (uintptr_t)idle_main);
   // TODO: support for kernel stack arguments
@@ -157,10 +154,9 @@ void proc_run()
   while (true) {}
 }
 
-extern "C" void int_timer(isr_registers *)
+void on_timer_tick(int)
 {
   proc_handle proc = suspended_head;
-  irq_eoi(IRQ_SYSTEM_TIMER);
 
   while (proc != processes.end_sentinel()) {
     process &process_ = processes[proc];
