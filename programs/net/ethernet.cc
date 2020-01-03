@@ -25,17 +25,27 @@ void eth_run(int fd)
 
   char pdu[1500];
   uint16_t packet_size = 0;
-  const int timeout_duration = 20;
+  const int timeout_duration = 200;
+
+  uint64_t last_tick = 0;
+  syscall1(currenttime, &last_tick);
 
   while (true) {
     verify(syscall1(set_timeout, timeout_duration));
     int ret = read(fd, (char *)&packet_size, 2);
 
-    // Not a very accurate way to aggregate time, but should be good enough for now
-    int timeout_consumed = timeout_duration - syscall0(get_timeout);
-    arp_tick(timeout_consumed);
-    ipv4_tick(timeout_consumed);
-    tcp_tick(timeout_consumed);
+    // TODO: can we skip the syscall here? let the kernel write to the
+    // variable immediately somehow?
+
+    uint64_t this_tick = 0;
+    syscall1(currenttime, &this_tick);
+
+    int tick_delta_ms = this_tick - last_tick;
+    last_tick = this_tick;
+
+    arp_tick(tick_delta_ms);
+    ipv4_tick(tick_delta_ms);
+    tcp_tick(tick_delta_ms);
 
     if (ret == ETIMEOUT) {
       continue;

@@ -206,13 +206,13 @@ size_t ipv4_send(int interface, const ipv4_info &ipv4, const char *data, size_t 
   return 0;
 }
 
-void ipv4_tick(int dt)
+void ipv4_tick(int delta_ms)
 {
   for (size_t i = 0; i < used_buffers.watermark(); ++i) {
     if (!used_buffers.valid(i))
       continue;
 
-    if ((used_buffers[i].ttl -= dt) <= 0) {
+    if ((used_buffers[i].ttl -= delta_ms) <= 0) {
       log(ipv4, "reassembly of %s %s [%d] aborted due to timeout",
           ipaddr_str(used_buffers[i].key.src),
           ipaddr_str(used_buffers[i].key.dest),
@@ -240,7 +240,7 @@ static uint16_t fetch_or_create_buffer(const buffer_id &bufid)
       return i;
   }
 
-  uint16_t idx = used_buffers.emplace_anywhere(buffer{bufid, 250});
+  uint16_t idx = used_buffers.emplace_anywhere(buffer{bufid, 10000});
   buffers[idx].reset();
   return idx;
 }

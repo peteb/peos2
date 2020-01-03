@@ -14,10 +14,10 @@ public:
   using await_fun = p2::inplace_fun<64, void(_Result)>;
   using op_fun = p2::inplace_fun<32, void()>;
 
-  retryable(op_fun fun)
+  retryable(op_fun fun, int retry_ms = 200)
     : _fun(fun)
   {
-    _last_delta = 10;
+    _last_delta = retry_ms;
   }
 
   bool tick(int dt)

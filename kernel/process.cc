@@ -154,7 +154,7 @@ void proc_run()
   while (true) {}
 }
 
-void on_timer_tick(int)
+void on_timer_tick(int delta_ms)
 {
   proc_handle proc = suspended_head;
 
@@ -162,7 +162,7 @@ void on_timer_tick(int)
     process &process_ = processes[proc];
 
     if (process_.suspension_timeout > 0) {
-      process_.suspension_timeout -= 1;  // TODO: correct tick
+      process_.suspension_timeout -= delta_ms;
 
       if (process_.suspension_timeout <= 0) {
         // The timeout reached 0 so wake it up
