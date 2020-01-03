@@ -74,7 +74,10 @@ void ipv4_configure(int interface, uint32_t ipaddr, uint32_t netmask, uint32_t g
       log(ipv4, "failed to lookup default gateway hwaddr");
     }
     else {
-      log(ipv4, "default gateway located");
+      uint8_t hwaddr_octets[6];
+      arp_cache_lookup_ipv4(interface, gwaddr, hwaddr_octets);
+      auto hwaddr = hwaddr_str(hwaddr_octets);
+      log(ipv4, "default gateway located, hwaddr=%s", hwaddr.c_str());
     }
   });
 }
