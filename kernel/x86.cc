@@ -284,7 +284,7 @@ void irq_eoi(uint8_t irq_line)
 void pit_set_phase(int hz)
 {
   int divisor = 1193180 / hz;
-  outb(0x43, 0x36);           // Command 0x36
+  outb(0x43, 0x36);           // Command 0x36 (mode 2 = 0x34)
   outb(0x40, divisor & 0xFF); // Low byte to data port
   outb(0x40, divisor >> 8);   // High byte to data port
 }

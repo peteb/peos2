@@ -68,16 +68,20 @@ tcp_connection &tcp_connection_table::operator [](handle idx)
 
 void tcp_connection_table::step_new_connections()
 {
-  for (auto it = _new_connections.begin(); it != _new_connections.end(); ++it) {
-    if (_connections.valid(it.index()))
-      _connections[it.index()].step();
+  for (auto &connection_handle : _new_connections) {
+    if (_connections.valid(connection_handle)) {
+      log(tcp, "stepping new connection %d", connection_handle);
 
-    _new_connections.erase(it.index());
+      size_t new_connection_count = _new_connections.size();
+      _connections[connection_handle].step();
+
+      if (_new_connections.size() != new_connection_count) {
+        log(tcp_connection_table, "warning, recursively creating connections");
+      }
+    }
   }
 
-  if (_new_connections.size() > 0) {
-    log(tcp_connection_table, "warning, recursively creating connections");
-  }
+  _new_connections.clear();
 }
 
 void tcp_connection_table::destroy_finished_connections()
