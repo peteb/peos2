@@ -1,0 +1,2 @@
+#!/bin/bash
+gcloud beta compute instances update-container peos-vm2 --zone "europe-north1-a" --container-image=eu.gcr.io/the-big-dump/peos-httpd:latest
