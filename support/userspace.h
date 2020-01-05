@@ -11,7 +11,9 @@
   void panic(const char *explanation)                                \
   {                                                                  \
     syscall3(write, 0, explanation, strlen(explanation));            \
-    while (true);                                                    \
+    syscall3(write, 0, "\n", 1);                                     \
+    syscall1(exit, 1);                                               \
+    while (true) {}                                                  \
   }
 
 
