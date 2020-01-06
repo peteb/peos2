@@ -220,3 +220,8 @@ void tcp_connection::tick(int dt)
 {
   (void)dt;
 }
+
+void tcp_connection::close()
+{
+  _state->active_close(*this);
+}

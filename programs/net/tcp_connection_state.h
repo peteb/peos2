@@ -39,6 +39,11 @@ public:
     (void)connection;
   }
 
+  virtual void active_close(tcp_connection &connection) const
+  {
+    (void)connection;
+  }
+
   static const tcp_connection_state *LISTEN, *SYN_RCVD, *ESTABLISHED,
     *LAST_ACK, *FIN_WAIT_1, *FIN_WAIT_2, *CLOSING;
 };

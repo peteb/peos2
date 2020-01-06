@@ -12,8 +12,14 @@ class tcp_connection_table {
 public:
   typedef uint16_t handle;
 
-  handle find_best_match(const tcp_endpoint &remote, const tcp_endpoint &local);
-  handle create_connection(const tcp_endpoint &remote, const tcp_endpoint &local, const tcp_connection_state *state);
+  handle find_best_match(const tcp_endpoint &remote,
+                         const tcp_endpoint &local);
+
+  handle create_connection(const tcp_endpoint &remote,
+                           const tcp_endpoint &local,
+                           const tcp_connection_state *state,
+                           const tcp_connection_listeners &listeners);
+
   void finish_connection(handle);
 
   void tick(int dt);

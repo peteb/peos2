@@ -13,6 +13,7 @@
 using namespace p2;
 
 extern "C" void _init();
+static void received_data(tcp_connection_handle connection, const char *data, size_t length);
 
 int main(int argc, char *argv[])
 {
@@ -43,6 +44,10 @@ int main(int argc, char *argv[])
                  parse_ipaddr(gwaddr));
   tcp_init(fd);
 
+  tcp_connection_listeners listeners;
+  listeners.on_receive = received_data;
+  tcp_listen(8080, listeners);
+
   eth_run(fd);
   verify(syscall1(close, fd));
 
@@ -50,3 +55,23 @@ int main(int argc, char *argv[])
 }
 
 START(main);
+
+void received_data(tcp_connection_handle connection, const char *data, size_t length)
+{
+  char buffer[256];
+  memcpy(buffer, data, p2::min(length, sizeof(buffer)));
+  buffer[p2::min(length, sizeof(buffer) - 1)] = 0;
+  log(net, "rx seq segment %d bytes: %s", length, buffer);
+
+  // Send some dummy data
+  const char *message = "HTTP/1.1 200 OK\r\n"
+    "Server: peos2\r\n"
+    "Content-Length: 16\r\n"
+    "Content-Type: text/plain\r\n"
+    "Connection: Closed\r\n"
+    "\r\n"
+    "Handled by peos2";
+
+  tcp_send(connection, message, strlen(message));
+  tcp_close(connection);
+}

@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 
+#include "tcp.h"
 #include "tcp_proto.h"
 #include "tcp_recv_queue.h"
 #include "tcp_send_queue.h"
@@ -30,12 +31,14 @@ public:
                  tcp_connection_table *connection_table,
                  const tcp_endpoint &remote,
                  const tcp_endpoint &local,
-                 const tcp_connection_state *state)
+                 const tcp_connection_state *state,
+                 const tcp_connection_listeners &listeners)
     : _ipv4_if(ipv4_if),
       _connection_table(connection_table),
       _remote(remote),
       _local(local),
-      _state(state)
+      _state(state),
+      _listeners(listeners)
   {
   }
 
@@ -74,14 +77,24 @@ public:
                 size_t length,
                 size_t send_length);
 
+  void transmit_phantom(const tcp_send_segment &segment)
+  {
+    static char phantom[1] = {'!'};
+    transmit(segment, phantom, 1, 0);
+  }
+
   void transition(const tcp_connection_state *new_state);
 
   tcp_connection_table &connection_table() { return *_connection_table; }
+
+  const tcp_connection_listeners &listeners() const { return _listeners; }
 
   // Advances internal timers and executes timeouts
   void tick(int dt);
 
   void step();
+
+  void close();
 
   uint16_t handle;
 
@@ -95,6 +108,7 @@ private:
 
   tcp_endpoint _remote, _local;
   const tcp_connection_state *_state;
+  tcp_connection_listeners _listeners;
 
   tcp_recv_queue _rx_queue;
   tcp_send_queue _tx_queue;

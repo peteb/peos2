@@ -28,7 +28,8 @@ static const class : public tcp_connection_state {
     tcp_connection_table &conntab = conn.connection_table();
     auto conn_idx = conntab.create_connection({segment.datagram->src_addr, segment.tcphdr->src_port},
                                               {segment.datagram->dest_addr, segment.tcphdr->dest_port},
-                                              tcp_connection_state::SYN_RCVD);
+                                              tcp_connection_state::SYN_RCVD,
+                                              conn.listeners());
 
     // Sequence this SYN, and thus send the ACK, in the new connection
     tcp_connection &client_conn = conntab[conn_idx];
@@ -124,7 +125,7 @@ static const class : public tcp_connection_state {
     }
   }
 
-  void sequenced_recv(tcp_connection &conn,
+  void sequenced_recv(tcp_connection &connection,
                       const tcp_recv_segment &segment,
                       const char *data,
                       size_t length) const override
@@ -138,39 +139,23 @@ static const class : public tcp_connection_state {
 
       tcp_send_segment response;
       response.flags = FIN;
-      conn.transmit(response, phantom, 1, 0);
-      conn.transition(tcp_connection_state::LAST_ACK);
+      connection.transmit(response, phantom, 1, 0);
+      connection.transition(tcp_connection_state::LAST_ACK);
       return;
     }
 
-    char buffer[256];
-    memcpy(buffer, data, p2::min(length, sizeof(buffer)));
-    buffer[p2::min(length, sizeof(buffer) - 1)] = 0;
-    log(tcp, "ESTABLISHED: rx seq segment %d bytes: %s", length, buffer);
-
-    if (length > 0) {
-      // Send some dummy data
-      const char *message = "HTTP/1.1 200 OK\r\n"
-        "Server: peos2\r\n"
-        "Content-Length: 16\r\n"
-        "Content-Type: text/plain\r\n"
-        "Connection: Closed\r\n"
-        "\r\n"
-        "Handled by peos2";
-
-      (void)message;
-
-      tcp_send_segment http_segment;
-      http_segment.flags = PSH;
-      conn.transmit(http_segment, message, strlen(message), strlen(message));
-
-      // Close the connection
-      tcp_send_segment fin_segment;
-      fin_segment.flags = FIN;
-      conn.transmit(fin_segment, phantom, 1, 0);
-      conn.transition(tcp_connection_state::FIN_WAIT_1);
+    if (length > 0 && connection.listeners().on_receive) {
+      connection.listeners().on_receive(&connection, data, length);
     }
 
+  }
+
+  void active_close(tcp_connection &connection) const
+  {
+    tcp_send_segment fin_segment;
+    fin_segment.flags = FIN;
+    connection.transmit_phantom(fin_segment);
+    connection.transition(tcp_connection_state::FIN_WAIT_1);
   }
 
 } established;

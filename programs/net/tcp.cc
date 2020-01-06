@@ -25,7 +25,6 @@ void tcp_init(int interface)
 
   // TODO: fix multi-interface handling
   connections.set_interface(interface);
-  connections.create_connection({0, 0}, {0, 8080}, tcp_connection_state::LISTEN);
 }
 
 void tcp_recv(int interface, eth_frame *frame, ipv4_info *datagram, const char *data, size_t length)
@@ -80,4 +79,25 @@ void tcp_recv(int interface, eth_frame *frame, ipv4_info *datagram, const char *
 void tcp_tick(int dt)
 {
   connections.tick(dt);
+}
+
+tcp_connection_handle tcp_listen(uint16_t port, const tcp_connection_listeners &listeners)
+{
+  auto connection_handle = connections.create_connection({0, 0}, {0, port},
+                                                         tcp_connection_state::LISTEN,
+                                                         listeners);
+  return static_cast<tcp_connection_handle>(&connections[connection_handle]);
+}
+
+void tcp_send(tcp_connection_handle connection_handle, const char *data, size_t length)
+{
+  tcp_connection *connection = static_cast<tcp_connection *>(connection_handle);
+  tcp_send_segment segment;
+  segment.flags = PSH;
+  connection->transmit(segment, data, length, length);
+}
+
+void tcp_close(tcp_connection_handle connection_handle)
+{
+  static_cast<tcp_connection *>(connection_handle)->close();
 }

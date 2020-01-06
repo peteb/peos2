@@ -25,7 +25,8 @@ tcp_connection_table::handle tcp_connection_table::find_best_match(const tcp_end
 
 tcp_connection_table::handle tcp_connection_table::create_connection(const tcp_endpoint &remote,
                                                                      const tcp_endpoint &local,
-                                                                     const tcp_connection_state *state)
+                                                                     const tcp_connection_state *state,
+                                                                     const tcp_connection_listeners &listeners)
 {
   log(tcp_connection_table, "creating connection remote=%s:%d local=%s:%d",
       ipaddr_str(remote.ipaddr),
@@ -38,7 +39,7 @@ tcp_connection_table::handle tcp_connection_table::create_connection(const tcp_e
     // TODO: don't crash when the table is full
   }
 
-  handle new_conn = _connections.emplace_anywhere(_ipv4_if, this, remote, local, state);
+  handle new_conn = _connections.emplace_anywhere(_ipv4_if, this, remote, local, state, listeners);
   _connections[new_conn].handle = new_conn;
   _new_connections.emplace_anywhere(new_conn);
   return new_conn;
