@@ -66,11 +66,11 @@ void received_data(tcp_connection_handle connection, const char *data, size_t le
   // Send some dummy data
   const char *message = "HTTP/1.1 200 OK\r\n"
     "Server: peos2\r\n"
-    "Content-Length: 16\r\n"
+    "Content-Length: 17\r\n"
     "Content-Type: text/plain\r\n"
     "Connection: Closed\r\n"
     "\r\n"
-    "Handled by peos2";
+    "Handled by peos2\n";
 
   tcp_send(connection, message, strlen(message));
   tcp_close(connection);
