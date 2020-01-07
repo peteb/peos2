@@ -16,8 +16,9 @@ struct eth_frame {
   uint16_t type;
 };
 
-void eth_run(int fd);
-void eth_hwaddr(int fd, uint8_t *octets);
+void eth_configure(int interface, uint8_t *local_hwaddr);
+void eth_on_receive(int interface, const char *data, size_t size);
 int eth_send(int fd, eth_frame *frame, const char *data, size_t size);
+void eth_hwaddr(int fd, uint8_t *octets);
 
 #endif // !NET_ETHERNHET_H

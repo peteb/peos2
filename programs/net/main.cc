@@ -3,6 +3,7 @@
 #include <support/userspace.h>
 #include <support/keyvalue.h>
 #include <kernel/syscall_decls.h>
+#include <stdint.h>
 
 #include "ethernet.h"
 #include "utils.h"
@@ -14,6 +15,8 @@ using namespace p2;
 
 extern "C" void _init();
 static void received_data(tcp_connection_handle connection, const char *data, size_t length);
+static void feed_data(int fd);
+static void fetch_hwaddr(int fd, uint8_t *octets);
 
 int main(int argc, char *argv[])
 {
@@ -38,6 +41,10 @@ int main(int argc, char *argv[])
 
   int fd = verify(syscall2(open, "/dev/eth0", 0));
 
+  uint8_t hwaddr[6];
+  fetch_hwaddr(fd, hwaddr);
+
+  eth_configure(fd, hwaddr);
   ipv4_configure(fd,
                  parse_ipaddr(ipaddr),
                  parse_ipaddr(netmask),
@@ -48,7 +55,8 @@ int main(int argc, char *argv[])
   listeners.on_receive = received_data;
   tcp_listen(8080, listeners);
 
-  eth_run(fd);
+  feed_data(fd);
+
   verify(syscall1(close, fd));
 
   return 0;
@@ -74,4 +82,53 @@ void received_data(tcp_connection_handle connection, const char *data, size_t le
 
   tcp_send(connection, message, strlen(message));
   tcp_close(connection);
+}
+
+void feed_data(int fd)
+{
+  uint16_t packet_size = 0;
+  const int timeout_duration = 200;
+
+  uint64_t last_tick = 0;
+  syscall1(currenttime, &last_tick);
+
+  while (true) {
+    verify(syscall1(set_timeout, timeout_duration));
+    int ret = read(fd, (char *)&packet_size, 2);
+
+    // TODO: can we skip the syscall here? let the kernel write to the
+    // variable immediately somehow?
+    uint64_t this_tick = 0;
+    syscall1(currenttime, &this_tick);
+
+    int tick_delta_ms = this_tick - last_tick;
+    last_tick = this_tick;
+
+    arp_tick(tick_delta_ms);
+    ipv4_tick(tick_delta_ms);
+    tcp_tick(tick_delta_ms);
+
+    if (ret == ETIMEOUT) {
+      continue;
+    }
+    else if (ret < 0) {
+      log(net, "read failed");
+      return;
+    }
+
+    char pdu[1518];
+    ret = read(fd, pdu, packet_size);
+
+    if (ret < 0) {
+      log(net, "read failed");
+    }
+
+    eth_on_receive(fd, pdu, packet_size);
+  }
+}
+
+void fetch_hwaddr(int fd, uint8_t *octets)
+{
+  // TODO: cache the address locally, this is very wasteful
+  verify(syscall4(control, fd, CTRL_NET_HW_ADDR, (uintptr_t)octets, 0));
 }
