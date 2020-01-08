@@ -1,3 +1,6 @@
+export LIB_INCLUDE_DIR=..
+export LIB_LIBRARY_DIR=..
+
 all :
 	$(MAKE) -C support
 

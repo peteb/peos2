@@ -1,0 +1,47 @@
+# -*- makefile -*-
+
+# This file roughly defines how projects should be built. The following rules apply:
+#
+# - Each project should include this makefile and define the `all` target
+# - Aggregate/pass-through makefiles for recursive Make should set LIB_INCLUDE_DIR and LIB_LIBRARY_DIR
+# - Projects can be built in separation by invoking `make` in their directory
+# - Unittest builds should link against object files rather than an .a file
+#
+# Global build order etc are defined in the root Makefile.
+
+OBJDIR=.$(shell $(CC) -dumpmachine)
+TEST_SOURCES=$(wildcard unittests/test_*.cc)
+TEST_OBJECTS=$(addprefix $(OBJDIR)/,$(TEST_SOURCES:.cc=.o))
+OBJECTS=$(addprefix $(OBJDIR)/,$(SOURCES:.cc=.o))
+
+# Default configuration
+OPT_FLAGS?=-O3
+CFLAGS=-std=gnu99 $(OPT_FLAGS) -Wall -Wextra -Werror -fno-threadsafe-statics -I$(LIB_INCLUDE_DIR) -DNDEBUG
+CXXFLAGS=-std=c++17 $(OPT_FLAGS) -Wall -Wextra -Werror -fno-threadsafe-statics -I$(LIB_INCLUDE_DIR) -DNDEBUG \
+         -fstrict-aliasing -Wstrict-aliasing=3 -fno-exceptions -fno-rtti -mno-red-zone
+
+# General rules
+$(OBJDIR)/%.o : %.s
+	@mkdir -p $(@D)
+	$(AS) $< -o $@
+
+$(OBJDIR)/%.o : %.c
+	@mkdir -p $(@D)
+	$(CC) -c $< -o $@ $(CFLAGS) -MMD -MP
+
+$(OBJDIR)/%.o : %.cc
+	@mkdir -p $(@D)
+	$(CXX) -c $< -o $@ $(CXXFLAGS) -MMD -MP
+
+clean :; rm -rf $(OBJDIR)
+unittest :: $(OBJDIR)/unittest ;
+check : $(OBJDIR)/unittest ; @$(OBJDIR)/unittest
+
+# TODO: only expose this rule if TEST_SOURCES is non-empty?
+$(OBJDIR)/unittest : $(OBJECTS) $(TEST_OBJECTS)
+	$(CXX) -o $(OBJDIR)/unittest -Werror $(OPT_FLAGS) $(OBJECTS) $(TEST_OBJECTS) -lunittest -L$(LIB_LIBRARY_DIR)/support/$(OBJDIR)
+
+.DEFAULT_GOAL := all
+.PHONY : clean check
+
+-include $(OBJDIR)/**/*.d
