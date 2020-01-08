@@ -1,10 +1,10 @@
 # Sorry for recursive make!
 
-GRUB_CFG ?= grub.cfg
+GRUB_CFG?=grub.cfg
 
-all : kernel/vmpeoz init.tar
+all : kernel init.tar
 
-image : kernel/vmpeoz init.tar
+image : kernel init.tar
 	@mkdir -p .image/boot/grub
 	cp $(GRUB_CFG) .image/boot/grub/grub.cfg
 	cp kernel/vmpeoz .image/boot/
@@ -14,7 +14,7 @@ image : kernel/vmpeoz init.tar
 vboximg : image
 	VBoxManage convertfromraw --format VDI peos2.img peos2.vdi
 
-init.tar : programs kernel/vmpeoz
+init.tar : programs kernel
 	@mkdir -p .initar/bin
 	cp programs/shell .initar/bin/
 	cp programs/shell_launcher .initar/bin/
@@ -23,24 +23,24 @@ init.tar : programs kernel/vmpeoz
 	cp programs/ls .initar/bin/
 	cd .initar && tar cf ../init.tar *
 
-libsupport :
-	$(MAKE) -C support
+libraries :
+	$(MAKE) -C libraries
 
-kernel/vmpeoz : libsupport
+kernel : libraries
 	$(MAKE) -C kernel
 
-programs : libsupport kernel/vmpeoz
+programs : libraries kernel
 	$(MAKE) -C programs
 
 clean :
 	$(MAKE) -C kernel clean
 	$(MAKE) -C programs clean
+	$(MAKE) -C libraries clean
 	$(MAKE) -C programs -f Makefile.host clean
-	$(MAKE) -C support clean
 	rm -rf .initar .image init.tar
 
-unittest : libsupport
-	$(MAKE) -C support unittest
+unittest : libraries programs
+	$(MAKE) -C libraries unittest
 	$(MAKE) -C programs -f Makefile.host unittest
 
 check :
@@ -64,4 +64,4 @@ toolchain :
 	docker build toolchain -t docker.pkg.github.com/peteb/peos2/peos-toolchain:latest
 
 .PHONY : clean kernel/vmpeoz programs/first_program check unittest dist-docker dist-docker-live \
-	publish-docker-live run-docker-live toolchain
+	publish-docker-live run-docker-live toolchain libraries kernel

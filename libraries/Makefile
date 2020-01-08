@@ -1,0 +1,14 @@
+all :
+	$(MAKE) -C support
+
+clean :
+	$(MAKE) -C support clean
+
+unittest :
+	$(MAKE) -C support unittest
+
+check :
+	$(MAKE) -C support check
+
+.PHONY : all clean unittest check
+

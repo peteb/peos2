@@ -6,7 +6,7 @@ CC=i686-elf-gcc
 CXX=i686-elf-g++
 AS=i686-elf-as
 CFLAGS=-std=gnu99 -masm=intel -ffreestanding $(OPT_FLAGS) -Wall -Wextra -Werror -fno-threadsafe-statics -DNDEBUG $(DEFS)
-CXXFLAGS=-std=c++17 -masm=intel -ffreestanding $(OPT_FLAGS) -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fno-threadsafe-statics -mno-red-zone -mgeneral-regs-only -I. -I.. -DNDEBUG $(DEFS)
+CXXFLAGS=-std=c++17 -masm=intel -ffreestanding $(OPT_FLAGS) -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fno-threadsafe-statics -mno-red-zone -mgeneral-regs-only -I. -I../libraries/ -DNDEBUG $(DEFS)
 OBJDIR=.target
 
 # Code
@@ -37,7 +37,7 @@ $(OBJDIR)/%.o : %.cc
 	$(CXX) -c $< -o $@ $(CXXFLAGS) -MMD -MP
 
 vmpeoz : $(OBJECTS) linker.ld
-	$(CC) -T linker.ld -o vmpeoz -ffreestanding $(OPT_FLAGS) -Werror -nostdlib $(OBJECTS) -L../support/$(TARGETDIR) -lgcc -lsupport
+	$(CC) -T linker.ld -o vmpeoz -ffreestanding $(OPT_FLAGS) -Werror -nostdlib $(OBJECTS) -L../libraries/support/$(TARGETDIR) -lgcc -lsupport
 
 -include $(OBJDIR)/*.d
 -include $(OBJDIR)/*/*.d

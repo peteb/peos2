@@ -5,7 +5,7 @@ scenario "libsupport unittest" do
   ]
 
   # TODO: remove hard coded host triplet
-  command "support/.x86_64-linux-gnu/unittest"
+  command "libraries/support/.x86_64-linux-gnu/unittest"
 
   it "runs successfully" do
     successfully_executes
