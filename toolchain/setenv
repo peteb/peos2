@@ -6,6 +6,7 @@ case $1 in
     export CC=gcc
     export CXX=g++
     export AS=as
+    export HOSTED=1
     ;;
 
   target)

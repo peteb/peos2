@@ -2,7 +2,9 @@
 
 GRUB_CFG?=grub.cfg
 
+ifneq ($(HOSTED),1)
 all : kernel init.tar
+endif
 
 image : kernel init.tar
 	@mkdir -p .image/boot/grub
@@ -39,7 +41,7 @@ clean :
 	$(MAKE) -C programs -f Makefile.host clean
 	rm -rf .initar .image init.tar
 
-unittest : libraries programs
+unittest : libraries
 	$(MAKE) -C libraries unittest
 	$(MAKE) -C programs -f Makefile.host unittest
 
