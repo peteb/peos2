@@ -23,5 +23,5 @@ $(OBJDIR)/libsupport.a : $(OBJECTS)
 	ar rcs $(OBJDIR)/libsupport.a $(OBJECTS)
 
 # The unittest framework used by this and other projects
-$(OBJDIR)/libunittest.a : $(OBJDIR)/unittest.o
-	ar rcs $(OBJDIR)/libunittest.a $(OBJDIR)/unittest.o
+$(OBJDIR)/libunittest.a : $(OBJDIR)/unittest.cc.o
+	ar rcs $(OBJDIR)/libunittest.a $(OBJDIR)/unittest.cc.o

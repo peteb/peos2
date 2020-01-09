@@ -11,25 +11,25 @@
 
 OBJDIR=.$(shell $(CC) -dumpmachine)
 TEST_SOURCES=$(wildcard unittests/test_*.cc)
-TEST_OBJECTS=$(addprefix $(OBJDIR)/,$(TEST_SOURCES:.cc=.o))
-OBJECTS=$(addprefix $(OBJDIR)/,$(SOURCES:.cc=.o))
+TEST_OBJECTS=$(addprefix $(OBJDIR)/,$(TEST_SOURCES:=.o))
+OBJECTS=$(addprefix $(OBJDIR)/,$(SOURCES:=.o))
 
 # Default configuration
 OPT_FLAGS?=-O3
-CFLAGS=-std=gnu99 $(OPT_FLAGS) -Wall -Wextra -Werror -fno-threadsafe-statics -I$(LIB_INCLUDE_DIR) -DNDEBUG
+CFLAGS=-std=gnu99 $(OPT_FLAGS) -Wall -Wextra -Werror -fno-threadsafe-statics -I$(LIB_INCLUDE_DIR) -DNDEBUG $(DEFS)
 CXXFLAGS=-std=c++17 $(OPT_FLAGS) -Wall -Wextra -Werror -fno-threadsafe-statics -I$(LIB_INCLUDE_DIR) -DNDEBUG \
-         -fstrict-aliasing -Wstrict-aliasing=3 -fno-exceptions -fno-rtti -mno-red-zone
+         -fstrict-aliasing -Wstrict-aliasing=3 -fno-exceptions -fno-rtti -mno-red-zone $(DEFS)
 
 # General rules
-$(OBJDIR)/%.o : %.s
+$(OBJDIR)/%.s.o : %.s
 	@mkdir -p $(@D)
 	$(AS) $< -o $@
 
-$(OBJDIR)/%.o : %.c
+$(OBJDIR)/%.c.o : %.c
 	@mkdir -p $(@D)
 	$(CC) -c $< -o $@ $(CFLAGS) -MMD -MP
 
-$(OBJDIR)/%.o : %.cc
+$(OBJDIR)/%.cc.o : %.cc
 	@mkdir -p $(@D)
 	$(CXX) -c $< -o $@ $(CXXFLAGS) -MMD -MP
 

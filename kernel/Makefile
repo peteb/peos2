@@ -1,43 +1,29 @@
 # -*- makefile -*-
 
-TARGETDIR=.$(shell $(CC) -dumpmachine)
-OPT_FLAGS?=-O3
-CC=i686-elf-gcc
-CXX=i686-elf-g++
-AS=i686-elf-as
-CFLAGS=-std=gnu99 -masm=intel -ffreestanding $(OPT_FLAGS) -Wall -Wextra -Werror -fno-threadsafe-statics -DNDEBUG $(DEFS)
-CXXFLAGS=-std=c++17 -masm=intel -ffreestanding $(OPT_FLAGS) -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fno-threadsafe-statics -mno-red-zone -mgeneral-regs-only -I. -I../libraries/ -DNDEBUG $(DEFS)
-OBJDIR=.target
+LIB_INCLUDE_DIR=../libraries
+LIB_LIBRARY_DIR=../libraries
 
-# Code
+SOURCES=boot.s main.cc screen.cc panic.cc x86.cc protected_mode.cc multiboot.cc \
+		    keyboard.cc syscalls.cc filesystem.cc terminal.cc process.cc memory.cc \
+		    ramfs.cc init.cc tar.cc elf.cc serial.cc pci.cc rtl8139.cc locks.cc timer.cc \
+
+-include ../Makefile.include
+
+CRTI_OBJECT=$(OBJDIR)/crti.s.o
+CRTN_OBJECT=$(OBJDIR)/crtn.s.o
 CRTBEGIN_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
-INTERNAL_OBJECTS=boot.o main.o screen.o panic.o x86.o protected_mode.o multiboot.o \
-		 keyboard.o syscalls.o filesystem.o terminal.o process.o memory.o \
-		 ramfs.o init.o tar.o elf.o serial.o pci.o rtl8139.o locks.o timer.o
+OBJECTS_LINK_ORDER=$(CRTI_OBJECT) $(CRTBEGIN_OBJECT) $(OBJECTS) $(CRTEND_OBJECT) $(CRTN_OBJECT)
 
-OBJECTS=$(OBJDIR)/crti.o $(CRTBEGIN_OBJECT) $(addprefix $(OBJDIR)/,$(INTERNAL_OBJECTS)) $(CRTEND_OBJECT) $(OBJDIR)/crtn.o
+# TODO: revert all inline asm into AT&T syntax
+CXXFLAGS+=-masm=intel -I.
 
+# Only build the kernel for the non-hosted environment
+ifneq ($HOSTED,1)
 all : vmpeoz
+endif
 
-.PHONY : clean
-clean :
-	rm -rf $(OBJDIR) vmpeoz
+vmpeoz : CXXFLAGS+=-ffreestanding
+vmpeoz : $(OBJECTS) $(CRTI_OBJECT) $(CRTN_OBJECT) linker.ld
+	$(CC) -T linker.ld -o vmpeoz -ffreestanding $(OPT_FLAGS) -Werror -nostdlib $(OBJECTS_LINK_ORDER) -L$(LIB_LIBRARY_DIR)/support/$(OBJDIR) -lgcc -lsupport
 
-$(OBJDIR)/%.o : %.s
-	@mkdir -p $(@D)
-	$(AS) $< -o $@
-
-$(OBJDIR)/%.o : %.c
-	@mkdir -p $(@D)
-	$(CC) -c $< -o $@ $(CFLAGS) -MMD -MP
-
-$(OBJDIR)/%.o : %.cc
-	@mkdir -p $(@D)
-	$(CXX) -c $< -o $@ $(CXXFLAGS) -MMD -MP
-
-vmpeoz : $(OBJECTS) linker.ld
-	$(CC) -T linker.ld -o vmpeoz -ffreestanding $(OPT_FLAGS) -Werror -nostdlib $(OBJECTS) -L../libraries/support/$(TARGETDIR) -lgcc -lsupport
-
--include $(OBJDIR)/*.d
--include $(OBJDIR)/*/*.d
