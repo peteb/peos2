@@ -1,50 +1,20 @@
-# -*- makefile -*-
+export LIB_INCLUDE_DIR=../../libraries/
+export LIB_LIBRARY_DIR=../../libraries/
 
-TARGETDIR=.$(shell $(CC) -dumpmachine)
-OPT_FLAGS ?= -O3
-CC=i686-elf-gcc
-CXX=i686-elf-g++
-AS=i686-elf-as
-CFLAGS=-std=gnu99 -m32 -masm=intel -nostdlib -ffreestanding $(OPT_FLAGS) -Wall -Wextra -Werror -fno-threadsafe-statics -DNDEBUG
-CXXFLAGS=-std=c++17 -m32 -masm=intel -nostdlib -ffreestanding $(OPT_FLAGS) -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fno-threadsafe-statics -mno-red-zone -mgeneral-regs-only -I. -I.. -I../libraries/ -DNDEBUG
-LDFLAGS=-L../libraries/support/$(TARGETDIR)  -lgcc
-BINARIES=shell shell_launcher tester ls nsa
-CRTBEGIN_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
-CRTEND_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
-NSA_OBJECTS=net/main.o net/ethernet.o net/utils.o net/arp.o net/ipv4.o net/tcp.o net/udp.o \
-	net/tcp_connection.o net/tcp_connection_table.o net/tcp_recv_queue.o \
-	net/tcp_connection_state.o net/tcp_send_queue.o net/tcp_proto.o net/ipv4_protocol.o
-
-.PHONY : clean
-
-%.o : %.s
-	$(AS) $< -o $@
-
-%.o : %.c
-	$(CC) -c $< -o $@ $(CFLAGS) -MMD -MP
-
-%.o : %.cc
-	$(CXX) -c $< -o $@ $(CXXFLAGS) -MMD -MP
-
-all : $(BINARIES)
+all :
+	$(MAKE) -C net
 
 clean :
-	rm -rf *.o net/*.o *.d $(BINARIES)
+	$(MAKE) -C net clean
 
-shell : shell.o
-	$(CC) -o $@ $(CXXFLAGS) shell.o $(LDFLAGS) -lsupport
+unittest :
+	$(MAKE) -C net unittest
 
-shell_launcher : shell_launcher.o
-	$(CC) -o $@ $(CXXFLAGS) shell_launcher.o $(LDFLAGS) -lsupport
+run-unittest :
+	$(MAKE) -C net run-unittest
 
-tester : tester.o
-	$(CC) -o $@ $(CXXFLAGS) tester.o $(LDFLAGS) -lsupport
+check :
+	$(MAKE) -C net check
 
-nsa : $(NSA_OBJECTS) crti.o crtn.o linker.ld
-	$(CC) -T linker.ld -o $@ $(CXXFLAGS) crti.o $(CRTBEGIN_OBJECT) $(NSA_OBJECTS) -lgcc $(CRTEND_OBJECT) crtn.o -L../libraries/support/$(TARGETDIR) -lsupport
+.PHONY : all clean unittest check
 
-ls : ls.o
-	$(CC) -o $@ $(CXXFLAGS) ls.o $(LDFLAGS) -lsupport
-
--include *.d
--include */*.d

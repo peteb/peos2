@@ -3,8 +3,8 @@
 #ifndef NET_TCP_PROTO_H
 #define NET_TCP_PROTO_H
 
-#include "net/ipv4.h"
-#include "net/ethernet.h"
+#include "ipv4.h"
+#include "ethernet.h"
 
 #define FIN 0x0001
 #define SYN 0x0002

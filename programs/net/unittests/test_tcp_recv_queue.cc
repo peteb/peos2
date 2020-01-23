@@ -1,7 +1,7 @@
 #include <support/unittest.h>
 #include <support/utils.h>
 
-#include "net/tcp_recv_queue.h"
+#include "tcp_recv_queue.h"
 
 TESTSUITE(tcp_recv_queue) {
   TESTCASE("readable_until returns 0 when queue is empty") {

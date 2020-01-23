@@ -1,5 +1,5 @@
 #include <support/unittest.h>
-#include "net/tcp_send_queue.h"
+#include "tcp_send_queue.h"
 
 TESTSUITE(tcp_send_queue) {
   TESTCASE("empty queue is not readable") {

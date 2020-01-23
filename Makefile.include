@@ -13,6 +13,7 @@ OBJDIR=.$(shell $(CC) -dumpmachine)
 TEST_SOURCES=$(wildcard unittests/test_*.cc)
 TEST_OBJECTS=$(addprefix $(OBJDIR)/,$(TEST_SOURCES:=.o))
 OBJECTS=$(addprefix $(OBJDIR)/,$(SOURCES:=.o))
+OBJECTS_unittest=$(addprefix $(OBJDIR)/,$(SOURCES_unittest:=.o))
 
 # Default configuration
 OPT_FLAGS?=-O3
@@ -36,10 +37,11 @@ $(OBJDIR)/%.cc.o : %.cc
 clean :; rm -rf $(OBJDIR)
 unittest :: $(OBJDIR)/unittest ;
 check : $(OBJDIR)/unittest ; @$(OBJDIR)/unittest
+run-unittest : unittest ; @$(OBJDIR)/unittest # Same as `check` for now
 
 # TODO: only expose this rule if TEST_SOURCES is non-empty?
-$(OBJDIR)/unittest : $(OBJECTS) $(TEST_OBJECTS)
-	$(CXX) -o $(OBJDIR)/unittest -Werror $(OPT_FLAGS) $(OBJECTS) $(TEST_OBJECTS) -lunittest -L$(LIB_LIBRARY_DIR)/support/$(OBJDIR)
+$(OBJDIR)/unittest : $(OBJECTS_unittest) $(TEST_OBJECTS)
+	$(CXX) -o $(OBJDIR)/unittest -Werror $(OPT_FLAGS) $(OBJECTS_unittest) $(TEST_OBJECTS) -lunittest -L$(LIB_LIBRARY_DIR)/support/$(OBJDIR) $(LINK_FLAGS)
 
 .DEFAULT_GOAL := all
 .PHONY : clean check

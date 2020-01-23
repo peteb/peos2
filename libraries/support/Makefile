@@ -1,6 +1,7 @@
 # -*- makefile -*-
 
 SOURCES=utils.cc string.cc
+SOURCES_unittest=$(SOURCES)
 
 # <hack_to_build_libunittest>
 OBJDIR=.$(shell $(CC) -dumpmachine)

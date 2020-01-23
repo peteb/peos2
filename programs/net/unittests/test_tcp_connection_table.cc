@@ -1,5 +1,5 @@
 #include <support/unittest.h>
-#include "net/tcp_connection_table.h"
+#include "tcp_connection_table.h"
 
 TESTSUITE(tcp_connection_table) {
   TESTCASE("find_best_match: finds a wildcard connection") {

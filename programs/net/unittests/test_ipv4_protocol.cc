@@ -1,6 +1,6 @@
 #include <support/unittest.h>
-#include "net/utils.h"
-#include "net/ipv4_protocol.h"
+#include "utils.h"
+#include "ipv4_protocol.h"
 
 namespace {
 ipv4_header basic_header() {

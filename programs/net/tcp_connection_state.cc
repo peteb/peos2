@@ -1,6 +1,6 @@
-#include "net/tcp_connection.h"
-#include "net/tcp_connection_state.h"
-#include "net/tcp_connection_table.h"
+#include "tcp_connection.h"
+#include "tcp_connection_state.h"
+#include "tcp_connection_table.h"
 #include "utils.h"
 
 #include "ipv4.h"

@@ -38,12 +38,16 @@ clean :
 	$(MAKE) -C kernel clean
 	$(MAKE) -C programs clean
 	$(MAKE) -C libraries clean
-	$(MAKE) -C programs -f Makefile.host clean
+	$(MAKE) -C programs clean
 	rm -rf .initar .image init.tar
 
 unittest : libraries
 	$(MAKE) -C libraries unittest
 	$(MAKE) -C programs -f Makefile.host unittest
+
+run-unittest : libraries
+	$(MAKE) -C libraries run-unittest
+	$(MAKE) -C programs run-unittest
 
 check :
 	@test/runner.rb
@@ -66,4 +70,4 @@ toolchain :
 	docker build toolchain -t docker.pkg.github.com/peteb/peos2/peos-toolchain:latest
 
 .PHONY : clean kernel/vmpeoz programs/first_program check unittest dist-docker dist-docker-live \
-	publish-docker-live run-docker-live toolchain libraries kernel
+	publish-docker-live run-docker-live toolchain libraries kernel programs run-unittest

@@ -10,6 +10,9 @@ clean :
 unittest :
 	$(MAKE) -C support unittest
 
+run-unittest :
+	$(MAKE) -C support run-unittest
+
 check :
 	$(MAKE) -C support check
 
