@@ -31,10 +31,6 @@ case $1 in
     qemu-system-i386 -s -S -kernel kernel/vmpeoz -no-reboot -no-shutdown -monitor stdio $FLAGS $INIT_SHELL
     ;;
 
-  test-tester)
-    qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot $FLAGS -initrd init.tar -append init=/ramfs/bin/tester
-    ;;
-
   test-shell)
     qemu-system-i386 -nographic -s -kernel kernel/vmpeoz -no-reboot $FLAGS $INIT_SHELL
     ;;

@@ -18,7 +18,7 @@ scenario "programs unittest" do
     %q(OPT_FLAGS="-O3" setenv host make clean unittest),
   ]
 
-  command "programs/unittest"
+  command "programs/net/.x86_64-linux-gnu/unittest"
 
   it "runs successfully" do
     successfully_executes

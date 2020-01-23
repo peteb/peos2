@@ -3,7 +3,7 @@
 #include <support/utils.h>
 #include <kernel/syscall_decls.h>
 
-#include "command_line.h"
+#include "../command_line.h"
 
 using namespace p2;
 

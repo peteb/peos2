@@ -3,8 +3,7 @@ KERNEL_BUILDS = [
   make_kernel('OPT_FLAGS' => '-O0 -g'),
   make_kernel('OPT_FLAGS' => '-O1'),
   make_kernel('OPT_FLAGS' => '-O2'),
-  make_kernel('OPT_FLAGS' => '-O3'),
-  make_kernel('OPT_FLAGS' => '-O3', 'DEFS' => '')
+  make_kernel('OPT_FLAGS' => '-O3')
 ]
 
 scenario "simple shell stress test" do
@@ -16,27 +15,6 @@ scenario "simple shell stress test" do
       }
 
       expect "> " { exit 0 }
-    EOS
-  end
-
-  it "runs the 'tester' program many times" do
-    successfully_expects <<~'EOS'
-      expect "WELCOME TO SHELL"
-
-      for {set i 1} {$i < 200} {incr i 1} {
-        expect "> " {
-          sleep 0.001
-          # TODO: I haven't yet been able to figure out why this sleep is necessary
-          send "/ramfs/bin/tester\r"
-        }
-
-        expect {
-          "WELCOME TO TESTER" {}
-          "panic: ASSERT" { exit 1 }
-        }
-      }
-
-      exit 0
     EOS
   end
 

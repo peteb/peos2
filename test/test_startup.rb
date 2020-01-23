@@ -9,15 +9,9 @@ KERNEL_BUILDS = [
 scenario "startup" do
   it "runs the 'tester' program" do
     successfully_expects <<~'EOS'
-      expect "WELCOME TO TESTER" { exit 0 }
+      expect "WELCOME TO SHELL" { exit 0 }
     EOS
   end
-end
-
-scenario "qemu i386 multiboot" do
-  builds KERNEL_BUILDS
-  command "./run-qemu test-tester"
-  it_successfully_runs "startup"
 end
 
 scenario "qemu i386 image" do

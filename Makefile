@@ -18,10 +18,9 @@ vboximg : image
 
 init.tar : programs kernel
 	@mkdir -p .initar/bin
-	cp programs/shell .initar/bin/
-	cp programs/shell_launcher .initar/bin/
-	cp programs/tester .initar/bin/
-	cp programs/nsa .initar/bin/
+	cp programs/shell/shell .initar/bin/
+	cp programs/shell/shell_launcher .initar/bin/
+	cp programs/net/nsa .initar/bin/
 	cp programs/ls .initar/bin/
 	cd .initar && tar cf ../init.tar *
 
@@ -43,7 +42,7 @@ clean :
 
 unittest : libraries
 	$(MAKE) -C libraries unittest
-	$(MAKE) -C programs -f Makefile.host unittest
+	$(MAKE) -C programs unittest
 
 run-unittest : libraries
 	$(MAKE) -C libraries run-unittest
