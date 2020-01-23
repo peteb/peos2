@@ -7,12 +7,11 @@ Peos2 is an operating system for i386 (so far). I'm not going to pretend it's fr
 Why build yet another operating system?
 
 - Because it's fun!
+- For experimentation
 - Learning
 - A good place to study algorithms and system design
 - It's meditative
 - To celebrate ARPANET 50 years
-
-There are probably more reasons, but I'm not looking to make anything "useful". Also, I'm not looking to build a fancy GUI or anything like that, I'd rather get a network stack up and running.
 
 ## Features
 - Basic x86 stuff: GDT, IDT, PIC, etc.

@@ -18,7 +18,7 @@ OBJECTS_LINK_ORDER=$(CRTI_OBJECT) $(CRTBEGIN_OBJECT) $(OBJECTS) $(CRTEND_OBJECT)
 # TODO: revert all inline asm into AT&T syntax
 CXXFLAGS+=-masm=intel -I.
 
-# Only build the kernel for the non-hosted environment
+# Only build kernel for the target environment
 ifneq ($HOSTED,1)
 all : vmpeoz
 endif
