@@ -21,7 +21,6 @@ init.tar : programs kernel
 	cp programs/shell/shell .initar/bin/
 	cp programs/shell/shell_launcher .initar/bin/
 	cp programs/net/nsa .initar/bin/
-	cp programs/ls .initar/bin/
 	cd .initar && tar cf ../init.tar *
 
 libraries :
