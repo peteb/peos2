@@ -41,7 +41,6 @@ ifneq ($(TEST_OBJECTS),)
   check : $(OBJDIR)/unittest ; @$(OBJDIR)/unittest
   run-unittest : unittest ; @$(OBJDIR)/unittest # Same as `check` for now
 
-  # TODO: only expose this rule if TEST_SOURCES is non-empty?
   $(OBJDIR)/unittest : $(OBJECTS_unittest) $(TEST_OBJECTS)
 		$(CXX) -o $(OBJDIR)/unittest -Werror $(OPT_FLAGS) $(OBJECTS_unittest) $(TEST_OBJECTS) -lunittest -L$(LIB_LIBRARY_DIR)/support/$(OBJDIR) $(LINK_FLAGS)
 else

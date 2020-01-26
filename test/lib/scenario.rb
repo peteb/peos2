@@ -74,5 +74,5 @@ def group_scenarios_by_build(scenarios)
 end
 
 def execute_build(command)
-  system(command, err: File::NULL, out: File::NULL)
+  system(command, err: $stderr, out: File::NULL)
 end
