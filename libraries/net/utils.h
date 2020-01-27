@@ -13,12 +13,12 @@
 #define log(module, fmt, ...)
 #else
 extern char debug_out_buffer[512];
+extern void _log_print(int level, const char *message);
 
-#include <support/userspace.h>
 #define log(module, fmt, ...) {                                             \
     p2::format<512>(debug_out_buffer, TOSTRING(module) ": " fmt             \
                     __VA_OPT__(,) __VA_ARGS__).str();                       \
-    puts(debug_out_buffer);}
+    _log_print(6, debug_out_buffer);}
 #endif
 
 p2::string<32> hwaddr_str(const uint8_t *octets);

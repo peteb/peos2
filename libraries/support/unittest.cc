@@ -35,6 +35,13 @@ int main()
   }
 }
 
+// Used in a lot of places for logging
+void _log_print(int level, const char *message)
+{
+  (void)level;
+  (void)message;
+}
+
 // Implements the `panic` function declared in the kernel so we can
 // catch it in our tests.
 void panic(const char *explanation)

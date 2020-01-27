@@ -162,3 +162,10 @@ int eth_send(int fd, eth_frame *frame, const char *data, size_t size)
   verify(syscall3(write, fd, data, size));
   return 1;
 }
+
+// Used in libraries for logging
+void _log_print(int level, const char *message)
+{
+  (void)level;
+  puts(message);
+}
