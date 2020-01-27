@@ -1,0 +1,17 @@
+# -*- makefile -*-
+
+# Include this file in programs so that you don't have to repeat a bunch of code specific for
+# building user-space programs.
+
+export LIB_INCLUDE_DIR=../../libraries
+export LIB_LIBRARY_DIR=../../libraries
+
+-include ../../Makefile.include
+
+CRTI_OBJECT=$(OBJDIR)/crti.s.o
+CRTN_OBJECT=$(OBJDIR)/crtn.s.o
+CRTBEGIN_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
+CRTEND_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
+OBJECTS_LINK_ORDER=$(CRTI_OBJECT) $(CRTBEGIN_OBJECT) $(OBJECTS) $(CRTEND_OBJECT) $(CRTN_OBJECT)
+CXXFLAGS+=-I. -I../ -I../../
+LINKFLAGS+=-lgcc

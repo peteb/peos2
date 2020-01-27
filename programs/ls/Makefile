@@ -1,19 +1,9 @@
 # -*- makefile -*-
 
-LIB_INCLUDE_DIR=../../libraries
-LIB_LIBRARY_DIR=../../libraries
-
 SOURCES=ls.cc
 
--include ../../Makefile.include
+-include ../Makefile.include
 
-CRTI_OBJECT=$(OBJDIR)/crti.s.o
-CRTN_OBJECT=$(OBJDIR)/crtn.s.o
-CRTBEGIN_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
-CRTEND_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
-OBJECTS_LINK_ORDER=$(CRTI_OBJECT) $(CRTBEGIN_OBJECT) $(OBJECTS) $(CRTEND_OBJECT) $(CRTN_OBJECT)
-
-CXXFLAGS+=-I. -I../ -I../../
 CXXFLAGS+=-masm=intel
 LINK_FLAGS+=-lsupport
 
