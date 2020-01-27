@@ -11,7 +11,7 @@ image : kernel init.tar
 	cp $(GRUB_CFG) .image/boot/grub/grub.cfg
 	cp kernel/vmpeoz .image/boot/
 	cp init.tar .image/boot/
-	grub-mkrescue -o peos2.img .image
+	grub-mkrescue -o peos2.img .image 2>&1
 
 vboximg : image
 	VBoxManage convertfromraw --format VDI peos2.img peos2.vdi
