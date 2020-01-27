@@ -1,6 +1,6 @@
-#include <support/userspace.h>
+//#include <support/userspace.h>
 #include <support/format.h>
-#include <kernel/syscall_decls.h>
+//#include <kernel/syscall_decls.h>
 #include <stdint.h>
 
 #include "utils.h"
@@ -66,25 +66,6 @@ void eth_on_receive(int interface, const char *data, size_t size)
     // TODO: handle ethernet flow
     break;
   }
-}
-
-int eth_send(int fd, eth_frame *frame, const char *data, size_t size)
-{
-  log(eth, "tx pdusz=%d,dst=%s,src=%s",
-      size, hwaddr_str(frame->dest).c_str(), hwaddr_str(frame->src).c_str());
-
-  // TODO: looping writes
-  header hdr;
-  memcpy(hdr.mac_dest, frame->dest, 6);
-  memcpy(hdr.mac_src, frame->src, 6);
-  hdr.ether_type = htons(frame->type);
-
-  // TODO: return failure rather than verify
-  uint16_t packet_size = sizeof(hdr) + size;
-  verify(syscall3(write, fd, (char *)&packet_size, sizeof(packet_size)));
-  verify(syscall3(write, fd, (char *)&hdr, sizeof(hdr)));
-  verify(syscall3(write, fd, data, size));
-  return 1;
 }
 
 void eth_hwaddr(int fd, uint8_t *octets)

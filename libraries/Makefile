@@ -1,20 +1,14 @@
 export LIB_INCLUDE_DIR=..
 export LIB_LIBRARY_DIR=..
 
-all :
-	$(MAKE) -C support
+PROJECTS=support net
+TARGETS=all clean unittest run-unittest check
 
-clean :
-	$(MAKE) -C support clean
+define generate_target
+$(1):
+	$(foreach subdir, $(PROJECTS), $(MAKE) -C $(subdir) $(1) ;)
+endef
 
-unittest :
-	$(MAKE) -C support unittest
+$(foreach target, $(TARGETS), $(eval $(call generate_target, $(target))) ;)
 
-run-unittest :
-	$(MAKE) -C support run-unittest
-
-check :
-	$(MAKE) -C support check
-
-.PHONY : all clean unittest check
-
+.PHONY : $(TARGETS)

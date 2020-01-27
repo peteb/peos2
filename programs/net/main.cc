@@ -5,11 +5,11 @@
 #include <kernel/syscall_decls.h>
 #include <stdint.h>
 
-#include "ethernet.h"
-#include "utils.h"
-#include "arp.h"
-#include "ipv4.h"
-#include "tcp.h"
+#include <net/ethernet.h>
+#include <net/utils.h>
+#include <net/arp.h>
+#include <net/ipv4.h>
+#include <net/tcp.h>
 
 using namespace p2;
 
@@ -131,4 +131,34 @@ void fetch_hwaddr(int fd, uint8_t *octets)
 {
   // TODO: cache the address locally, this is very wasteful
   verify(syscall4(control, fd, CTRL_NET_HW_ADDR, (uintptr_t)octets, 0));
+}
+
+struct header {
+  uint8_t  mac_dest[6];
+  uint8_t  mac_src[6];
+  uint16_t ether_type;
+} __attribute__((packed));
+
+
+// Below is used from within libnet
+int eth_send(int fd, eth_frame *frame, const char *data, size_t size)
+{
+  log(eth, "tx pdusz=%d,dst=%s,src=%s",
+      size, hwaddr_str(frame->dest).c_str(), hwaddr_str(frame->src).c_str());
+
+  // TODO: looping writes
+  header hdr;
+  memcpy(hdr.mac_dest, frame->dest, 6);
+  memcpy(hdr.mac_src, frame->src, 6);
+  hdr.ether_type = htons(frame->type);
+
+  (void)fd;
+  (void)data;
+  (void)size;
+  // TODO: return failure rather than verify
+  uint16_t packet_size = sizeof(hdr) + size;
+  verify(syscall3(write, fd, (char *)&packet_size, sizeof(packet_size)));
+  verify(syscall3(write, fd, (char *)&hdr, sizeof(hdr)));
+  verify(syscall3(write, fd, data, size));
+  return 1;
 }

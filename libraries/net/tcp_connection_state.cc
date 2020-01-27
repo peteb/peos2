@@ -90,6 +90,8 @@ static const class : public tcp_connection_state {
     }
 
     (void)data;
+    (void)length;
+
     log(tcp, "SYN-RCVD: flags %04x", segment.flags);
     log(tcp, "SYN-RCVD: rx sequenced SYN segment of size %d, sending back", length);
 

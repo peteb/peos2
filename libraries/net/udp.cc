@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include <support/utils.h>
-#include <support/userspace.h>
 
 #include "udp.h"
 #include "utils.h"
