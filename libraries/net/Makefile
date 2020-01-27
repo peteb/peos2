@@ -11,8 +11,8 @@ SOURCES_unittest=tcp_connection_table.cc tcp_connection.cc tcp_recv_queue.cc \
 
 -include ../../Makefile.include
 
-CXXFLAGS+=-I../.. -I.
-CXXFLAGS+=-masm=intel -I.
+CXXFLAGS+=-I. -I../..
+CXXFLAGS+=-masm=intel
 LINK_FLAGS+=-lsupport
 
 # Project specific rules

@@ -12,15 +12,17 @@ scenario "libsupport unittest" do
   end
 end
 
-scenario "programs unittest" do
+scenario "libnet unittest" do
   builds [
     %q(OPT_FLAGS="-O0" setenv host make clean unittest),
     %q(OPT_FLAGS="-O3" setenv host make clean unittest),
   ]
 
-  command "programs/net/.x86_64-linux-gnu/unittest"
+  # TODO: remove hard coded host triplet
+  command "libraries/net/.x86_64-linux-gnu/unittest"
 
   it "runs successfully" do
     successfully_executes
   end
 end
+
