@@ -1,6 +1,6 @@
-//#include <support/userspace.h>
 #include <support/format.h>
-//#include <kernel/syscall_decls.h>
+#include <support/logging.h>
+
 #include <stdint.h>
 
 #include "utils.h"
@@ -23,7 +23,7 @@ void eth_configure(int interface, uint8_t *local_hwaddr)
 {
   (void)interface;
   // TODO: care about the interface
-  log(eth, "config local_hwaddr=%s", hwaddr_str(local_hwaddr).c_str());
+  log_info("config local_hwaddr=%s", hwaddr_str(local_hwaddr).c_str());
   memcpy(local_hwaddr, local_hwaddr, 6);
 }
 
