@@ -19,10 +19,10 @@ LINK_FLAGS+=-lsupport -lnet
 
 # Only build program for the target environment
 ifneq ($HOSTED,1)
-all : nsa
+all : live-httpd
 endif
 
-nsa : CXXFLAGS+=-ffreestanding
-nsa : $(OBJECTS) $(CRTI_OBJECT) $(CRTN_OBJECT) linker.ld
+live-httpd : CXXFLAGS+=-ffreestanding
+live-httpd : $(OBJECTS) $(CRTI_OBJECT) $(CRTN_OBJECT) linker.ld
 	$(CC) -T linker.ld -o $@ -ffreestanding $(OPT_FLAGS) -Werror -nostdlib $(OBJECTS_LINK_ORDER) -L$(LIB_LIBRARY_DIR)/support/$(OBJDIR) -L$(LIB_LIBRARY_DIR)/net/$(OBJDIR) -lgcc $(LINK_FLAGS)
 

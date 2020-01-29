@@ -3,6 +3,7 @@
 #include <support/pool.h>
 #include <support/frag_buffer.h>
 #include <support/flip_buffer.h>
+#include <support/logging.h>
 
 #include "ipv4_protocol.h"
 #include "ipv4.h"
@@ -54,7 +55,7 @@ void ipv4_configure(int interface, uint32_t ipaddr, uint32_t netmask, uint32_t g
   local_netmask = netmask;
   local_gwaddr = gwaddr;
 
-  log(ipv4, "config ipaddr=%s,mask=%s,gw=%s", ipaddr_str(ipaddr), ipaddr_str(netmask), ipaddr_str(gwaddr));
+  log_info("config ipaddr=%s,mask=%s,gw=%s", ipaddr_str(ipaddr), ipaddr_str(netmask), ipaddr_str(gwaddr));
 
   // Run an ARP request for our own ip address to see that it's not
   // already in use. We're sending from our configured IP address, so

@@ -44,4 +44,4 @@ DEBUG="-s -d pcall,cpu_reset,guest_errors \
 STARTUP="-kernel kernel/vmpeoz -initrd init.tar"
 ARGS="-nographic $STARTUP $NETWORK $DEBUG"
 
-qemu-system-i386 $ARGS -append "init=/ramfs/bin/nsa ipaddr=$IP netmask=$NETMASK gw=$GW"
+qemu-system-i386 $ARGS -append "init=/ramfs/bin/live-httpd ipaddr=$IP netmask=$NETMASK gw=$GW"

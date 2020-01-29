@@ -1,3 +1,5 @@
+#include <support/logging.h>
+
 #include "tcp_connection_table.h"
 #include "utils.h"
 
@@ -28,7 +30,7 @@ tcp_connection_table::handle tcp_connection_table::create_connection(const tcp_e
                                                                      const tcp_connection_state *state,
                                                                      const tcp_connection_listeners &listeners)
 {
-  log(tcp_connection_table, "creating connection remote=%s:%d local=%s:%d",
+  log_info("creating connection remote=%s:%d local=%s:%d",
       ipaddr_str(remote.ipaddr),
       remote.port,
       ipaddr_str(local.ipaddr),

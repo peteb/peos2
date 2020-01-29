@@ -49,7 +49,7 @@ case $1 in
     ;;
 
   terminal-net)
-    qemu-system-i386 -s ${EXTRA:-} -nographic -kernel kernel/vmpeoz -initrd init.tar -append init=/ramfs/bin/nsa $FLAGS $UD_MONITOR
+    qemu-system-i386 -s ${EXTRA:-} -nographic -kernel kernel/vmpeoz -initrd init.tar -append init=/ramfs/bin/live-httpd $FLAGS $UD_MONITOR
     ;;
 
   httpd)
@@ -59,7 +59,7 @@ case $1 in
       -object filter-dump,id=dp1,netdev=mynet0,file=vm0.pcap"
 
     qemu-system-i386 -kernel kernel/vmpeoz -initrd init.tar $FLAGS \
-                     -append "init=/ramfs/bin/nsa ipaddr=10.0.2.15 netmask=255.255.255.0 gw=10.0.2.2"
+                     -append "init=/ramfs/bin/live-httpd ipaddr=10.0.2.15 netmask=255.255.255.0 gw=10.0.2.2"
     ;;
 
   *)

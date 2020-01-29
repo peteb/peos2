@@ -20,7 +20,7 @@ init.tar : programs kernel
 	@mkdir -p .initar/bin
 	cp programs/shell/shell .initar/bin/
 	cp programs/shell/shell_launcher .initar/bin/
-	cp programs/net/nsa .initar/bin/
+	cp programs/live-httpd/live-httpd .initar/bin/
 	cp programs/ls/ls .initar/bin/
 	cd .initar && tar cf ../init.tar *
 

@@ -1,7 +1,7 @@
 export LIB_INCLUDE_DIR=../../libraries/
 export LIB_LIBRARY_DIR=../../libraries/
 
-PROJECTS=net shell ls
+PROJECTS=live-httpd shell ls
 TARGETS=all clean unittest run-unittest check
 
 define generate_target
