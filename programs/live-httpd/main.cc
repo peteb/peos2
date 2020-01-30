@@ -2,6 +2,7 @@
 #include <support/format.h>
 #include <support/userspace.h>
 #include <support/keyvalue.h>
+#include <support/logging.h>
 
 #include <kernel/syscall_decls.h>
 #include <stdint.h>
@@ -27,17 +28,17 @@ int main(int argc, char *argv[])
   _init();
   puts("Welcome to the network stack!");
 
-  const char *ipaddr = "10.14.0.3";
-  const char *netmask = "255.255.255.255";
-  const char *gwaddr = "10.14.0.1";
+  uint32_t ipaddr = parse_ipaddr("10.14.0.3");
+  uint32_t netmask = parse_ipaddr("255.255.255.255");
+  uint32_t gwaddr = parse_ipaddr("10.14.0.1");
 
   if (argc > 1) {
-    log(nsa, "parsing attributes '%s'...", argv[1]);
+    log_info("parsing attributes '%s'...", argv[1]);
     p2::keyvalue<256> opts(argv[1]);
 
-    if (opts["ipaddr"]) ipaddr = opts["ipaddr"];
-    if (opts["netmask"]) netmask = opts["netmask"];
-    if (opts["gw"]) gwaddr = opts["gw"];
+    if (opts["ipaddr"]) ipaddr = parse_ipaddr(opts["ipaddr"]);
+    if (opts["netmask"]) netmask = parse_ipaddr(opts["netmask"]);
+    if (opts["gw"]) gwaddr = parse_ipaddr(opts["gw"]);
   }
 
   int fd = verify(syscall2(open, "/dev/eth0", 0));
@@ -46,10 +47,7 @@ int main(int argc, char *argv[])
   fetch_hwaddr(fd, hwaddr);
 
   eth_configure(fd, hwaddr);
-  ipv4_configure(fd,
-                 parse_ipaddr(ipaddr),
-                 parse_ipaddr(netmask),
-                 parse_ipaddr(gwaddr));
+  ipv4_configure(fd, ipaddr, netmask, gwaddr);
   tcp_init(fd);
 
   tcp_connection_listeners listeners;
