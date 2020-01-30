@@ -13,8 +13,8 @@ extern void _log_print(int level, const char *message);
 }
 
 #define log_info(fmt, ...) do {                                                             \
-  p2::format<512>(debug_out_buffer, "INFO  " __FILE__ ":" TOSTRING(__LINE__) ": " fmt    \
-                  __VA_OPT__(,) __VA_ARGS__).str();                                      \
+  p2::format<512>(debug_out_buffer, "INFO  " __FILE__ ":" TOSTRING(__LINE__) ": " fmt,    \
+                  ##__VA_ARGS__).str();                                      \
   _log_print(6, debug_out_buffer);                                                       \
 } while(0)
 

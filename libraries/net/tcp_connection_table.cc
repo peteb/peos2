@@ -24,7 +24,6 @@ tcp_connection_table::handle tcp_connection_table::find_best_match(const tcp_end
     return most_specific_it.index();
 }
 
-
 tcp_connection_table::handle tcp_connection_table::create_connection(const tcp_endpoint &remote,
                                                                      const tcp_endpoint &local,
                                                                      const tcp_connection_state *state,

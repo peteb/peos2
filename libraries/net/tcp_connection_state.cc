@@ -23,7 +23,7 @@ static const class : public tcp_connection_state {
       return;
     }
 
-    // Create a new connection for this pair of endpoints
+    // Create a new conneciton for this pair of endpoints
     // TODO: what if this connection is the most specific pair of endpoints already?
     tcp_connection_table &conntab = conn.connection_table();
     auto conn_idx = conntab.create_connection({segment.datagram->src_addr, segment.tcphdr->src_port},
