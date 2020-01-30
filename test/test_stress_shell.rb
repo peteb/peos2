@@ -1,8 +1,6 @@
 KERNEL_BUILDS = [
   make_kernel('OPT_FLAGS' => '-O0'),
-  make_kernel('OPT_FLAGS' => '-O0 -g'),
   make_kernel('OPT_FLAGS' => '-O1'),
-  make_kernel('OPT_FLAGS' => '-O2'),
   make_kernel('OPT_FLAGS' => '-O3')
 ]
 

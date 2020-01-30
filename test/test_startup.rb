@@ -1,8 +1,6 @@
 KERNEL_BUILDS = [
   make_kernel('OPT_FLAGS' => '-O0', 'GRUB_CFG' => 'grub-test.cfg'),
-  make_kernel('OPT_FLAGS' => '-O0 -g', 'GRUB_CFG' => 'grub-test.cfg'),
   make_kernel('OPT_FLAGS' => '-O1', 'GRUB_CFG' => 'grub-test.cfg'),
-  make_kernel('OPT_FLAGS' => '-O2', 'GRUB_CFG' => 'grub-test.cfg'),
   make_kernel('OPT_FLAGS' => '-O3', 'GRUB_CFG' => 'grub-test.cfg')
 ]
 
