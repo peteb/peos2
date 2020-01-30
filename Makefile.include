@@ -52,4 +52,8 @@ endif
 .DEFAULT_GOAL := all
 .PHONY : clean check
 
--include $(OBJDIR)/**/*.d
+-include $(OBJDIR)/*/*/*/*.d
+-include $(OBJDIR)/*/*/*.d
+-include $(OBJDIR)/*/*.d
+-include $(OBJDIR)/*.d
+

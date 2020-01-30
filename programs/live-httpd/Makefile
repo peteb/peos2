@@ -14,11 +14,11 @@ CRTEND_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
 
 CXXFLAGS+=-I. -I../../
 CXXFLAGS+=-masm=intel
-LINK_FLAGS+=-lsupport -lnet
+OBJECTS+=$(LIB_LIBRARY_DIR)/net/$(OBJDIR)/libnet.a $(LIB_LIBRARY_DIR)/support/$(OBJDIR)/libsupport.a
 
 # TODO: use sysroot instead so we don't have to mess around with this order
 OBJECTS_LINK_ORDER=$(CRTI_OBJECT) $(CRTBEGIN_OBJECT) \
-                   $(OBJECTS) -L$(LIB_LIBRARY_DIR)/support/$(OBJDIR) -L$(LIB_LIBRARY_DIR)/net/$(OBJDIR) -lgcc $(LINK_FLAGS) \
+                   $(OBJECTS) -lgcc $(LINK_FLAGS) \
                    $(CRTEND_OBJECT) $(CRTN_OBJECT)
 
 # Only build program for the target environment
