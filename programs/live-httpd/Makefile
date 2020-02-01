@@ -12,7 +12,7 @@ CRTN_OBJECT=$(OBJDIR)/crtn.s.o
 CRTBEGIN_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND_OBJECT=$(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
 
-CXXFLAGS+=-I. -I../../
+CXXFLAGS+=-I. -I../../ -I$(LIB_INCLUDE_DIR)/net
 CXXFLAGS+=-masm=intel
 OBJECTS+=$(LIB_LIBRARY_DIR)/net/$(OBJDIR)/libnet.a $(LIB_LIBRARY_DIR)/support/$(OBJDIR)/libsupport.a
 
