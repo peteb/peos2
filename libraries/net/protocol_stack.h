@@ -23,7 +23,10 @@ public:
   net::arp::protocol &arp() {return _arp; }
   net::ipv4::protocol &ipv4() {return _ipv4; }
 
-  void tick(uint32_t delta_ms) { (void)delta_ms; }
+  void tick(uint32_t delta_ms)
+  {
+    arp().tick(delta_ms);
+  }
 
 private:
   net::device *_device;

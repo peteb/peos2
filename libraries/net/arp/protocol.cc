@@ -65,16 +65,10 @@ void protocol::on_receive(const net::ethernet::frame_metadata &metadata, const c
   else if (oper == op::OP_REPLY) {
     log_info("ARP %s is at %s, sender=%s",
       ipaddr_str(spa).c_str(),
-      net::ethernet::hwaddr_str(hdr.sha).c_str(),
-      net::ethernet::hwaddr_str(*metadata.mac_src).c_str());
+      hwaddr_str(hdr.sha).c_str(),
+      hwaddr_str(*metadata.mac_src).c_str());
 
-    /*
-    add_cache_entry(spa, hdr.sha);
-
-    if (size_t probe_idx = find_ipv4_probe(spa); probe_idx != ipv4_probes.end_sentinel()) {
-      ipv4_probes[probe_idx].value.notify_all(PROBE_REPLY);
-      ipv4_probes.erase(probe_idx);
-    }*/
+    write_cache_entry(spa, hdr.sha);
   }
   else {
     log_info("dropping message due to invalid oper=%04x", oper);
@@ -101,5 +95,89 @@ int protocol::send(int op, net::ipv4::address tpa, const net::ethernet::address 
 
   return _protocols.ethernet().send(net::ethernet::ET_ARP, next_hop, reinterpret_cast<const char *>(&hdr), sizeof(hdr));
 }
+
+void protocol::tick(uint32_t delta_ms)
+{
+  for (auto probe_it = _active_probes.begin(); probe_it != _active_probes.end(); ++probe_it) {
+    if (!probe_it->value.tick(delta_ms)) {
+      ipv4_lookup_result result = nullptr;
+      probe_it->value.notify_all(result);
+      _active_probes.erase(probe_it);
+    }
+  }
+}
+
+void protocol::write_cache_entry(net::ipv4::address ipaddr, net::ethernet::address hwaddr)
+{
+  _mappings.insert(ipaddr, hwaddr);
+
+  if (auto probe_it = _active_probes.find(ipaddr); probe_it != _active_probes.end()) {
+    // There's a probe waiting for this result
+    ipv4_lookup_result result = &hwaddr;
+    probe_it->value.notify_all(result);
+    _active_probes.erase(probe_it);
+  }
+}
+
+ipv4_lookup_result protocol::fetch_cached(net::ipv4::address ipaddr) const
+{
+  return _mappings.fetch(ipaddr);
+}
+
+void protocol::fetch_network(net::ipv4::address ipaddr, probe::await_fun callback)
+{
+  // Short-circuit in case we've already got the entry
+  if (auto address = _mappings.fetch(ipaddr)) {
+    callback(address);
+    return;
+  }
+
+  if (auto it = _active_probes.find(ipaddr); it != _active_probes.end()) {
+    // There's already a probe out for this ip address, let's bump its expiration so that it'll go on for a bit longer
+    it->value.reset();
+    it->value.await(callback);
+  }
+  else {
+    // No probe already exists for this ipaddr, create one
+    log_info("creating probe for %s", net::ipv4::ipaddr_str(ipaddr));
+
+    probe::op_fun operation = [=]() {
+      send(op::OP_REQUEST, ipaddr, net::ethernet::address::wildcard, net::ethernet::address::broadcast);
+    };
+
+    _active_probes.insert(ipaddr, operation);
+
+    // TODO: there's a lot of back-to-back lookups here. We need to be smarter about that.
+    auto probe_it = _active_probes.find(ipaddr);
+    assert(probe_it != _active_probes.end());
+    probe_it->value.await(callback);
+    probe_it->value.tick(0);
+  }
+}
+
+void mapping_table::insert(net::ipv4::address ipaddr, net::ethernet::address hwaddr)
+{
+  if (_entries.full())
+    _entries.pop_front();
+
+  cache_entry entry;
+  memcpy(&entry.hwaddr, hwaddr, sizeof(hwaddr));
+  entry.ipaddr = ipaddr;
+  _entries.push_back(entry);
+}
+
+const net::ethernet::address *mapping_table::fetch(net::ipv4::address ipaddr) const
+{
+  const net::ethernet::address *latest_value = nullptr;
+
+  for (int index = _entries.begin(); index != _entries.end(); ++index) {
+    if (_entries[index].ipaddr == ipaddr)
+      latest_value = &_entries[index].hwaddr;
+    // We need to iterate over the whole list as we might've received a new mapping for this ipaddr
+  }
+
+  return latest_value;
+}
+
 
 }

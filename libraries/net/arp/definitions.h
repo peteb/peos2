@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "ethernet/definitions.h"
+#include "ipv4/definitions.h"
 
 namespace net::arp {
 
@@ -13,9 +14,9 @@ namespace net::arp {
     uint8_t  plen;
     uint16_t oper;
     net::ethernet::address sha;
-    uint32_t spa;
+    net::ipv4::address spa;
     net::ethernet::address tha;
-    uint32_t tpa;
+    net::ipv4::address tpa;
   } __attribute__((packed));
 
   enum op : uint16_t {

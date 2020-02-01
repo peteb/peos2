@@ -186,6 +186,11 @@ public:
     --_count;
   }
 
+  void erase(const iterator &it)
+  {
+    erase(it._idx);
+  }
+
   template<typename... _Args>
   void emplace(_IndexT idx, _Args&&... args)
   {

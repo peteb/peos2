@@ -3,8 +3,15 @@
 #include <stdint.h>
 
 namespace net::ethernet {
+  struct address {
+    operator void *() {return octets; }
+    operator const void *() const {return octets; }
+    uint8_t operator [](size_t idx) const {return octets[idx]; }
 
-  using address = uint8_t[6];
+    static const address wildcard, broadcast;
+
+    uint8_t octets[6];
+  };
 
   enum ether_type : uint16_t {
     ET_IPV4 = 0x0800,

@@ -43,6 +43,11 @@ public:
     return true;
   }
 
+  void erase(const iterator &iterator)
+  {
+    _storage.erase(iterator);
+  }
+
   _Value &operator [](const _Key &key)
   {
     if (auto it = find(key); it != end())
