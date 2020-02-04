@@ -18,9 +18,9 @@ void protocol::on_receive(const net::ethernet::frame_metadata &metadata, const c
   assert(length >= sizeof(hdr));
   memcpy(&hdr, data, sizeof(hdr));
 
-  uint16_t htype = ntohs(hdr.htype);
+  uint16_t htype{ntohs(hdr.htype)};
   net::ethernet::ether_type ptype{ntohs(hdr.ptype)};
-  op oper = op{ntohs(hdr.oper)};
+  op oper{ntohs(hdr.oper)};
 
   if (htype != 1 || ptype != net::ethernet::ether_type::ET_IPV4) {
     log_debug("protocols not supported htype=%04x,ptype=%04x", htype, ptype);
@@ -139,7 +139,7 @@ void protocol::fetch_network(net::ipv4::address ipaddr, probe::await_fun callbac
   }
   else {
     // No probe already exists for this ipaddr, create one
-    log_info("creating probe for %s", net::ipv4::ipaddr_str(ipaddr));
+    log_debug("creating probe for %s", net::ipv4::ipaddr_str(ipaddr));
 
     probe::op_fun operation = [=]() {
       send(op::OP_REQUEST, ipaddr, net::ethernet::address::wildcard, net::ethernet::address::broadcast);

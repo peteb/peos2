@@ -1,0 +1,23 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "Build libnet unittest",
+            "command": "OPT_FLAGS=-g setenv host make -C libraries/net unittest",
+            "problemMatcher": ["$gcc"],
+            "group": {
+              "kind": "build",
+              "isDefault": true
+            }
+        },
+        {
+            "type": "shell",
+            "label": "(run) httpd",
+            "command": "./run-qemu httpd",
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}

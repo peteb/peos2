@@ -3,9 +3,11 @@
 vmpeoz
 unittest
 *.tar
-.*
 *.d
 peos2.img
 *.pcap
 crapfile
 bochsout.txt
+.initar
+.i686-elf
+.x86_64-linux-gnu

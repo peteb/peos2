@@ -1,7 +1,10 @@
+#include <support/logging.h>
+
 #include "tcp_connection.h"
 #include "tcp_connection_state.h"
 #include "tcp_connection_table.h"
 #include "utils.h"
+#include "net/utils.h"
 
 #include "ipv4.h"
 
@@ -18,7 +21,7 @@ static const class : public tcp_connection_state {
                   const tcp_segment &segment) const override
   {
     if (!(segment.flags & SYN)) {
-      log(tcp, "LISTEN: received segment without SYN, dropping");
+      log_info("LISTEN: received segment without SYN, dropping");
       // TODO: RST
       return;
     }
@@ -48,7 +51,7 @@ static const class : public tcp_connection_state {
                       const char *,
                       size_t) const override
   {
-    log(tcp, "LISTEN: rx sequenced segment, shouldn't happen");
+    log_info("LISTEN: rx sequenced segment, shouldn't happen");
   }
 
 } listen;
@@ -75,7 +78,7 @@ static const class : public tcp_connection_state {
       conn.transition(tcp_connection_state::ESTABLISHED);
     }
     else {
-      log(tcp, "SYN-RCVD: early_recv of non-ACK, flags=%04x, dropping", segment.flags);
+      log_info("SYN-RCVD: early_recv of non-ACK, flags=%04x, dropping", segment.flags);
     }
   }
 
@@ -85,15 +88,15 @@ static const class : public tcp_connection_state {
                       size_t length) const override
   {
     if (!(segment.flags & SYN)) {
-      log(tcp, "SYN-RCVD: sequenced a segment without SYN set");
+      log_info("SYN-RCVD: sequenced a segment without SYN set");
       return;
     }
 
     (void)data;
     (void)length;
 
-    log(tcp, "SYN-RCVD: flags %04x", segment.flags);
-    log(tcp, "SYN-RCVD: rx sequenced SYN segment of size %d, sending back", length);
+    log_info("SYN-RCVD: flags %04x", segment.flags);
+    log_info("SYN-RCVD: rx sequenced SYN segment of size %d, sending back", length);
 
     // TODO: verify that this is a sequenced SYN
     tcp_send_segment response;
@@ -174,7 +177,7 @@ static const class : public tcp_connection_state {
 
   void remote_consumed_all(tcp_connection &conn) const
   {
-    log(tcp, "LAST-ACK: remote consumed all our messages, closing down connection...");
+    log_info("LAST-ACK: remote consumed all our messages, closing down connection...");
     conn.mark_for_destruction();
   }
 
@@ -199,13 +202,13 @@ static const class : public tcp_connection_state {
       // TODO: if we don't implement the "recv_sequenced" function, we
       // shouldn't consume from the rx queue. This would forward any
       // FINs from the other side to the FIN-WAIT-2 state
-      log(tcp, "FIN-WAIT-1: received a FIN -- the other endpoint is shutting down at the same time");
+      log_info("FIN-WAIT-1: received a FIN -- the other endpoint is shutting down at the same time");
       conn.sequence(segment, phantom, 1);
       conn.transition(tcp_connection_state::CLOSING);
       return;
     }
 
-    log(tcp, "FIN-WAIT-1: received non-FIN message, dropping...");
+    log_info("FIN-WAIT-1: received non-FIN message, dropping...");
     // TODO: what if we receive data here, should we do anything with it?
   }
 
@@ -231,7 +234,7 @@ static const class : public tcp_connection_state {
 
   void remote_consumed_all(tcp_connection &conn) const
   {
-    log(tcp, "CLOSING: remote ACK'd all messages");
+    log_info("CLOSING: remote ACK'd all messages");
     conn.mark_for_destruction();
   }
 } closing;
@@ -256,7 +259,7 @@ static const class : public tcp_connection_state {
       return;
     }
 
-    log(tcp, "FIN-WAIT-2: received non-FIN message, dropping");
+    log_info("FIN-WAIT-2: received non-FIN message, dropping");
     // TODO: what if we receive data here, should we do anything with it?
   }
 
@@ -268,11 +271,11 @@ static const class : public tcp_connection_state {
     (void)data;
     (void)length;
     if (segment.flags & FIN) {
-      log(tcp, "FIN-WAIT-2: received remote FIN, shutting down...");
+      log_info("FIN-WAIT-2: received remote FIN, shutting down...");
       conn.mark_for_destruction();  // TODO: use the CLOSED state instead
     }
     else {
-      log(tcp, "FIN-WAIT-2: received non-FIN segment, dropping");
+      log_info("FIN-WAIT-2: received non-FIN segment, dropping");
     }
   }
 } fin_wait_2;

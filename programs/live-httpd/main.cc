@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 
   {
     file_device device(fd);
-    net::protocol_stack protocols(&device);
+    static net::protocol_stack protocols(&device);
 
     configure_ethernet(fd, protocols.ethernet());
 
@@ -57,12 +57,7 @@ int main(int argc, char *argv[])
       parse_ipaddr("255.255.255.255"),
       parse_ipaddr("10.0.2.2"));
 
-    protocols.arp().fetch_network(parse_ipaddr("10.0.2.17"), [=](auto result) {
-      if (result)
-        log_info("Received mapping for 10.0.2.17: %s", net::ethernet::hwaddr_str(*result).c_str());
-      else
-        log_info("Found no mapping for 10.0.2.17");
-    });
+    protocols.tcp().listen({0, 8080});
 
     feed_data(fd, protocols);
   }

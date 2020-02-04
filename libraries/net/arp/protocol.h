@@ -20,7 +20,7 @@ namespace net::arp {
   // as we're mostly going to talk to the default gateway.
   class mapping_table {
   public:
-    void                          insert(net::ipv4::address ipaddr, net::ethernet::address hwaddr);
+    void insert(net::ipv4::address ipaddr, net::ethernet::address hwaddr);
     const net::ethernet::address *fetch(net::ipv4::address ipaddr) const;
 
   private:
@@ -39,7 +39,7 @@ namespace net::arp {
 
     void on_receive(const net::ethernet::frame_metadata &metadata, const char *data, size_t length);
     int  send(int op, net::ipv4::address tpa, const net::ethernet::address &tha, const net::ethernet::address &next_hop);
-    void tick(uint32_t delta_time);
+    void tick(uint32_t delta_ms);
 
     ipv4_lookup_result fetch_cached(net::ipv4::address ipaddr) const;
     void fetch_network(net::ipv4::address ipaddr, probe::await_fun callback);

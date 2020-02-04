@@ -6,9 +6,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define PROTO_ICMP   1
-#define PROTO_TCP    6
-#define PROTO_UDP   17
+#define _PROTO_ICMP   1
+#define _PROTO_TCP    6
+#define _PROTO_UDP   17
 
 // Information about an IPv4 datagram
 struct ipv4_info {

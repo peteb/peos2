@@ -1,5 +1,6 @@
 #include <support/format.h>
 #include "ipv4/utils.h"
+#include "../utils.h"
 
 namespace net::ipv4 {
 
@@ -38,6 +39,17 @@ net::ipv4::address parse_ipaddr(const char *str)
   }
 
   return ipaddr;
+}
+
+uint16_t checksum(const net::ipv4::header &header)
+{
+  assert(header.checksum == 0);
+
+  auto sum = sum_words(reinterpret_cast<const char *>(&header), sizeof(header));
+  while (sum > 0xFFFF)
+    sum = (sum >> 16) + (sum & 0xFFFF);
+
+  return ~(uint16_t)sum;
 }
 
 }

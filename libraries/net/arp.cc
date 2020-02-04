@@ -61,7 +61,7 @@ void arp_recv(int eth_fd, eth_frame */*frame*/, const char *data, size_t length)
   uint16_t ptype = ntohs(hdr.ptype);
   uint16_t oper = ntohs(hdr.oper);
 
-  if (htype != 1 || ptype != ET_IPV4) {
+  if (htype != 1 || ptype != _ET_IPV4) {
     log(arp, "protocols not supported htype=%04x,ptype=%04x",
         htype, ptype);
     return;
@@ -184,7 +184,7 @@ static int send_arp(int fd, int op, uint32_t tpa, const uint8_t *tha, const uint
 
   header hdr;
   hdr.htype = htons(1);
-  hdr.ptype = htons(ET_IPV4);
+  hdr.ptype = htons(_ET_IPV4);
   hdr.hlen = 6;
   hdr.plen = 4;
   hdr.oper = htons(op);
@@ -196,7 +196,7 @@ static int send_arp(int fd, int op, uint32_t tpa, const uint8_t *tha, const uint
   eth_frame frame = {
     .dest = eth_hwaddr_dest,
     .src = hdr.sha,
-    .type = ET_ARP
+    .type = _ET_ARP
   };
 
   return eth_send(fd, &frame, (char *)&hdr, sizeof(hdr));

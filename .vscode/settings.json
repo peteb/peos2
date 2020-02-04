@@ -1,0 +1,22 @@
+{
+  "files.associations": {
+    "array": "cpp",
+    "string_view": "cpp",
+    "initializer_list": "cpp",
+    "utility": "cpp",
+    "string": "cpp",
+    "unordered_map": "cpp",
+    "deque": "cpp",
+    "vector": "cpp"
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/.*": true,
+    "**/*.o": true,
+    "**/*.d": true
+  }
+}

@@ -121,11 +121,11 @@ void ipv4_on_receive(int interface, eth_frame *frame, const char *data, size_t l
   void (*recv_function)(int, eth_frame *, ipv4_info *, const char *, size_t);
 
   switch (hdr.protocol) {
-  case PROTO_TCP:
+  case _PROTO_TCP:
     recv_function = tcp_recv;
     break;
 
-  case PROTO_UDP:
+  case _PROTO_UDP:
     recv_function = udp_recv;
     break;
 
@@ -280,7 +280,7 @@ static void send_single_datagram(int interface,
   eth_frame ethernet;
   ethernet.dest = dest;
   ethernet.src = src;
-  ethernet.type = ET_IPV4;
+  ethernet.type = _ET_IPV4;
 
   char buffer[1500];
   // TODO: fetch MTU from ethernet, but hard code to jumbo frames?

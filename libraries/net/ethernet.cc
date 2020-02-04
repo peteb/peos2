@@ -49,20 +49,20 @@ void eth_on_receive(int interface, const char *data, size_t size)
   };
 
   switch (ether_type) {
-  case ET_IPV4:
+  case _ET_IPV4:
     // TODO: handle ipv4
     ipv4_on_receive(interface, &frame, pdu, pdu_size);
     break;
 
-  case ET_IPV6:
+  case _ET_IPV6:
     // TODO: handle ipv6
     break;
 
-  case ET_ARP:
+  case _ET_ARP:
     arp_recv(interface, &frame, pdu, pdu_size);
     break;
 
-  case ET_FLOW:
+  case _ET_FLOW:
     // TODO: handle ethernet flow
     break;
   }

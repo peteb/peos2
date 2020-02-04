@@ -10,7 +10,8 @@ namespace p2 {
 template<size_t _MaxLen>
 class flip_buffer {
 public:
-  typedef uint64_t handle;
+  using handle =  uint64_t;
+  static constexpr size_t capacity = _MaxLen;
 
   flip_buffer()
   {

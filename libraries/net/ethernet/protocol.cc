@@ -43,28 +43,13 @@ void protocol::on_receive(const char *data, size_t length)
     _protocols.arp().on_receive(metadata, pdu, pdu_size);
     break;
 
-  default:
-    log_debug("dropping packet due to unknown type");
-  }
-
-  /*switch (ether_type) {
   case ET_IPV4:
-    // TODO: handle ipv4
-    ipv4_on_receive(interface, &frame, pdu, pdu_size);
+    _protocols.ipv4().on_receive(metadata, pdu, pdu_size);
     break;
 
-  case ET_IPV6:
-    // TODO: handle ipv6
-    break;
-
-  case ET_ARP:
-    arp_recv(interface, &frame, pdu, pdu_size);
-    break;
-
-  case ET_FLOW:
-    // TODO: handle ethernet flow
-    break;
-  }*/
+  default:
+    log_debug("dropping packet due to unsupported type");
+  }
 }
 
 int protocol::send(ether_type type, const address &destination, const char *data, size_t length)
