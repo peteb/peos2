@@ -7,7 +7,7 @@ bool tcp_recv_queue::insert(const tcp_recv_segment &segment, const char *data, s
   if (_segments.full())
     return false;
 
-  if (p2::numeric_limits<tcp_seqnbr>::max() - _read_cursor < _data_buffer.capacity()) {
+  if (p2::numeric_limits<net::tcp::sequence_number>::max() - _read_cursor < _data_buffer.capacity()) {
     // The window is wrapping around
     if (segment.seqnbr < _read_cursor &&
         segment.seqnbr >= _read_cursor + _data_buffer.capacity())
@@ -49,7 +49,7 @@ bool tcp_recv_queue::read_one_segment(tcp_recv_segment *segment,
   return true;
 }
 
-tcp_seqnbr tcp_recv_queue::readable_until() const
+net::tcp::sequence_number tcp_recv_queue::readable_until() const
 {
   if (_segments.size() == 0)
     return _read_cursor;
@@ -72,14 +72,14 @@ bool tcp_recv_queue::has_readable() const
   return seg.seqnbr == _read_cursor;
 }
 
-tcp_seqnbr tcp_recv_queue::read_cursor() const
+net::tcp::sequence_number tcp_recv_queue::read_cursor() const
 {
   return _read_cursor;
 }
 
 size_t tcp_recv_queue::find_front_segment() const
 {
-  tcp_seqnbr lowest_seq = p2::numeric_limits<tcp_seqnbr>::max();
+  net::tcp::sequence_number lowest_seq = p2::numeric_limits<net::tcp::sequence_number>::max();
   auto lowest_it = _segments.end();
 
   for (auto it = _segments.begin(); it != _segments.end(); ++it) {
@@ -93,7 +93,7 @@ size_t tcp_recv_queue::find_front_segment() const
   return lowest_it.index();
 }
 
-void tcp_recv_queue::reset(tcp_seqnbr seqnbr)
+void tcp_recv_queue::reset(net::tcp::sequence_number seqnbr)
 {
   _read_cursor = seqnbr;
   _data_buffer.clear();

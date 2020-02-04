@@ -5,10 +5,10 @@
 #include <stdint.h>
 
 #include "tcp/definitions.h"
+#include "tcp/connection_state.h"
 
 #include "tcp_recv_queue.h"
 #include "tcp_send_queue.h"
-#include "tcp_connection_state.h"
 
 namespace net::ipv4 {
   class protocol;

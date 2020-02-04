@@ -16,7 +16,6 @@ p2::string<16> ipaddr_str(net::ipv4::address octets)
 net::ipv4::address parse_ipaddr(const char *str)
 {
   // Supports only the simple format 123.255.1.0.128
-
   const char *pos = str;
   net::ipv4::address ipaddr = 0;
   int current_octet = 0;

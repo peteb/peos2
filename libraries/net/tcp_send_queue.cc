@@ -61,7 +61,7 @@ void tcp_send_queue::set_window(size_t wndsz)
   _wndsz = wndsz;
 }
 
-void tcp_send_queue::reset(tcp_seqnbr seqnbr)
+void tcp_send_queue::reset(net::tcp::sequence_number seqnbr)
 {
   _read_pos = 0;
   _ack_pos = _write_pos = seqnbr;
@@ -70,7 +70,7 @@ void tcp_send_queue::reset(tcp_seqnbr seqnbr)
   _wndsz = 0xFFFF;
 }
 
-void tcp_send_queue::ack(tcp_seqnbr new_ack_pos)
+void tcp_send_queue::ack(net::tcp::sequence_number new_ack_pos)
 {
   // TODO: 32 bit wrap-around
   while (new_ack_pos > _ack_pos) {

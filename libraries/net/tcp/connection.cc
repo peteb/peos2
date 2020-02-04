@@ -135,12 +135,12 @@ void connection::transmit(const tcp_send_segment &segment, const char *data, siz
   _tx_queue.write_back(segment_, data, length, send_length);
 }
 
-void connection::reset_tx(tcp_seqnbr outgoing_seqnbr)
+void connection::reset_tx(net::tcp::sequence_number outgoing_seqnbr)
 {
   _tx_queue.reset(outgoing_seqnbr);
 }
 
-void connection::reset_rx(tcp_seqnbr incoming_seqnbr)
+void connection::reset_rx(net::tcp::sequence_number incoming_seqnbr)
 {
   _rx_queue.reset(incoming_seqnbr);
 }

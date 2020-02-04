@@ -1,10 +1,7 @@
-#include "tcp/connection.h"
 #include "tcp/connection_state.h"
 #include "tcp/connection_table.h"
 #include "utils.h"
 #include "../utils.h"
-
-#include "ipv4.h"
 
 namespace net::tcp {
 
@@ -40,7 +37,7 @@ static const class : public connection_state {
 
     // Sequence this SYN, and thus send the ACK, in the new connection
     connection &client_conn = conntab[conn_idx];
-    tcp_seqnbr isn = 0xDEADBEEF;  // TODO: generate
+    net::tcp::sequence_number isn = 0xDEADBEEF;  // TODO: generate
     client_conn.reset_rx(metadata.tcp_header->seq_nbr);
     client_conn.reset_tx(isn);
 

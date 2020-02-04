@@ -3,7 +3,9 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}",
+                "${workspaceFolder}/libraries/",
+                "${workspaceFolder}/libraries/net/"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

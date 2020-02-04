@@ -3,14 +3,14 @@
 LIB_INCLUDE_DIR=..
 LIB_LIBRARY_DIR=..
 
-SOURCES=ethernet.cc utils.cc arp.cc ipv4.cc tcp.cc udp.cc \
-        tcp_connection.cc tcp_connection_table.cc tcp_recv_queue.cc \
-        tcp_connection_state.cc tcp_send_queue.cc tcp_proto.cc ipv4_protocol.cc \
+SOURCES=utils.cc \
+        tcp_recv_queue.cc \
+        tcp_send_queue.cc \
         ethernet/protocol.cc ethernet/utils.cc arp/protocol.cc ipv4/utils.cc \
         ipv4/protocol.cc tcp/protocol.cc tcp/connection_state.cc tcp/connection_table.cc \
         tcp/connection.cc tcp/utils.cc ethernet/definitions.cc tcp/definitions.cc
-SOURCES_unittest=tcp_connection_table.cc tcp_connection.cc tcp_recv_queue.cc \
-                 tcp_send_queue.cc tcp_proto.cc utils.cc ipv4_protocol.cc
+SOURCES_unittest=tcp/connection_table.cc tcp/connection.cc tcp_recv_queue.cc \
+                 tcp_send_queue.cc tcp/definitions.cc utils.cc ipv4_protocol.cc
 
 -include ../../Makefile.include
 

@@ -3,7 +3,6 @@
 #pragma once
 
 #include "tcp_recv_queue.h"
-#include "tcp_proto.h"
 
 namespace net::tcp {
   class connection;

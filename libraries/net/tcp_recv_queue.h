@@ -9,11 +9,11 @@
 #include <support/pool.h>
 #include <support/ring_buffer.h>
 
-#include "tcp_proto.h"
+#include "tcp/definitions.h"
 
 struct tcp_recv_segment {
   uint16_t flags;
-  tcp_seqnbr seqnbr;
+  net::tcp::sequence_number seqnbr;
   uint32_t length;
 };
 
@@ -24,17 +24,17 @@ public:
   bool read_one_segment(tcp_recv_segment *segment, char *buffer, size_t len);
 
   // readable_until - the largest continuous chunk starting at the read cursor
-  tcp_seqnbr readable_until() const;
+  net::tcp::sequence_number readable_until() const;
   bool has_readable() const;
-  tcp_seqnbr read_cursor() const;
-  void reset(tcp_seqnbr seqnbr);
+  net::tcp::sequence_number read_cursor() const;
+  void reset(net::tcp::sequence_number seqnbr);
 
 private:
   size_t find_front_segment() const;
 
   p2::pool<tcp_recv_segment, 200> _segments;
   p2::ring_buffer<0xFFFF> _data_buffer;
-  tcp_seqnbr _read_cursor = 0;
+  net::tcp::sequence_number _read_cursor = 0;
 };
 
 #endif // !NET_TCP_RECV_QUEUE_H

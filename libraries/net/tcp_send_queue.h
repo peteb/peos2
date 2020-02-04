@@ -5,12 +5,12 @@
 
 #include <support/ring_buffer.h>
 
-#include "tcp_proto.h"
+#include "tcp/definitions.h"
 
 // TODO: clean up these intermediary segment types
 struct tcp_send_segment {
   uint16_t flags = 0;
-  tcp_seqnbr seqnbr;
+  net::tcp::sequence_number seqnbr;
   uint32_t data_length, send_length;
 };
 
@@ -26,13 +26,13 @@ public:
 
   // Removes all segments up until @new_ack_pos so that they won't get
   // resent
-  void ack(tcp_seqnbr new_ack_pos);
+  void ack(net::tcp::sequence_number new_ack_pos);
 
-  void reset(tcp_seqnbr seqnbr);
-  tcp_seqnbr write_cursor() const { return _write_pos; }
+  void reset(net::tcp::sequence_number seqnbr);
+  net::tcp::sequence_number write_cursor() const { return _write_pos; }
 
 private:
-  tcp_seqnbr _ack_pos, _write_pos;
+  net::tcp::sequence_number _ack_pos, _write_pos;
   size_t _read_pos;
   size_t _wndsz = 0xFFFF;
 
