@@ -175,19 +175,19 @@ void connection::send(uint16_t flags, net::tcp::sequence_number seqnbr, const ch
         this_seqnbr,
         remotes_last_seqnbr);
 
-    hdr.checksum = net::tcp::checksum(_ipv4.local_address(),
+    hdr.checksum = net::tcp::checksum(_ipv4->local_address(),
                                       _remote.ipaddr,
                                       net::ipv4::proto::PROTO_TCP,
                                       (char *)&hdr,
                                       sizeof(hdr),
                                       nullptr,
                                       0);
-    _ipv4.send(net::ipv4::proto::PROTO_TCP, _remote.ipaddr, reinterpret_cast<const char *>(&hdr), sizeof(hdr));
+    _ipv4->send(net::ipv4::proto::PROTO_TCP, _remote.ipaddr, reinterpret_cast<const char *>(&hdr), sizeof(hdr));
   }
   else {
     log(tcp_connection, "send: sending segment with payload, length=%d", length);
 
-    hdr.checksum = net::tcp::checksum(_ipv4.local_address(),
+    hdr.checksum = net::tcp::checksum(_ipv4->local_address(),
                                       _remote.ipaddr,
                                       net::ipv4::proto::PROTO_TCP,
                                       (char *)&hdr,
@@ -200,7 +200,7 @@ void connection::send(uint16_t flags, net::tcp::sequence_number seqnbr, const ch
     assert(length + sizeof(hdr) < sizeof(buffer));
     memcpy(buffer, &hdr, sizeof(hdr));
     memcpy(buffer + sizeof(hdr), data, length);
-    _ipv4.send(net::ipv4::proto::PROTO_TCP, _remote.ipaddr, buffer, length + sizeof(hdr));
+    _ipv4->send(net::ipv4::proto::PROTO_TCP, _remote.ipaddr, buffer, length + sizeof(hdr));
   }
 
   _next_outgoing_seqnbr = this_seqnbr + length;

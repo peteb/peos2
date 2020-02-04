@@ -53,7 +53,7 @@ void protocol::on_receive(const net::ethernet::frame_metadata &metadata, const c
       hwaddr_str(hdr.sha).c_str(),
       hwaddr_str(*metadata.mac_src).c_str());
 
-    if (tpa == _protocols.ipv4().local_address()) {
+    if (tpa == _protocols.ipv4()->local_address()) {
       // To avoid spamming the sender and the network, we only respond with data that we own and
       // never entries that we've learned
       send(op::OP_REPLY, spa, hdr.sha, *metadata.mac_src);
@@ -87,7 +87,7 @@ int protocol::send(int op, net::ipv4::address tpa, const net::ethernet::address 
 
   // Sender address
   memcpy(hdr.sha, &_protocols.ethernet().hwaddr(), sizeof(hdr.sha));
-  hdr.spa = htonl(_protocols.ipv4().local_address());
+  hdr.spa = htonl(_protocols.ipv4()->local_address());
 
   // Target address
   memcpy(hdr.tha, tha, 6);

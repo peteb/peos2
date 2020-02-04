@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 
     configure_ethernet(fd, protocols.ethernet());
 
-    protocols.ipv4().configure(parse_ipaddr("10.0.2.15"),
+    protocols.ipv4()->configure(parse_ipaddr("10.0.2.15"),
       parse_ipaddr("255.255.255.255"),
       parse_ipaddr("10.0.2.2"));
 

@@ -82,7 +82,7 @@ TESTSUITE(tcp_recv_queue) {
 
     // given
     tcp_recv_queue q;
-    tcp_seqnbr seqnbr = 0;
+    net::tcp::sequence_number seqnbr = 0;
 
     for (int i = 0; i < 30000; ++i) {
       ASSERT_EQ(q.insert(tcp_recv_segment{0, seqnbr, 0}, bs, sizeof(bs)), true);

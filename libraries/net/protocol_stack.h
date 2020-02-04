@@ -22,7 +22,7 @@ public:
   net::device &device() {return *_device; }
   net::ethernet::protocol &ethernet() {return _ethernet; }
   net::arp::protocol &arp() {return _arp; }
-  net::ipv4::protocol &ipv4() {return _ipv4; }
+  net::ipv4::protocol *ipv4() {return &_ipv4; }
   net::tcp::protocol &tcp() {return _tcp; }
 
   void tick(uint32_t delta_ms)

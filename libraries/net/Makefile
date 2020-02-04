@@ -9,8 +9,7 @@ SOURCES=utils.cc \
         ethernet/protocol.cc ethernet/utils.cc arp/protocol.cc ipv4/utils.cc \
         ipv4/protocol.cc tcp/protocol.cc tcp/connection_state.cc tcp/connection_table.cc \
         tcp/connection.cc tcp/utils.cc ethernet/definitions.cc tcp/definitions.cc
-SOURCES_unittest=tcp/connection_table.cc tcp/connection.cc tcp_recv_queue.cc \
-                 tcp_send_queue.cc tcp/definitions.cc utils.cc ipv4_protocol.cc
+SOURCES_unittest=$(SOURCES)
 
 -include ../../Makefile.include
 

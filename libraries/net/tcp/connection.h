@@ -26,7 +26,7 @@ namespace net::tcp {
   // connection state.
   class connection {
   public:
-    connection(net::ipv4::protocol &ipv4,
+    connection(net::ipv4::protocol *ipv4,
                net::tcp::connection_table &table,
                const endpoint &remote,
                const endpoint &local,
@@ -95,7 +95,7 @@ namespace net::tcp {
               const char *data,
               size_t length);
 
-    net::ipv4::protocol &_ipv4;
+    net::ipv4::protocol *_ipv4;
     connection_table &_connection_table;
 
     endpoint _remote, _local;

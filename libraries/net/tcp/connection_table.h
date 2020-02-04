@@ -15,7 +15,7 @@ namespace net::ipv4 {
 namespace net::tcp {
   class connection_table {
   public:
-    connection_table(net::ipv4::protocol &ipv4);
+    connection_table(net::ipv4::protocol *ipv4);
 
     using handle = uint16_t;
 
@@ -36,7 +36,7 @@ namespace net::tcp {
     connection &operator [](handle idx);
 
   private:
-    net::ipv4::protocol &_ipv4;
+    net::ipv4::protocol *_ipv4;
     p2::pool<connection, 40, handle> _connections;
     p2::pool<handle, 10> _new_connections, _finished_connections;
   };

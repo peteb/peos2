@@ -1,10 +1,10 @@
 #include <support/unittest.h>
 #include "utils.h"
-#include "ipv4_protocol.h"
+#include "ipv4/utils.h"
 
 namespace {
-ipv4_header basic_header() {
-  ipv4_header header;
+net::ipv4::header basic_header() {
+  net::ipv4::header header;
   header.ihl = 5;
   header.version = 4;
   header.ecn_dscp = 0;
@@ -14,8 +14,8 @@ ipv4_header basic_header() {
   header.ttl = 65;
   header.protocol = 6;
   header.checksum = 0;
-  header.src_addr = htonl(parse_ipaddr("10.14.0.3"));
-  header.dest_addr = htonl(parse_ipaddr("83.248.217.4"));
+  header.src_addr = htonl(net::ipv4::parse_ipaddr("10.14.0.3"));
+  header.dest_addr = htonl(net::ipv4::parse_ipaddr("83.248.217.4"));
   return header;
 }
 }
@@ -25,15 +25,15 @@ TESTSUITE(ipv4_protocol) {
     // These samples have been collected using packet capture and verified
 
     {
-      ipv4_header hdr = basic_header();
-      ASSERT_EQ(ipv4_checksum(hdr), ntohs(0x42c2));
+      net::ipv4::header hdr = basic_header();
+      ASSERT_EQ(net::ipv4::checksum(hdr), ntohs(0x42c2));
     }
 
     {
-      ipv4_header hdr = basic_header();
+      net::ipv4::header hdr = basic_header();
       hdr.id = htons(5);
-      hdr.dest_addr = htonl(parse_ipaddr("217.214.149.216"));
-      ASSERT_EQ(ipv4_checksum(hdr), ntohs(0x000c));
+      hdr.dest_addr = htonl(net::ipv4::parse_ipaddr("217.214.149.216"));
+      ASSERT_EQ(net::ipv4::checksum(hdr), ntohs(0x000c));
     }
   }
 }

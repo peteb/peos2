@@ -6,7 +6,7 @@
 
 namespace net::tcp {
 
-connection_table::connection_table(net::ipv4::protocol &ipv4)
+connection_table::connection_table(net::ipv4::protocol *ipv4)
   : _ipv4(ipv4)
 {
 }
