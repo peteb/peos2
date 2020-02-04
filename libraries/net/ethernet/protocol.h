@@ -8,7 +8,6 @@ namespace net {
 }
 
 namespace net::ethernet {
-
   // Main ethernet state for a stack
   class protocol {
   public:

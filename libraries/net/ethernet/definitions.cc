@@ -19,5 +19,7 @@ namespace {
   }
 }
 
-const net::ethernet::address net::ethernet::address::wildcard = create_wildcard();
-const net::ethernet::address net::ethernet::address::broadcast = create_broadcast();
+namespace net::ethernet {
+  const address address::wildcard = create_wildcard();
+  const address address::broadcast = create_broadcast();
+}

@@ -6,7 +6,6 @@
 #include "ipv4/definitions.h"
 
 namespace net::arp {
-
   struct header {
     uint16_t htype;
     uint16_t ptype;
