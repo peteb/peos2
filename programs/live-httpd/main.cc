@@ -6,6 +6,7 @@
 #include <net/protocol_stack.h>
 #include <net/ethernet/utils.h>
 #include <net/utils.h>
+#include <net/ipv4/utils.h>
 
 #include <stdint.h>
 
@@ -77,9 +78,9 @@ int main(int argc, char *argv[])
 
     configure_ethernet(fd, protocols.ethernet());
 
-    protocols.ipv4()->configure(parse_ipaddr("10.0.2.15"),
-      parse_ipaddr("255.255.255.255"),
-      parse_ipaddr("10.0.2.2"));
+    protocols.ipv4()->configure(net::ipv4::parse_ipaddr("10.0.2.15"),
+      net::ipv4::parse_ipaddr("255.255.255.255"),
+      net::ipv4::parse_ipaddr("10.0.2.2"));
 
     protocols.tcp().set_callback(&server);
     protocols.tcp().listen({0, 8080});

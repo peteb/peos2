@@ -4,6 +4,7 @@
 #include "arp/protocol.h"
 #include "ipv4/protocol.h"
 #include "tcp/protocol.h"
+#include "udp/protocol.h"
 
 namespace net {
 
@@ -24,6 +25,7 @@ public:
   net::arp::protocol &arp() {return _arp; }
   net::ipv4::protocol *ipv4() {return &_ipv4; }
   net::tcp::protocol &tcp() {return _tcp; }
+  net::udp::protocol *udp() {return &_udp; }
 
   void tick(uint32_t delta_ms)
   {
@@ -36,6 +38,7 @@ private:
   net::arp::protocol _arp;
   net::ipv4::protocol _ipv4;
   net::tcp::protocol _tcp;
+  net::udp::protocol _udp;
 };
 
 
