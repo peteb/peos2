@@ -3,7 +3,6 @@
 #include <stdint.h>
 
 namespace net::ipv4 {
-
   using address = uint32_t;
 
   enum flags {
@@ -35,5 +34,4 @@ namespace net::ipv4 {
     net::ipv4::address src_addr;
     net::ipv4::address dest_addr;
   };
-
 }
