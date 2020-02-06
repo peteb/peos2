@@ -1,6 +1,8 @@
 #include <support/logging.h>
 
 #include "tcp/connection_table.h"
+#include "ipv4/utils.h"
+
 #include "utils.h"
 #include "../utils.h"
 
@@ -36,9 +38,9 @@ namespace net::tcp {
                                                               const connection_state *state)
   {
     log_info("creating connection remote=%s:%d local=%s:%d",
-        ipaddr_str(remote.ipaddr),
+        net::ipv4::ipaddr_str(remote.ipaddr),
         remote.port,
-        ipaddr_str(local.ipaddr),
+        net::ipv4::ipaddr_str(local.ipaddr),
         local.port);
 
     if (_connections.full()) {

@@ -6,7 +6,7 @@
 #include <support/function.h>
 #include <support/pool.h>
 
-// retryable - wraps a lambda in retry logic with support for
+// Wraps a lambda in retry logic with support for
 // registering listeners that will be called when a result exists
 template<typename _Result>
 class retryable {
