@@ -1,10 +1,10 @@
 #include <support/unittest.h>
-#include "tcp_send_queue.h"
+#include "tcp/send_queue.h"
 
-TESTSUITE(tcp_send_queue) {
+TESTSUITE(net::tcp::send_queue) {
   TESTCASE("empty queue is not readable") {
     // given
-    tcp_send_queue q;
+    net::tcp::send_queue q;
 
     // when/then
     ASSERT_EQ(q.has_readable(), false);
@@ -13,7 +13,7 @@ TESTSUITE(tcp_send_queue) {
   TESTCASE("write_back can write more than the send window") {
     // given
     char buf[1000];
-    tcp_send_queue q;
+    net::tcp::send_queue q;
     q.set_window(100);
 
     // when
@@ -24,7 +24,7 @@ TESTSUITE(tcp_send_queue) {
     // given
     char buf[1000];
 
-    tcp_send_queue q;
+    net::tcp::send_queue q;
     q.write_back({0, 0, 1000, 1000}, buf, 1000, 1000);
 
     // when
@@ -35,7 +35,7 @@ TESTSUITE(tcp_send_queue) {
     // given
     char buf[1000];
 
-    tcp_send_queue q;
+    net::tcp::send_queue q;
     q.write_back({0, 0, 1000, 1000}, buf, 1000, 1000);
 
     // when/then
@@ -45,12 +45,12 @@ TESTSUITE(tcp_send_queue) {
 
   TESTCASE("write_back can be read") {
     // given
-    tcp_send_queue q;
+    net::tcp::send_queue q;
     ASSERT_EQ(q.write_back({1, 0, 0, 0}, "AAA", 3, 3), true);
     ASSERT_EQ(q.write_back({2, 3, 0, 0}, "BBBBB", 5, 5), true);
 
     // when
-    tcp_send_segment seg;
+    net::tcp::tcp_send_segment seg;
     char buf[100];
     ASSERT_EQ(q.read_one_segment(&seg, buf, sizeof(buf)), 3u);
     ASSERT_EQ(memcmp(buf, "AAA", 3), 0);
@@ -61,8 +61,8 @@ TESTSUITE(tcp_send_queue) {
   }
 
   TESTCASE("ack scenario") {
-    tcp_send_queue q;
-    tcp_send_segment s;
+    net::tcp::send_queue q;
+    net::tcp::tcp_send_segment s;
     char buf[100];
 
     q.reset(0);

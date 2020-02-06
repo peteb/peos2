@@ -6,9 +6,8 @@
 
 #include "tcp/definitions.h"
 #include "tcp/connection_state.h"
-
-#include "tcp_recv_queue.h"
-#include "tcp_send_queue.h"
+#include "tcp/receive_queue.h"
+#include "tcp/send_queue.h"
 
 namespace net::ipv4 {
   class protocol;
@@ -108,8 +107,8 @@ namespace net::tcp {
 
     const connection_state *_state;
 
-    tcp_recv_queue _rx_queue;
-    tcp_send_queue _tx_queue;
+    net::tcp::receive_queue _rx_queue;
+    net::tcp::send_queue _tx_queue;
 
     sequence_number _next_outgoing_seqnbr = 0;
     net::tcp::callback *_callback = nullptr;

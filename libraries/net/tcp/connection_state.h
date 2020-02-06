@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "tcp_recv_queue.h"
+#include "tcp/receive_queue.h"
 
 namespace net::tcp {
   class connection;
