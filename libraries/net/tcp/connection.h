@@ -17,6 +17,7 @@ namespace net::ipv4 {
 namespace net::tcp {
   class connection_state;
   class connection_table;
+  class callback;
 }
 
 namespace net::tcp {
@@ -48,6 +49,7 @@ namespace net::tcp {
 
     void mark_for_destruction();
     void on_receive(const segment_metadata &metadata, const char *data, size_t length);
+    void on_full_receive(const char *data, size_t length);
 
     // Clear the transmit queue and set its sequence number
     void reset_tx(sequence_number outgoing_seqnbr);
@@ -76,6 +78,10 @@ namespace net::tcp {
       static char phantom[1] = {'!'};
       transmit(segment, phantom, 1, 0);
     }
+
+    void send(const char *data, size_t length);
+
+    void set_callback(net::tcp::callback *callback_);
 
     void transition(const connection_state *new_state);
 
@@ -106,6 +112,7 @@ namespace net::tcp {
     tcp_send_queue _tx_queue;
 
     sequence_number _next_outgoing_seqnbr = 0;
+    net::tcp::callback *_callback = nullptr;
   };
 
 

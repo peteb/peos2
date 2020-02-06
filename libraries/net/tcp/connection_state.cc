@@ -157,10 +157,7 @@ static const class : public connection_state {
       return;
     }
 
-    /*if (length > 0 && connection.listeners().on_receive) {
-      connection.listeners().on_receive(&connection, data, length);
-    }*/
-
+    connection.on_full_receive(data, length);
   }
 
   void active_close(connection &connection) const

@@ -13,6 +13,10 @@ namespace net::ipv4 {
 }
 
 namespace net::tcp {
+  class callback;
+}
+
+namespace net::tcp {
   class connection_table {
   public:
     connection_table(net::ipv4::protocol *ipv4);
@@ -35,10 +39,13 @@ namespace net::tcp {
     handle end() const;
     connection &operator [](handle idx);
 
+    void set_callback(net::tcp::callback *callback_) {_callback = callback_; }
+
   private:
     net::ipv4::protocol *_ipv4;
     p2::pool<connection, 40, handle> _connections;
     p2::pool<handle, 10> _new_connections, _finished_connections;
+    net::tcp::callback *_callback = nullptr;
   };
 
 }

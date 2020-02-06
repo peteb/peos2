@@ -37,6 +37,29 @@ private:
   int _fd;
 };
 
+class http_server : public net::tcp::callback {
+public:
+  void on_receive(net::tcp::connection &connection, const char *data, size_t length) final
+  {
+    char buffer[256];
+    memcpy(buffer, data, p2::min(length, sizeof(buffer)));
+    buffer[p2::min(length, sizeof(buffer) - 1)] = 0;
+    log_info("rx seq segment %d bytes: %s", length, buffer);
+
+    // Send some dummy data
+    const char *message = "HTTP/1.1 200 OK\r\n"
+      "Server: peos2\r\n"
+      "Content-Length: 17\r\n"
+      "Content-Type: text/plain\r\n"
+      "Connection: Closed\r\n"
+      "\r\n"
+      "Handled by peos2\n";
+
+    connection.send(message, strlen(message));
+    connection.close();
+  }
+};
+
 int main(int argc, char *argv[])
 {
   (void)argc;
@@ -45,6 +68,7 @@ int main(int argc, char *argv[])
   _init();
   puts("Welcome to the network stack!");
 
+  http_server server;
   int fd = verify(syscall2(open, "/dev/eth0", 0));
 
   {
@@ -57,6 +81,7 @@ int main(int argc, char *argv[])
       parse_ipaddr("255.255.255.255"),
       parse_ipaddr("10.0.2.2"));
 
+    protocols.tcp().set_callback(&server);
     protocols.tcp().listen({0, 8080});
 
     feed_data(fd, protocols);
@@ -125,28 +150,6 @@ void feed_data(int fd, net::protocol_stack &protocols)
     protocols.ethernet().on_receive(pdu, packet_size);
   }
 }
-
-/*void received_data(tcp_connection_handle connection, const char *data, size_t length)
-{
-  char buffer[256];
-  memcpy(buffer, data, p2::min(length, sizeof(buffer)));
-  buffer[p2::min(length, sizeof(buffer) - 1)] = 0;
-  log(net, "rx seq segment %d bytes: %s", length, buffer);
-
-  // Send some dummy data
-  const char *message = "HTTP/1.1 200 OK\r\n"
-    "Server: peos2\r\n"
-    "Content-Length: 17\r\n"
-    "Content-Type: text/plain\r\n"
-    "Connection: Closed\r\n"
-    "\r\n"
-    "Handled by peos2\n";
-
-  tcp_send(connection, message, strlen(message));
-  tcp_close(connection);
-}
-
-*/
 
 int fetch_hwaddr(int fd, net::ethernet::address *octets)
 {
