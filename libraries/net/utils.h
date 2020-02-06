@@ -9,18 +9,6 @@
 #include <support/format.h>
 #include <support/string.h>
 
-#if __STDC_HOSTED__ == 1
-#define log(module, fmt, ...)
-#else
-extern char debug_out_buffer[512];
-extern void _log_print(int level, const char *message);
-
-#define log(module, fmt, ...) {                                             \
-    p2::format<512>(debug_out_buffer, TOSTRING(module) ": " fmt             \
-                    __VA_OPT__(,) __VA_ARGS__).str();                       \
-    _log_print(6, debug_out_buffer);}
-#endif
-
 p2::string<32> hwaddr_str(const uint8_t *octets);
 int read(int fd, char *buf, size_t length);
 p2::string<16> ipaddr_str(uint32_t octets);

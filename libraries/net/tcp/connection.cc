@@ -1,4 +1,5 @@
 #include <support/assert.h>
+#include <support/logging.h>
 
 #include "tcp/connection_table.h"
 #include "tcp/connection.h"
@@ -91,7 +92,7 @@ namespace net::tcp {
 
       if (!_rx_queue.read_one_segment(&sequenced_segment, buffer, sizeof(buffer))) {
         // This is weird, has_readable returned true...!
-        log(tcp, "failed to read one segment");
+        log_warn("failed to read one segment");
         return;
       }
 
@@ -107,7 +108,7 @@ namespace net::tcp {
       // than what the window allows, which would lead to the ACK
       // getting queued
 
-      log(tcp_connection, "sending empty ack with seqnbr=% 12d", _next_outgoing_seqnbr);
+      log_debug("sending empty ack with seqnbr=% 12d", _next_outgoing_seqnbr);
       tcp_send_segment segment;
       segment.flags = 0;
       segment.seqnbr = _next_outgoing_seqnbr;
@@ -116,7 +117,7 @@ namespace net::tcp {
 
     // Send outgoing messages if we have any
     while (_tx_queue.has_readable()) {
-      log(tcp_connection, "sending outstanding tx");
+      log_debug("sending outstanding tx");
       tcp_send_segment seg;
       size_t bytes_read = _tx_queue.read_one_segment(&seg, buffer, sizeof(buffer));
       send(seg.flags, seg.seqnbr, buffer, bytes_read);
@@ -161,7 +162,7 @@ namespace net::tcp {
     sequence_number this_seqnbr = seqnbr;
     sequence_number remotes_last_seqnbr = _rx_queue.read_cursor();
 
-    log(tcp_connection, "send: sending segment with flags %04x:", flags);
+    log_debug("send: sending segment with flags %04x:", flags);
 
     header hdr;
     hdr.src_port = htons(_local.port);
@@ -176,7 +177,7 @@ namespace net::tcp {
     if ((((flags & SYN) || (flags & FIN)) && length == 1) || length == 0) {
       // Phantom byte (during handshake) or possibly an idle ack with
       // empty payload
-      log(tcp_connection, "send: sending empty or phantom message, seqnbr=% 12d, ack=% 12d",
+      log_debug("send: sending empty or phantom message, seqnbr=% 12d, ack=% 12d",
           this_seqnbr,
           remotes_last_seqnbr);
 
@@ -190,7 +191,7 @@ namespace net::tcp {
       _ipv4->send(net::ipv4::proto::PROTO_TCP, _remote.ipaddr, reinterpret_cast<const char *>(&hdr), sizeof(hdr));
     }
     else {
-      log(tcp_connection, "send: sending segment with payload, length=%d", length);
+      log_debug("send: sending segment with payload, length=%d", length);
 
       hdr.checksum = net::tcp::checksum(_ipv4->local_address(),
                                         _remote.ipaddr,
@@ -213,7 +214,7 @@ namespace net::tcp {
 
   void connection::transition(const connection_state *new_state)
   {
-    log(tcp, "transitioning from %s to %s", _state->name(), new_state->name());
+    log_debug("transitioning from %s to %s", _state->name(), new_state->name());
     _state = new_state;
   }
 

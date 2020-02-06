@@ -23,7 +23,7 @@ void udp_recv(int interface, eth_frame *frame, ipv4_info *datagram, const char *
   hdr.length = ntohs(hdr.length);
   hdr.checksum = ntohs(hdr.checksum);
 
-  log(udp, "udp src_port=%d,dest_port=%d,length=%d,checksum=%x", hdr.src_port, hdr.dest_port, hdr.length, hdr.checksum);
+  log_debug("udp src_port=%d,dest_port=%d,length=%d,checksum=%x", hdr.src_port, hdr.dest_port, hdr.length, hdr.checksum);
 
   const char *payload = data + sizeof(hdr);
   size_t payload_size = hdr.length - sizeof(hdr);

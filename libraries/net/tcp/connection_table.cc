@@ -42,7 +42,7 @@ namespace net::tcp {
         local.port);
 
     if (_connections.full()) {
-      log(tcp_connection_table, "connection table is full!");
+      log_error("connection table is full!");
       // TODO: don't crash when the table is full
     }
 
@@ -80,13 +80,11 @@ namespace net::tcp {
   {
     for (auto &connection_handle : _new_connections) {
       if (_connections.valid(connection_handle)) {
-        log(tcp, "stepping new connection %d", connection_handle);
-
         size_t new_connection_count = _new_connections.size();
         _connections[connection_handle].step();
 
         if (_new_connections.size() != new_connection_count) {
-          log(tcp_connection_table, "warning, recursively creating connections");
+          log_warn("recursively creating connections");
         }
       }
     }
@@ -98,11 +96,11 @@ namespace net::tcp {
   {
     for (auto &conn_handle : _finished_connections) {
       if (!_connections.valid(conn_handle)) {
-        log(tcp_connection_table, "double finish for handle %d", conn_handle);
+        log_warn("double finish for handle %d", conn_handle);
         break;
       }
 
-      log(tcp_connection_table, "removing connection");
+      log_debug("removing connection");
       _connections.erase(conn_handle);
     }
 

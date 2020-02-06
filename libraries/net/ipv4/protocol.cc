@@ -199,7 +199,7 @@ namespace net::ipv4 {
     // TODO: fetch MTU from ethernet, but hard code to jumbo frames?
 
     if (sizeof(hdr) + length > sizeof(buffer)) {
-      log(ipv4, "datagram too large for one packet, dropping");
+      log_info("datagram too large for one packet, dropping");
       return;
     }
 
