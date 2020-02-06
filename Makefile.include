@@ -10,7 +10,7 @@
 # Global build order etc are defined in the root Makefile.
 
 OBJDIR=.$(shell $(CC) -dumpmachine)
-TEST_SOURCES=$(wildcard unittests/test_*.cc)
+TEST_SOURCES=$(shell find unittests/ -type f -name 'test_*.cc')
 TEST_OBJECTS=$(addprefix $(OBJDIR)/,$(TEST_SOURCES:=.o))
 OBJECTS=$(addprefix $(OBJDIR)/,$(SOURCES:=.o))
 OBJECTS_unittest=$(addprefix $(OBJDIR)/,$(SOURCES_unittest:=.o))
