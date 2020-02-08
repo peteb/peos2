@@ -37,7 +37,7 @@ static p2::internal_page_allocator<sizeof(page_table_entry) * 1024 * 100, 0x1000
 
 static p2::page_allocator *user_space_allocator;
 
-static p2::pool<space_info, 128, mem_space> spaces;
+static p2::fixed_pool<space_info, 128, mem_space> spaces;
 static mem_space current_space = spaces.end_sentinel();
 static mem_space start_space;
 

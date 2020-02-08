@@ -1,23 +1,23 @@
 #include "support/unittest.h"
 #include "support/pool.h"
 
-TESTSUITE(p2::pool) {
+TESTSUITE(p2::fixed_pool) {
   TESTCASE("created pool has zero size") {
     struct testobj {int hello; };
-    p2::pool<testobj, 32> items;
+    p2::fixed_pool<testobj, 32> items;
 
     ASSERT_EQ(items.size(), 0u);
   }
 
   TESTCASE("items can be pushed up until max_capacity_of_type - 1") {
-    p2::pool<int, 255, uint8_t> items;
+    p2::fixed_pool<int, 255, uint8_t> items;
     for (int i = 0; i < 255; ++i) {
       items.emplace_anywhere(i);
     }
   }
 
   TESTCASE("items can be pushed until the end") {
-    p2::pool<int, 4> items;
+    p2::fixed_pool<int, 4> items;
 
     // when/then (expect no crash ...)
     items.emplace_anywhere(1);
@@ -27,7 +27,7 @@ TESTSUITE(p2::pool) {
   }
 
   TESTCASE("continuous indexes are allocated") {
-    p2::pool<int, 4> items;
+    p2::fixed_pool<int, 4> items;
 
     ASSERT_EQ(items.emplace_anywhere(1), 0);
     ASSERT_EQ(items.emplace_anywhere(2), 1);
@@ -37,7 +37,7 @@ TESTSUITE(p2::pool) {
 
   TESTCASE("add/remove scenario") {
     // given
-    p2::pool<int, 13> items;
+    p2::fixed_pool<int, 13> items;
 
     // when
     for (int count = 0; count < 1000; ++count) {
@@ -64,7 +64,7 @@ TESTSUITE(p2::pool) {
 
   TESTCASE("pushing further than the capacity causes panic") {
     // given
-    p2::pool<int, 3> items;
+    p2::fixed_pool<int, 3> items;
 
     // when/then
     items.emplace_anywhere(1);
@@ -80,7 +80,7 @@ TESTSUITE(p2::pool) {
     };
 
     // given
-    p2::pool<item_t, 10> items;
+    p2::fixed_pool<item_t, 10> items;
 
     // then
     ASSERT_EQ(ctor_count, 0);
@@ -94,7 +94,7 @@ TESTSUITE(p2::pool) {
     };
 
     // given
-    p2::pool<item_t, 10> items;
+    p2::fixed_pool<item_t, 10> items;
 
     // when
     items.emplace_anywhere(item_t());
@@ -113,7 +113,7 @@ TESTSUITE(p2::pool) {
     };
 
     // given
-    p2::pool<item_t, 10> items;
+    p2::fixed_pool<item_t, 10> items;
 
     // then
     items.emplace_anywhere(123);
@@ -126,7 +126,7 @@ TESTSUITE(p2::pool) {
     };
 
     // given
-    p2::pool<item_t, 10> items;
+    p2::fixed_pool<item_t, 10> items;
     uint16_t idx = items.emplace_anywhere(333, 222);
     ASSERT_EQ(items[idx].one, 333);
     ASSERT_EQ(items[idx].two, 222);
@@ -142,7 +142,7 @@ TESTSUITE(p2::pool) {
     };
 
     // given
-    p2::pool<item_t, 10> items;
+    p2::fixed_pool<item_t, 10> items;
 
     // when
     uint16_t idx = items.emplace_anywhere();
@@ -153,7 +153,7 @@ TESTSUITE(p2::pool) {
   }
 
   TESTCASE("valid: all items are invalid at the beginning") {
-    p2::pool<int, 5> items;
+    p2::fixed_pool<int, 5> items;
 
     for (int i = 0; i < 5; ++i) {
       ASSERT_EQ(items.valid(i), false);
@@ -161,7 +161,7 @@ TESTSUITE(p2::pool) {
   }
 
   TESTCASE("valid: only a pushed item is valid") {
-    p2::pool<int, 5> items;
+    p2::fixed_pool<int, 5> items;
     uint16_t idx = items.emplace_anywhere(123);
 
     ASSERT_EQ(items.valid(idx), true);
@@ -169,7 +169,7 @@ TESTSUITE(p2::pool) {
   }
 
   TESTCASE("valid: erasing an item makes it invalid") {
-    p2::pool<int, 5> items;
+    p2::fixed_pool<int, 5> items;
     uint16_t idx = items.emplace_anywhere(123);
     items.erase(idx);
 
@@ -178,7 +178,7 @@ TESTSUITE(p2::pool) {
   }
 
   TESTCASE("valid: erasing earlier items make them invalid") {
-    p2::pool<int, 5> items;
+    p2::fixed_pool<int, 5> items;
     uint16_t idx = items.emplace_anywhere(123);
     uint16_t idx2 = items.emplace_anywhere(532);
     items.emplace_anywhere(5511);
@@ -191,7 +191,7 @@ TESTSUITE(p2::pool) {
   }
 
   TESTCASE("valid: erasing all elements make them all invalid") {
-    p2::pool<int, 5> items;
+    p2::fixed_pool<int, 5> items;
 
     for (int i = 0; i < 5; ++i)
       items.emplace_anywhere(i);
@@ -204,7 +204,7 @@ TESTSUITE(p2::pool) {
   }
 
   TESTCASE("valid: removing last element makes it invalid") {
-    p2::pool<int, 5> items;
+    p2::fixed_pool<int, 5> items;
     items.emplace_anywhere(0);
     items.emplace_anywhere(1);
     items.emplace_anywhere(2);
@@ -220,12 +220,12 @@ TESTSUITE(p2::pool) {
   }
 
   TESTCASE("emplace: writing over the end causes panic") {
-    p2::pool<int, 5> items;
+    p2::fixed_pool<int, 5> items;
     ASSERT_PANIC(items.emplace(5, 12345));
   }
 
   TESTCASE("emplace: writing to the first element increases watermark and size") {
-    p2::pool<int, 5> items;
+    p2::fixed_pool<int, 5> items;
     items.emplace(0, 4443);
     ASSERT_EQ(items.size(), 1u);
     ASSERT_EQ(items.watermark(), 1u);
@@ -233,7 +233,7 @@ TESTSUITE(p2::pool) {
   }
 
   TESTCASE("emplace: pushing after emplacing retains both items") {
-    p2::pool<int, 5> items;
+    p2::fixed_pool<int, 5> items;
     items.emplace(0, 214);
     items.emplace_anywhere(444);
     ASSERT_EQ(items.size(), 2u);
@@ -243,7 +243,7 @@ TESTSUITE(p2::pool) {
   }
 
   TESTCASE("emplace: emplacing, push and erase scenario") {
-    p2::pool<int, 5> items;
+    p2::fixed_pool<int, 5> items;
     items.emplace(0, 444);
     items.emplace_anywhere(555);
     items.erase(0);
@@ -256,7 +256,7 @@ TESTSUITE(p2::pool) {
   }
 
   TESTCASE("iterator can be used to get all values") {
-    p2::pool<int, 5> items;
+    p2::fixed_pool<int, 5> items;
     items.emplace_anywhere(3);
     items.emplace_anywhere(7);
     items.emplace_anywhere(11);

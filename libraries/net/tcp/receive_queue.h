@@ -32,7 +32,7 @@ namespace net::tcp {
   private:
     size_t find_front_segment() const;
 
-    p2::pool<tcp_recv_segment, 200> _segments;
+    p2::fixed_pool<tcp_recv_segment, 200> _segments;
     p2::ring_buffer<0xFFFF> _data_buffer;
     net::tcp::sequence_number _read_cursor = 0;
   };

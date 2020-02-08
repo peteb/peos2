@@ -10,15 +10,15 @@
 using namespace p2;
 
 static void setup_std_fds(const char *terminal_filename);
-static void list_terminals(pool<string<32>, 16> *terminals);
+static void list_terminals(pool<string<32>> *terminals);
 
 int main(int, char *[])
 {
-  pool<string<32>, 16> terminals;
+  fixed_pool<string<32>, 16> terminals;
   list_terminals(&terminals);
 
   // TODO: enumerate terminals and spawn one shell for each
-  pool<int, 16> child_pids;
+  fixed_pool<int, 16> child_pids;
 
   for (const auto &term_name : terminals) {
     const char *filename = term_name.c_str();
@@ -65,7 +65,7 @@ static void setup_std_fds(const char *terminal_filename)
   setup_term_at(terminal_filename, 2);
 }
 
-static void list_terminals(pool<string<32>, 16> *terminals)
+static void list_terminals(pool<string<32>> *terminals)
 {
   assert(terminals);
 

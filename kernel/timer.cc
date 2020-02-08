@@ -14,7 +14,7 @@ extern "C" void isr_timer(isr_registers *);
 static int syscall_currenttime(uint64_t *time_out);
 
 // Global state
-static p2::pool<timer_callback, 16> tick_callbacks;
+static p2::fixed_pool<timer_callback, 16> tick_callbacks;
 static int milliseconds_per_tick = 0;
 static uint64_t milliseconds_since_start = 0;
 

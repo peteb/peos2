@@ -17,7 +17,7 @@ TESTSUITE(p2::inplace_fun) {
   }
 
   TESTCASE("can be stored in other containers") {
-    p2::pool<p2::inplace_fun<16, int(int, int)>, 10> funs;
+    p2::fixed_pool<p2::inplace_fun<16, int(int, int)>, 10> funs;
     funs.emplace_anywhere([](int a, int b) {return a + b; });
     funs.emplace_anywhere([](int a, int b) {return a * b; });
 

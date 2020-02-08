@@ -67,7 +67,7 @@ TESTSUITE(p2::frag_buffer) {
 
   TESTCASE("can fill with overlapping writes") {
     // given
-    char data[256];
+    char data[1024];
     p2::frag_buffer<1024> fb;
 
     // when

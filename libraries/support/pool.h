@@ -25,24 +25,16 @@ namespace p2 {
   // Time complexity:
   // emplace:   O(1)
   // erase:     O(1)
-  template<typename T, size_t _MaxLen, typename _IndexT = uint16_t>
+  template<typename T, typename _IndexT = uint16_t>
   class pool {
+  protected:
     struct node {
-      template<typename... _Args>
-      node(_Args&&... args) : _value(p2::forward<_Args>(args)...) {}
-      node(const T &o) : _value(o) {}
-
-      T *value() {return _value.get(); }
-
-      const T *value() const {return _value.get(); }
-
-      inplace_object<T> _value;
-
       // prev_free is needed for `emplace`, which might un-free an
       // item in the middle of the free list. NB: _free_list_tail is
       // still needed for other things and isn't related to the
       // double-linked list.
       _IndexT next_free = END_SENTINEL, prev_free = END_SENTINEL;
+      inplace_object<T> value;
     };
 
   public:
@@ -125,9 +117,6 @@ namespace p2 {
       using iterator_base<const T, const_iterator, const pool>::iterator_base;
     };
 
-    static_assert(_MaxLen <= p2::numeric_limits<_IndexT>::max(), "max value of _IndexT is reserved as a sentinel");
-    static_assert(_MaxLen > 0);
-
     pool() {clear(); }
 
     void clear();
@@ -150,7 +139,7 @@ namespace p2 {
     const T *at(_IndexT idx) const;
 
     size_t size() const          {return _count; }
-    bool full() const            {return _count >= _MaxLen - 1; }
+    bool full() const            {return _data_begin + _count >= _data_end; }
     _IndexT watermark() const    {return _watermark; }
     _IndexT end_sentinel() const {return END_SENTINEL; }
 
@@ -158,6 +147,9 @@ namespace p2 {
     iterator end()               {return iterator(this, _watermark); }
     const_iterator begin() const {return const_iterator(this, 0); }
     const_iterator end() const   {return const_iterator(this, _watermark); }
+
+  protected:
+     node *_data_begin = nullptr, *_data_end = nullptr;
 
   private:
     // Updates the watermark to `idx`, similar to calling `emplace_anywhere`
@@ -170,16 +162,35 @@ namespace p2 {
       _free_list_tail = END_SENTINEL,
       _count = 0;
 
-    inplace_array<node, _MaxLen> _data;
-
     // The highest possible value, useful as a null index due to the
     // pool being 0-indexed
     static const _IndexT END_SENTINEL = p2::numeric_limits<_IndexT>::max();
   };
 
+  template<typename T, size_t Capacity, typename Index = uint16_t>
+  class fixed_pool : public pool<T, Index> {
+  private:
+    static_assert(Capacity <= p2::numeric_limits<Index>::max(), "max value of _IndexT is reserved as a sentinel");
+    static_assert(Capacity > 0);
 
-  template<typename T, size_t _MaxLen, typename _IndexT>
-  void pool<T, _MaxLen, _IndexT>::clear()
+    using pool<T, Index>::_data_begin;
+    using pool<T, Index>::_data_end;
+    using typename pool<T, Index>::node;
+
+  public:
+    fixed_pool()
+      : pool<T, Index>()
+    {
+      _data_begin = p2::launder(reinterpret_cast<node *>(_data));
+      _data_end = _data_begin + Capacity;
+    }
+
+  private:
+    char _data[sizeof(node) * Capacity] alignas(node);
+  };
+
+  template<typename T, typename _IndexT>
+  void pool<T, _IndexT>::clear()
   {
     _watermark = 0;
     _free_list_head = END_SENTINEL;
@@ -187,9 +198,9 @@ namespace p2 {
     _count = 0;
   }
 
-  template<typename T, size_t _MaxLen, typename _IndexT>
+  template<typename T, typename _IndexT>
   template<typename... _Args>
-  _IndexT pool<T, _MaxLen, _IndexT>::emplace_anywhere(_Args&&... args)
+  _IndexT pool<T, _IndexT>::emplace_anywhere(_Args&&... args)
   {
     _IndexT idx;
 
@@ -205,8 +216,48 @@ namespace p2 {
     return idx;
   }
 
-  template<typename T, size_t _MaxLen, typename _IndexT>
-  void pool<T, _MaxLen, _IndexT>::erase(_IndexT idx)
+  template<typename T, typename _IndexT>
+  template<typename... _Args>
+  void pool<T, _IndexT>::emplace(_IndexT idx, _Args&&... args)
+  {
+    increase_size(idx);
+    assert(_data_begin + idx < _data_end);
+
+    if (valid(idx)) {
+      // Something's in there already, just write over
+      _data_begin[idx].value.construct(forward<_Args>(args)...);
+      return;
+    }
+
+    // element[idx] is either on the free list or == watermark
+    if (idx == _watermark) {
+      ++_watermark;
+    }
+    else {
+      // Remove element from the free list
+      _IndexT next_free = _data_begin[idx].next_free;
+      _IndexT prev_free = _data_begin[idx].prev_free;
+
+      if (prev_free != END_SENTINEL)
+        _data_begin[prev_free].next_free = next_free;
+
+      if (next_free != END_SENTINEL)
+        _data_begin[next_free].prev_free = prev_free;
+
+      if (_free_list_head == idx)
+        _free_list_head = next_free;
+
+      if (_free_list_tail == idx)
+        _free_list_tail = prev_free;
+    }
+
+    new (_data_begin + idx) node{};
+    _data_begin[idx].value.construct(forward<_Args>(args)...);
+    ++_count;
+  }
+
+  template<typename T, typename _IndexT>
+  void pool<T, _IndexT>::erase(_IndexT idx)
   {
     assert(valid(idx));
 
@@ -222,53 +273,13 @@ namespace p2 {
     --_count;
   }
 
-  template<typename T, size_t _MaxLen, typename _IndexT>
-  template<typename... _Args>
-  void pool<T, _MaxLen, _IndexT>::emplace(_IndexT idx, _Args&&... args)
-  {
-    increase_size(idx);
-
-    if (valid(idx)) {
-      // Something's in there already, just write over
-      _data.emplace(idx, forward<_Args>(args)...);
-      return;
-    }
-
-    // element[idx] is either on the free list or == watermark
-    if (idx == _watermark) {
-      ++_watermark;
-    }
-    else {
-      // Remove element from the free list
-      _IndexT next_free = _data[idx].next_free;
-      _IndexT prev_free = _data[idx].prev_free;
-
-      if (prev_free != END_SENTINEL)
-        _data[prev_free].next_free = next_free;
-
-      if (next_free != END_SENTINEL)
-        _data[next_free].prev_free = prev_free;
-
-      if (_free_list_head == idx)
-        _free_list_head = next_free;
-
-      if (_free_list_tail == idx)
-        _free_list_tail = prev_free;
-
-      _data[idx].prev_free = _data[idx].next_free = END_SENTINEL;
-    }
-
-    _data.emplace(idx, forward<_Args>(args)...);
-    ++_count;
-  }
-
-  template<typename T, size_t _MaxLen, typename _IndexT>
-  bool pool<T, _MaxLen, _IndexT>::valid(_IndexT idx) const
+  template<typename T, typename _IndexT>
+  bool pool<T, _IndexT>::valid(_IndexT idx) const
   {
     if (idx >= _watermark)
       return false;
 
-    if (_data[idx].next_free != END_SENTINEL)
+    if (_data_begin[idx].next_free != END_SENTINEL)
       return false;
 
     if (idx == _free_list_head)
@@ -280,56 +291,58 @@ namespace p2 {
     return true;
   }
 
-  template<typename T, size_t _MaxLen, typename _IndexT>
-  T &pool<T, _MaxLen, _IndexT>::operator [](_IndexT idx)
+  template<typename T, typename _IndexT>
+  T &pool<T, _IndexT>::operator [](_IndexT idx)
   {
     assert(valid(idx));
-    return *_data[idx].value();
+    return *_data_begin[idx].value.get();
   }
 
-  template<typename T, size_t _MaxLen, typename _IndexT>
-  const T &pool<T, _MaxLen, _IndexT>::operator [](_IndexT idx) const
+  template<typename T, typename _IndexT>
+  const T &pool<T, _IndexT>::operator [](_IndexT idx) const
   {
     assert(valid(idx));
-    return *_data[idx].value();
+    return *_data_begin[idx].value.get();
   }
 
-  template<typename T, size_t _MaxLen, typename _IndexT>
-  T *pool<T, _MaxLen, _IndexT>::at(_IndexT idx)
+  template<typename T, typename _IndexT>
+  T *pool<T, _IndexT>::at(_IndexT idx)
   {
     if (!valid(idx))
       return nullptr;
 
-    return _data[idx].value();
+    return _data_begin[idx].value.get();
   }
 
-  template<typename T, size_t _MaxLen, typename _IndexT>
-  const T *pool<T, _MaxLen, _IndexT>::at(_IndexT idx) const
+  template<typename T, typename _IndexT>
+  const T *pool<T, _IndexT>::at(_IndexT idx) const
   {
     if (!valid(idx))
       return nullptr;
 
-    return _data[idx].value();
+    return _data_begin[idx].value.get();
   }
 
-  template<typename T, size_t _MaxLen, typename _IndexT>
-  void pool<T, _MaxLen, _IndexT>::increase_size(_IndexT idx)
+  template<typename T, typename _IndexT>
+  void pool<T, _IndexT>::increase_size(_IndexT idx)
   {
-    assert(idx < _MaxLen);
+    assert(_data_begin + idx < _data_end);
 
     while (_watermark < idx) {
+      new (_data_begin + _watermark) pool<T, _IndexT>::node{};
+
       prepend_to_free_list(_watermark);
       ++_watermark;
     }
   }
 
-  template<typename T, size_t _MaxLen, typename _IndexT>
-  void pool<T, _MaxLen, _IndexT>::prepend_to_free_list(_IndexT idx)
+  template<typename T, typename _IndexT>
+  void pool<T, _IndexT>::prepend_to_free_list(_IndexT idx)
   {
     if (_free_list_head != END_SENTINEL)
-      _data[_free_list_head].prev_free = idx;
+      _data_begin[_free_list_head].prev_free = idx;
 
-    _data[idx].next_free = _free_list_head;
+    _data_begin[idx].next_free = _free_list_head;
     _free_list_head = idx;
 
     if (_free_list_tail == END_SENTINEL)

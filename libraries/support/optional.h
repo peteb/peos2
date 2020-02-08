@@ -11,13 +11,14 @@ namespace p2 {
 template<typename T>
 class optional {
 public:
-  optional() : _value(p2::no_construct) {}
+  optional() {}
 
   template<typename... _Args>
   optional(_Args&&... args)
-    : _value(p2::forward<_Args>(args)...),
-      _is_assigned(true)
-  {}
+    : _is_assigned(true)
+  {
+    _value.construct(p2::forward<_Args>(args)...);
+  }
 
   T &operator *()
   {

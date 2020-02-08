@@ -59,24 +59,9 @@ extern no_construct_t no_construct;
 template<typename T>
 class inplace_object {
 public:
-  inplace_object(no_construct_t) {}
-
   template<typename... _Args>
-  inplace_object(_Args&&... args)
-  {
-    new (_data) T(p2::forward<_Args>(args)...);
-  }
-
-  template<typename _CtorT>
-  inplace_object(const _CtorT &value)
-  {
-    new (_data) T(value);
-  }
-
-  void destruct()
-  {
-    (**this).~T();
-  }
+  void construct(_Args&&... args) {new (get()) T(p2::forward<_Args>(args)...); }
+  void destruct() {get()->~T(); }
 
   T *get()             {return p2::launder(reinterpret_cast<T *>(_data)); }
   const T *get() const {return p2::launder(reinterpret_cast<const T *>(_data)); }

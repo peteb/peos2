@@ -17,7 +17,7 @@ static void focus_terminal(uint16_t term_id);
 static void create_terminal(const char *name, screen_buffer buffer);
 
 // Global state
-static p2::pool<terminal, 16> terminals;
+static p2::fixed_pool<terminal, 16> terminals;
 static uint16_t current_terminal = terminals.end_sentinel();
 
 // Definitions

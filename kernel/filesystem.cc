@@ -28,14 +28,14 @@ static int open_locally(vfs_device *device, const char *path, uint32_t flags);
 static int close_locally(int handle);
 
 // Global state
-static p2::pool<vfs_node, 256, vfs_node_handle> nodes;
-static p2::pool<vfs_dirent, 256, decltype(vfs_node::info_node)> directories;
-static p2::pool<vfs_device, 64, decltype(vfs_node::info_node)> drivers;
+static p2::fixed_pool<vfs_node, 256, vfs_node_handle> nodes;
+static p2::fixed_pool<vfs_dirent, 256, decltype(vfs_node::info_node)> directories;
+static p2::fixed_pool<vfs_device, 64, decltype(vfs_node::info_node)> drivers;
 static vfs_node_handle root_dir;
 
-static p2::pool<context, 64, vfs_context> contexts;
-static p2::pool<opened_file, 64, opened_file_handle> opened_files;
-static p2::pool<locally_opened_file, 64, opened_file_handle> locally_opened_files;
+static p2::fixed_pool<context, 64, vfs_context> contexts;
+static p2::fixed_pool<opened_file, 64, opened_file_handle> opened_files;
+static p2::fixed_pool<locally_opened_file, 64, opened_file_handle> locally_opened_files;
 
 static vfs_node_handle local_driver_handle;
 

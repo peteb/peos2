@@ -21,14 +21,14 @@ static int seek(int handle, int offset, int relative);
 static int tell(int handle, int *position);
 static int mkdir(const char *path);
 
-static p2::pool<mem_range_file, 64, file_handle> mem_range_files;
-static p2::pool<dirent, 16, file_handle> directories;
-static p2::pool<file_node, 64, node_handle> nodes;
+static p2::fixed_pool<mem_range_file, 64, file_handle> mem_range_files;
+static p2::fixed_pool<dirent, 16, file_handle> directories;
+static p2::fixed_pool<file_node, 64, node_handle> nodes;
 
 static node_handle root;
 
 // To remember file descriptor states (position etc)
-static p2::pool<opened_file, 32, file_handle> opened_files;
+static p2::fixed_pool<ramfs_opened_file, 32, file_handle> opened_files;
 
 void ramfs_init()
 {
@@ -99,7 +99,7 @@ static node_handle lookup(node_handle parent, const char *path)
 static int read(int handle, char *data, int length)
 {
   // TODO: verify that the file is in fact a mem range file
-  opened_file &fd = opened_files[handle];
+  ramfs_opened_file &fd = opened_files[handle];
   file_node &node = nodes[fd.node];
   mem_range_file &file = mem_range_files[node.file];
 
@@ -213,7 +213,7 @@ static int close(int handle)
 static int seek(int handle, int offset, int relative)
 {
   // TODO: verify file type
-  opened_file &fd = opened_files[handle];
+  ramfs_opened_file &fd = opened_files[handle];
   file_node &node = nodes[fd.node];
   mem_range_file &file = mem_range_files[node.file];
 

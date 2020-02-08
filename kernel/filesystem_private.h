@@ -56,7 +56,7 @@ struct locally_opened_file {
 };
 
 struct context {
-  p2::pool<opened_file_handle, 16, vfs_fd> descriptors;
+  p2::fixed_pool<opened_file_handle, 16, vfs_fd> descriptors;
 };
 
 #endif // !PEOS2_FILESYSTEM_PRIVATE_H

@@ -17,7 +17,7 @@ public:
   };
 
 private:
-  using storage_t = p2::pool<entry, _Capacity>;
+  using storage_t = p2::fixed_pool<entry, _Capacity>;
 
 public:
   using iterator = typename storage_t::iterator;

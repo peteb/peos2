@@ -51,9 +51,9 @@ struct file_map_info {
 struct space_info {
   space_info(page_dir_entry *page_dir) : page_dir(page_dir) {}
   page_dir_entry *page_dir;
-  p2::pool<area_info, 32> areas;
-  p2::pool<linear_map_info, 16> linear_maps;
-  p2::pool<file_map_info, 16> file_maps;
+  p2::fixed_pool<area_info, 32> areas;
+  p2::fixed_pool<linear_map_info, 16> linear_maps;
+  p2::fixed_pool<file_map_info, 16> file_maps;
 };
 
 #endif // !PEOS2_MEMORY_PRIVATE_H

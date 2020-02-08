@@ -111,7 +111,7 @@ private:
   };
 
   uint8_t _data[_MaxLen];
-  p2::pool<hole, _MaxLen / 40> _holes;
+  p2::fixed_pool<hole, _MaxLen / 40> _holes;
 };
 
 }

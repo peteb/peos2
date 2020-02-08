@@ -57,7 +57,7 @@ private:
 
   p2::string<256> _arena;
   char *_pos = &_arena[0];
-  p2::pool<const char *, 32> _args;
+  p2::fixed_pool<const char *, 32> _args;
 };
 
 #endif // !SHELL_COMMAND_LINE

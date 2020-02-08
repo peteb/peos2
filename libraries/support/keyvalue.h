@@ -113,7 +113,7 @@ namespace p2 {
     }
 
     p2::string<N> _arena;
-    p2::pool<attribute, 16> _attribs;
+    p2::fixed_pool<attribute, 16> _attribs;
     char *pos = &_arena[0];
   };
 }

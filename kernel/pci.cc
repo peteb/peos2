@@ -8,7 +8,7 @@
 #define CONFIG_ADDRESS 0xCF8
 #define CONFIG_DATA    0xCFC
 
-static p2::pool<pci_device, 32> devices;
+static p2::fixed_pool<pci_device, 32> devices;
 
 static inline uint32_t loc2addr(uint8_t bus, uint8_t slot, uint8_t func, uint8_t reg)
 {

@@ -57,7 +57,7 @@ public:
 
 private:
   op_fun _fun;
-  p2::pool<await_fun, 32> _waiters;
+  p2::fixed_pool<await_fun, 32> _waiters;
 
   int _last_delta = 0;
   int _retry_timer = 0;

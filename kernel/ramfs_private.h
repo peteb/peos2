@@ -9,8 +9,8 @@
 typedef uint16_t file_handle;
 typedef uint16_t node_handle;
 
-struct opened_file {
-  opened_file(node_handle node, uint32_t position) : node(node), position(position) {}
+struct ramfs_opened_file {
+  ramfs_opened_file(node_handle node, uint32_t position) : node(node), position(position) {}
 
   node_handle node;
   uint32_t position;

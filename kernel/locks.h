@@ -54,7 +54,7 @@ private:
     _waiting_procs.erase(idx);
   }
 
-  p2::pool<proc_handle, _MaxWaiters> _waiting_procs;
+  p2::fixed_pool<proc_handle, _MaxWaiters> _waiting_procs;
 };
 
 #endif // !PEOS2_LOCKS_H

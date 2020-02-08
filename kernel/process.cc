@@ -42,7 +42,7 @@ static void        idle_main();
 static void        on_timer_tick(int milliseconds);
 
 // Global state
-static p2::pool<process, 128, proc_handle> processes;
+static p2::fixed_pool<process, 128, proc_handle> processes;
 
 static proc_handle current_pid = processes.end_sentinel();
 static proc_handle running_head = processes.end_sentinel(), suspended_head = processes.end_sentinel();
