@@ -43,7 +43,7 @@ namespace net::ethernet {
       break;
 
     case ET_IPV4:
-      _protocols.ipv4()->on_receive(metadata, pdu, pdu_size);
+      _protocols.ipv4().on_receive(metadata, pdu, pdu_size);
       break;
 
     default:

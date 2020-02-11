@@ -17,6 +17,10 @@ namespace {
       protocols.tcp().on_receive(metadata, data, length);
       return true;
 
+    case net::ipv4::proto::PROTO_UDP:
+      protocols.udp().on_receive(metadata, data, length);
+      return true;
+
     default:
       return false;
     }
@@ -24,12 +28,12 @@ namespace {
 }
 
 namespace net::ipv4 {
-  protocol::protocol(protocol_stack &protocols)
+  protocol_impl::protocol_impl(protocol_stack &protocols)
     : _protocols(protocols)
   {
   }
 
-  void protocol::on_receive(const net::ethernet::frame_metadata &ethernet_metadata, const char *data, size_t length)
+  void protocol_impl::on_receive(const net::ethernet::frame_metadata &ethernet_metadata, const char *data, size_t length)
   {
     (void)ethernet_metadata;
     (void)data;
@@ -89,7 +93,7 @@ namespace net::ipv4 {
     }
   }
 
-  bool protocol::send(net::ipv4::proto protocol, net::ipv4::address destination, const char *data, size_t length)
+  bool protocol_impl::send(net::ipv4::proto protocol, net::ipv4::address destination, const char *data, size_t length)
   {
     net::ipv4::address next_hop_ipaddr{};
 
@@ -139,17 +143,17 @@ namespace net::ipv4 {
     return true;
   }
 
-  void protocol::send(net::ipv4::proto protocol, net::ipv4::address destination, net::ethernet::address next_hop, const char *data, size_t length)
+  void protocol_impl::send(net::ipv4::proto protocol, net::ipv4::address destination, net::ethernet::address next_hop, const char *data, size_t length)
   {
     send_single_datagram(protocol, _local, destination, next_hop, data, length);
   }
 
-  void protocol::tick(uint32_t delta_ms)
+  void protocol_impl::tick(uint32_t delta_ms)
   {
     (void)delta_ms;
   }
 
-  void protocol::configure(address local, address netmask, address default_gateway)
+  void protocol_impl::configure(address local, address netmask, address default_gateway)
   {
     _local = local;
     _netmask = netmask;
@@ -174,7 +178,7 @@ namespace net::ipv4 {
     });
   }
 
-  void protocol::send_single_datagram(net::ipv4::proto protocol,
+  void protocol_impl::send_single_datagram(net::ipv4::proto protocol,
                                       net::ipv4::address src_addr,
                                       net::ipv4::address dest_addr,
                                       net::ethernet::address next_hop,

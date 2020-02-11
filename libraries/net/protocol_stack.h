@@ -13,21 +13,33 @@ public:
   virtual int send(const char *data, size_t length) = 0;
 };
 
+class protocol_stack {
+public:
+  virtual net::device &device() = 0;
+  virtual net::ethernet::protocol &ethernet() = 0;
+  virtual net::arp::protocol &arp() = 0;
+  virtual net::ipv4::protocol &ipv4() = 0;
+  virtual net::tcp::protocol &tcp() = 0;
+  virtual net::udp::protocol &udp() = 0;
+
+  virtual void tick(uint32_t delta_ms) = 0;
+};
+
 // A protocol is part of a protocol stack and is connected to other protocols;
 // Ethernet <-> IP <-> TCP etc.
 // Typically, one protocol stack is instantiated per ethernet device.
-class protocol_stack {
+class protocol_stack_impl : public protocol_stack {
 public:
-  protocol_stack(net::device *device) : _device(device), _ethernet(*this), _arp(*this), _ipv4(*this), _tcp(*this) {}
+  protocol_stack_impl(net::device *device) : _device(device), _ethernet(*this), _arp(*this), _ipv4(*this), _tcp(*this) {}
 
-  net::device &device() {return *_device; }
-  net::ethernet::protocol &ethernet() {return _ethernet; }
-  net::arp::protocol &arp() {return _arp; }
-  net::ipv4::protocol *ipv4() {return &_ipv4; }
-  net::tcp::protocol &tcp() {return _tcp; }
-  net::udp::protocol *udp() {return &_udp; }
+  net::device &device() final {return *_device; }
+  net::ethernet::protocol &ethernet() final {return _ethernet; }
+  net::arp::protocol &arp() final {return _arp; }
+  net::ipv4::protocol &ipv4() final {return _ipv4; }
+  net::tcp::protocol &tcp() final {return _tcp; }
+  net::udp::protocol &udp() final {return _udp; }
 
-  void tick(uint32_t delta_ms)
+  void tick(uint32_t delta_ms) final
   {
     arp().tick(delta_ms);
   }
@@ -36,10 +48,9 @@ private:
   net::device *_device;
   net::ethernet::protocol _ethernet;
   net::arp::protocol _arp;
-  net::ipv4::protocol _ipv4;
+  net::ipv4::protocol_impl _ipv4;
   net::tcp::protocol _tcp;
-  net::udp::protocol _udp;
+  net::udp::protocol_impl _udp;
 };
-
 
 }

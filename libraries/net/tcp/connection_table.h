@@ -19,7 +19,7 @@ namespace net::tcp {
 namespace net::tcp {
   class connection_table {
   public:
-    connection_table(net::ipv4::protocol *ipv4);
+    connection_table(net::ipv4::protocol &ipv4);
 
     using handle = uint16_t;
 
@@ -42,7 +42,7 @@ namespace net::tcp {
     void set_callback(net::tcp::callback *callback_) {_callback = callback_; }
 
   private:
-    net::ipv4::protocol *_ipv4;
+    net::ipv4::protocol &_ipv4;
     p2::fixed_pool<connection, 40, handle> _connections;
     p2::fixed_pool<handle, 10> _new_connections, _finished_connections;
     net::tcp::callback *_callback = nullptr;

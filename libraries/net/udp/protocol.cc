@@ -8,7 +8,7 @@
 #include "utils.h"
 
 namespace net::udp {
-  void protocol::on_receive(const net::ipv4::datagram_metadata &datagram, const char *data, size_t length)
+  void protocol_impl::on_receive(const net::ipv4::datagram_metadata &datagram, const char *data, size_t length)
   {
     assert(length >= sizeof(header));
     header hdr;

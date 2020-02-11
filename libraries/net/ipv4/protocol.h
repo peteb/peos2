@@ -17,15 +17,26 @@ namespace net::ethernet {
 namespace net::ipv4 {
   class protocol {
   public:
-    protocol(protocol_stack &protocols);
+    virtual void configure(address local, address netmask, address default_gateway) = 0;
+    virtual void tick(uint32_t delta_ms) = 0;
+    virtual address local_address() const = 0;
 
-    void configure(address local, address netmask, address default_gateway);
-    void on_receive(const net::ethernet::frame_metadata &metadata, const char *data, size_t length);
-    bool send(net::ipv4::proto protocol, net::ipv4::address destination, const char *data, size_t length);
-    void send(net::ipv4::proto protocol, net::ipv4::address destination, net::ethernet::address next_hop, const char *data, size_t length);
-    void tick(uint32_t delta_ms);
+    virtual void on_receive(const net::ethernet::frame_metadata &metadata, const char *data, size_t length) = 0;
+    virtual bool send(net::ipv4::proto protocol, net::ipv4::address destination, const char *data, size_t length) = 0;
+    virtual void send(net::ipv4::proto protocol, net::ipv4::address destination, net::ethernet::address next_hop, const char *data, size_t length) = 0;
+  };
 
-    address local_address() const {return _local; }
+  class protocol_impl : public protocol {
+  public:
+    protocol_impl(protocol_stack &protocols);
+
+    void configure(address local, address netmask, address default_gateway) final;
+    void on_receive(const net::ethernet::frame_metadata &metadata, const char *data, size_t length) final;
+    bool send(net::ipv4::proto protocol, net::ipv4::address destination, const char *data, size_t length) final;
+    void send(net::ipv4::proto protocol, net::ipv4::address destination, net::ethernet::address next_hop, const char *data, size_t length) final;
+    void tick(uint32_t delta_ms) final;
+
+    address local_address() const final {return _local; }
 
   private:
     void send_single_datagram(net::ipv4::proto protocol,

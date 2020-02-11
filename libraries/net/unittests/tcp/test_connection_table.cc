@@ -1,10 +1,12 @@
 #include <support/unittest.h>
 #include "tcp/connection_table.h"
+#include "unittests/testing_utils.h"
 
 TESTSUITE(net::tcp::connection_table) {
   TESTCASE("find_best_match: finds a wildcard connection") {
     // given
-    net::tcp::connection_table tab{nullptr};
+    net::ipv4::protocol_mock ipv4_mock;
+    net::tcp::connection_table tab{ipv4_mock};
     auto conn = tab.create_connection({0, 0}, {0, 0}, nullptr);
 
     // when
@@ -16,7 +18,8 @@ TESTSUITE(net::tcp::connection_table) {
 
   TESTCASE("find_best_match: finds the most specific connection") {
     // given
-    net::tcp::connection_table tab{nullptr};
+    net::ipv4::protocol_mock ipv4_mock;
+    net::tcp::connection_table tab{ipv4_mock};
     tab.create_connection({0, 0}, {0, 0}, nullptr);
     tab.create_connection({0x44334455, 0}, {0, 0}, nullptr);
     tab.create_connection({0x44334455, 2412}, {0, 0}, nullptr);
@@ -33,7 +36,9 @@ TESTSUITE(net::tcp::connection_table) {
 
   TESTCASE("find_best_match: finds nothing when there is no match") {
     // given
-    net::tcp::connection_table tab{nullptr};
+    net::ipv4::protocol_mock ipv4_mock;
+    net::tcp::connection_table tab{ipv4_mock};
+
     tab.create_connection({0, 0}, {0, 8080}, nullptr);
 
     // when

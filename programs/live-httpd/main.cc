@@ -74,11 +74,11 @@ int main(int argc, char *argv[])
 
   {
     file_device device(fd);
-    static net::protocol_stack protocols(&device);
+    static net::protocol_stack_impl protocols(&device);
 
     configure_ethernet(fd, protocols.ethernet());
 
-    protocols.ipv4()->configure(net::ipv4::parse_ipaddr("10.0.2.15"),
+    protocols.ipv4().configure(net::ipv4::parse_ipaddr("10.0.2.15"),
       net::ipv4::parse_ipaddr("255.255.255.255"),
       net::ipv4::parse_ipaddr("10.0.2.2"));
 
