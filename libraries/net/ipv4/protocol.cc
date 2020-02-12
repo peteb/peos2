@@ -77,9 +77,16 @@ namespace net::ipv4 {
       return;
     }
 
-    // TODO: check checksum
+    hdr.checksum = 0;
+    uint16_t calculated_checksum = htons(net::ipv4::checksum(hdr)); // htons due to checksuming over network byte order rather than
+                                                                    // host byte order like in #send
 
-    const char *payload = data + 4 * hdr.ihl;
+    if (checksum != calculated_checksum) {
+      log_debug("dropping packet due to incorrect checksum, calculated=%04x, received=%04x", calculated_checksum, checksum);
+      return;
+    }
+
+    const char *payload = data + 4 * hdr.ihl; // TODO: check that this isn't OOB
     size_t payload_size = p2::min<unsigned>(total_len - 4 * hdr.ihl, length - sizeof(hdr)); // TODO: add options
 
     datagram_metadata ipv4_metadata;

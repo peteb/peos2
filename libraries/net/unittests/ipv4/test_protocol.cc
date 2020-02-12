@@ -31,7 +31,7 @@ namespace {
   }
 }
 
-TESTSUITE(ipv4::protocol) {
+TESTSUITE(net::ipv4::protocol) {
   char data[1024];
 
   TESTCASE("on_receive: non-fragmented packet is forwarded to UDP") {
@@ -41,6 +41,7 @@ TESTSUITE(ipv4::protocol) {
 
     const char payload[] = "hello";
     net::ipv4::header hdr = basic_header(sizeof(payload));
+    hdr.checksum = net::ipv4::checksum(hdr);
     memcpy(data, &hdr, sizeof(hdr));
     memcpy(data + sizeof(hdr), payload, sizeof(payload));
 
@@ -53,7 +54,7 @@ TESTSUITE(ipv4::protocol) {
     ASSERT_EQ(invocation.data.size(), 6u);
   }
 
-  TESTCASE("on_receive: a packet with 0 ttl is dropped") {
+  TESTCASE("on_receive: packet with 0 ttl is dropped") {
     // Given
     mock m;
     net::ipv4::protocol_impl ipv4(m.protocols);
@@ -61,6 +62,27 @@ TESTSUITE(ipv4::protocol) {
     const char payload[] = "hello";
     net::ipv4::header hdr = basic_header(sizeof(payload));
     hdr.ttl = 0;
+    hdr.checksum = net::ipv4::checksum(hdr);
+
+    memcpy(data, &hdr, sizeof(hdr));
+    memcpy(data + sizeof(hdr), payload, sizeof(payload));
+
+    // When
+    ipv4.on_receive({}, data, sizeof(payload) + sizeof(hdr));
+
+    // Then
+    ASSERT_EQ(m.udp_mock.on_receive_invocations.size(), 0u);
+  }
+
+  TESTCASE("on_receive: packet with incorrect checksum is dropped") {
+    // Given
+    mock m;
+    net::ipv4::protocol_impl ipv4(m.protocols);
+
+    const char payload[] = "hello";
+    net::ipv4::header hdr = basic_header(sizeof(payload));
+    --hdr.checksum;
+
     memcpy(data, &hdr, sizeof(hdr));
     memcpy(data + sizeof(hdr), payload, sizeof(payload));
 
