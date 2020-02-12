@@ -11,7 +11,7 @@
 #include "protocol_stack.h"
 
 namespace net::arp {
-  void protocol::on_receive(const net::ethernet::frame_metadata &metadata, const char *data, size_t length)
+  void protocol_impl::on_receive(const net::ethernet::frame_metadata &metadata, const char *data, size_t length)
   {
     header hdr;
     assert(length >= sizeof(hdr));
@@ -75,7 +75,7 @@ namespace net::arp {
     }
   }
 
-  int protocol::send(int op, net::ipv4::address tpa, const net::ethernet::address &tha, const net::ethernet::address &next_hop)
+  int protocol_impl::send(int op, net::ipv4::address tpa, const net::ethernet::address &tha, const net::ethernet::address &next_hop)
   {
     header hdr;
     hdr.htype = htons(1);
@@ -95,7 +95,7 @@ namespace net::arp {
     return _protocols.ethernet().send(net::ethernet::ET_ARP, next_hop, reinterpret_cast<const char *>(&hdr), sizeof(hdr));
   }
 
-  void protocol::tick(uint32_t delta_ms)
+  void protocol_impl::tick(uint32_t delta_ms)
   {
     for (auto probe_it = _active_probes.begin(); probe_it != _active_probes.end(); ++probe_it) {
       if (!probe_it->value.tick(delta_ms)) {
@@ -106,7 +106,7 @@ namespace net::arp {
     }
   }
 
-  void protocol::write_cache_entry(net::ipv4::address ipaddr, net::ethernet::address hwaddr)
+  void protocol_impl::write_cache_entry(net::ipv4::address ipaddr, net::ethernet::address hwaddr)
   {
     _mappings.insert(ipaddr, hwaddr);
 
@@ -118,12 +118,12 @@ namespace net::arp {
     }
   }
 
-  ipv4_lookup_result protocol::fetch_cached(net::ipv4::address ipaddr) const
+  ipv4_lookup_result protocol_impl::fetch_cached(net::ipv4::address ipaddr) const
   {
     return _mappings.fetch(ipaddr);
   }
 
-  void protocol::fetch_network(net::ipv4::address ipaddr, probe::await_fun callback)
+  void protocol_impl::fetch_network(net::ipv4::address ipaddr, probe::await_fun callback)
   {
     // Short-circuit in case we've already got the entry
     if (auto address = _mappings.fetch(ipaddr)) {

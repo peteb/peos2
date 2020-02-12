@@ -45,6 +45,7 @@ namespace net::ipv4 {
                               net::ethernet::address next_hop,
                               const char *data,
                               size_t length);
+    bool is_recipient(net::ipv4::address dest_addr) const;
 
   private:
     address _local, _netmask, _default_gateway;

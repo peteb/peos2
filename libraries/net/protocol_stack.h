@@ -47,7 +47,7 @@ public:
 private:
   net::device *_device;
   net::ethernet::protocol _ethernet;
-  net::arp::protocol _arp;
+  net::arp::protocol_impl _arp;
   net::ipv4::protocol_impl _ipv4;
   net::tcp::protocol _tcp;
   net::udp::protocol_impl _udp;

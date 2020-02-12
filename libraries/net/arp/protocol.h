@@ -35,14 +35,24 @@ namespace net::arp {
   // Main ARP state for a stack
   class protocol {
   public:
-    protocol(protocol_stack &protocols) : _protocols(protocols) {}
+    virtual void on_receive(const net::ethernet::frame_metadata &metadata, const char *data, size_t length) = 0;
+    virtual int send(int op, net::ipv4::address tpa, const net::ethernet::address &tha, const net::ethernet::address &next_hop) = 0;
+    virtual void tick(uint32_t delta_ms) = 0;
 
-    void on_receive(const net::ethernet::frame_metadata &metadata, const char *data, size_t length);
-    int  send(int op, net::ipv4::address tpa, const net::ethernet::address &tha, const net::ethernet::address &next_hop);
-    void tick(uint32_t delta_ms);
+    virtual ipv4_lookup_result fetch_cached(net::ipv4::address ipaddr) const = 0;
+    virtual void fetch_network(net::ipv4::address ipaddr, probe::await_fun callback) = 0;
+  };
 
-    ipv4_lookup_result fetch_cached(net::ipv4::address ipaddr) const;
-    void fetch_network(net::ipv4::address ipaddr, probe::await_fun callback);
+  class protocol_impl : public protocol {
+  public:
+    protocol_impl(protocol_stack &protocols) : _protocols(protocols) {}
+
+    void on_receive(const net::ethernet::frame_metadata &metadata, const char *data, size_t length) final;
+    int  send(int op, net::ipv4::address tpa, const net::ethernet::address &tha, const net::ethernet::address &next_hop) final;
+    void tick(uint32_t delta_ms) final;
+
+    ipv4_lookup_result fetch_cached(net::ipv4::address ipaddr) const final;
+    void fetch_network(net::ipv4::address ipaddr, probe::await_fun callback) final;
 
   private:
     void write_cache_entry(net::ipv4::address ipaddr, net::ethernet::address hwaddr);

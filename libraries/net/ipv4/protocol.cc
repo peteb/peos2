@@ -26,6 +26,16 @@ namespace {
       return false;
     }
   }
+
+  bool is_broadcast_address(net::ipv4::address addr, net::ipv4::address netmask)
+  {
+    return (addr & ~netmask) == (net::ipv4::address{-1u} & ~netmask);
+  }
+
+  bool is_same_subnet(net::ipv4::address addr1, net::ipv4::address addr2, net::ipv4::address netmask)
+  {
+    return (addr1 & netmask) == (addr2 & netmask);
+  }
 }
 
 namespace net::ipv4 {
@@ -83,6 +93,11 @@ namespace net::ipv4 {
 
     if (checksum != calculated_checksum) {
       log_debug("dropping packet due to incorrect checksum, calculated=%04x, received=%04x", calculated_checksum, checksum);
+      return;
+    }
+
+    if (!is_recipient(dest_addr)) {
+      log_debug("dropping packet due to not being the intended receiver, dest_addr=%s", net::ipv4::ipaddr_str(dest_addr).c_str());
       return;
     }
 
@@ -222,5 +237,18 @@ namespace net::ipv4 {
     memcpy(buffer, &hdr, sizeof(hdr));
     memcpy(buffer + sizeof(hdr), data, length);
     _protocols.ethernet().send(net::ethernet::ether_type::ET_IPV4, next_hop, buffer, sizeof(hdr) + length);
+  }
+
+  // Checks whether @dest_addr is an address that local host should respond to
+  bool protocol_impl::is_recipient(net::ipv4::address dest_addr) const
+  {
+    if (dest_addr == _local)
+      return true;
+
+    if (is_same_subnet(dest_addr, _local, _netmask) &&
+        is_broadcast_address(dest_addr, _netmask))
+      return true;
+
+    return false;
   }
 }

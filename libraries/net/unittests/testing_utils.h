@@ -57,3 +57,15 @@ namespace net::udp {
     std::queue<on_receive_invocation> on_receive_invocations;
   };
 }
+
+namespace net::arp {
+  class protocol_mock : public protocol {
+  public:
+    void on_receive(const net::ethernet::frame_metadata &, const char *, size_t) final {}
+    int send(int, net::ipv4::address, const net::ethernet::address &, const net::ethernet::address &) final {return 0; }
+    void tick(uint32_t) final {}
+
+    ipv4_lookup_result fetch_cached(net::ipv4::address) const final {return nullptr; }
+    void fetch_network(net::ipv4::address, probe::await_fun) final {}
+  };
+}

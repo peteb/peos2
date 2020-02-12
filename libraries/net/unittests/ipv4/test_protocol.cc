@@ -8,9 +8,15 @@
 namespace {
   class mock {
   public:
-    mock() {protocols._udp = &udp_mock; }
+    mock()
+    {
+      protocols._udp = &udp_mock;
+      protocols._arp = &arp_mock;
+    }
+
     net::protocol_stack_mock protocols;
     net::udp::protocol_mock udp_mock;
+    net::arp::protocol_mock arp_mock;
   };
 
   net::ipv4::header basic_header(size_t payload_size)
@@ -38,6 +44,9 @@ TESTSUITE(net::ipv4::protocol) {
     // Given
     mock m;
     net::ipv4::protocol_impl ipv4(m.protocols);
+    ipv4.configure(net::ipv4::parse_ipaddr("1.1.0.5"),
+                  net::ipv4::parse_ipaddr("255.255.255.0"),
+                  net::ipv4::parse_ipaddr("1.1.0.1"));
 
     const char payload[] = "hello";
     net::ipv4::header hdr = basic_header(sizeof(payload));
@@ -58,6 +67,9 @@ TESTSUITE(net::ipv4::protocol) {
     // Given
     mock m;
     net::ipv4::protocol_impl ipv4(m.protocols);
+    ipv4.configure(net::ipv4::parse_ipaddr("1.1.0.5"),
+                  net::ipv4::parse_ipaddr("255.255.255.0"),
+                  net::ipv4::parse_ipaddr("1.1.0.1"));
 
     const char payload[] = "hello";
     net::ipv4::header hdr = basic_header(sizeof(payload));
@@ -78,11 +90,81 @@ TESTSUITE(net::ipv4::protocol) {
     // Given
     mock m;
     net::ipv4::protocol_impl ipv4(m.protocols);
+    ipv4.configure(net::ipv4::parse_ipaddr("1.1.0.5"),
+                  net::ipv4::parse_ipaddr("255.255.255.0"),
+                  net::ipv4::parse_ipaddr("1.1.0.1"));
 
     const char payload[] = "hello";
     net::ipv4::header hdr = basic_header(sizeof(payload));
     --hdr.checksum;
 
+    memcpy(data, &hdr, sizeof(hdr));
+    memcpy(data + sizeof(hdr), payload, sizeof(payload));
+
+    // When
+    ipv4.on_receive({}, data, sizeof(payload) + sizeof(hdr));
+
+    // Then
+    ASSERT_EQ(m.udp_mock.on_receive_invocations.size(), 0u);
+  }
+
+  TESTCASE("on_receive: packet with different dest ip address is dropped") {
+    // Given
+    mock m;
+    net::ipv4::protocol_impl ipv4(m.protocols);
+    ipv4.configure(net::ipv4::parse_ipaddr("1.1.0.5"),
+                  net::ipv4::parse_ipaddr("255.255.255.0"),
+                  net::ipv4::parse_ipaddr("1.1.0.1"));
+
+    const char payload[] = "hello";
+    net::ipv4::header hdr = basic_header(sizeof(payload));
+    hdr.dest_addr = htonl(net::ipv4::parse_ipaddr("1.1.0.6"));
+    hdr.checksum = net::ipv4::checksum(hdr);
+    memcpy(data, &hdr, sizeof(hdr));
+    memcpy(data + sizeof(hdr), payload, sizeof(payload));
+
+    // When
+    ipv4.on_receive({}, data, sizeof(payload) + sizeof(hdr));
+
+    // Then
+    ASSERT_EQ(m.udp_mock.on_receive_invocations.size(), 0u);
+  }
+
+  TESTCASE("on_receive: packet with broadcast dest ip address on same subnet is received") {
+    // Given
+    mock m;
+    net::ipv4::protocol_impl ipv4(m.protocols);
+    ipv4.configure(net::ipv4::parse_ipaddr("1.1.0.5"),
+                  net::ipv4::parse_ipaddr("255.255.255.0"),
+                  net::ipv4::parse_ipaddr("1.1.0.1"));
+
+    const char payload[] = "hello";
+    net::ipv4::header hdr = basic_header(sizeof(payload));
+    hdr.dest_addr = htonl(net::ipv4::parse_ipaddr("1.1.0.255"));
+    hdr.checksum = net::ipv4::checksum(hdr);
+    memcpy(data, &hdr, sizeof(hdr));
+    memcpy(data + sizeof(hdr), payload, sizeof(payload));
+
+    // When
+    ipv4.on_receive({}, data, sizeof(payload) + sizeof(hdr));
+
+    // Then
+    ASSERT_EQ(m.udp_mock.on_receive_invocations.size(), 1u);
+  }
+
+
+  TESTCASE("on_receive: packet with broadcast dest ip address on different subnet is dropped") {
+    // Given
+    mock m;
+    net::ipv4::protocol_impl ipv4(m.protocols);
+    ipv4.configure(net::ipv4::parse_ipaddr("1.1.0.5"),
+                  net::ipv4::parse_ipaddr("255.255.255.0"),
+                  net::ipv4::parse_ipaddr("1.1.0.1"));
+
+    const char payload[] = "hello";
+    net::ipv4::header hdr = basic_header(sizeof(payload));
+    hdr.dest_addr = htonl(net::ipv4::parse_ipaddr("1.1.1.255"));
+    hdr.checksum = net::ipv4::checksum(hdr);
     memcpy(data, &hdr, sizeof(hdr));
     memcpy(data + sizeof(hdr), payload, sizeof(payload));
 
