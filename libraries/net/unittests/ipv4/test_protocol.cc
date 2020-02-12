@@ -32,24 +32,42 @@ namespace {
 }
 
 TESTSUITE(ipv4::protocol) {
+  char data[1024];
+
   TESTCASE("on_receive: non-fragmented packet is forwarded to UDP") {
     // Given
     mock m;
     net::ipv4::protocol_impl ipv4(m.protocols);
 
-    char data[1024];
     const char payload[] = "hello";
     net::ipv4::header hdr = basic_header(sizeof(payload));
     memcpy(data, &hdr, sizeof(hdr));
     memcpy(data + sizeof(hdr), payload, sizeof(payload));
 
     // When
-    net::ethernet::frame_metadata metadata{};
-    ipv4.on_receive(metadata, data, sizeof(payload) + sizeof(hdr));
+    ipv4.on_receive({}, data, sizeof(payload) + sizeof(hdr));
 
     // Then
     ASSERT_EQ(m.udp_mock.on_receive_invocations.size(), 1u);
     auto invocation = m.udp_mock.on_receive_invocations.front();
     ASSERT_EQ(invocation.data.size(), 6u);
+  }
+
+  TESTCASE("on_receive: a packet with 0 ttl is dropped") {
+    // Given
+    mock m;
+    net::ipv4::protocol_impl ipv4(m.protocols);
+
+    const char payload[] = "hello";
+    net::ipv4::header hdr = basic_header(sizeof(payload));
+    hdr.ttl = 0;
+    memcpy(data, &hdr, sizeof(hdr));
+    memcpy(data + sizeof(hdr), payload, sizeof(payload));
+
+    // When
+    ipv4.on_receive({}, data, sizeof(payload) + sizeof(hdr));
+
+    // Then
+    ASSERT_EQ(m.udp_mock.on_receive_invocations.size(), 0u);
   }
 }

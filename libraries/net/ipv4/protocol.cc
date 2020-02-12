@@ -1,4 +1,5 @@
 #include <support/logging.h>
+#include <support/utils.h>
 
 #include "ipv4/protocol.h"
 #include "ipv4/utils.h"
@@ -71,11 +72,15 @@ namespace net::ipv4 {
       return;
     }
 
-    // TODO: check ttl
+    if (hdr.ttl == 0) {
+      log_debug("dropping packet due to ttl = 0");
+      return;
+    }
+
     // TODO: check checksum
 
     const char *payload = data + 4 * hdr.ihl;
-    size_t payload_size = total_len - 4 * hdr.ihl;
+    size_t payload_size = p2::min<unsigned>(total_len - 4 * hdr.ihl, length - sizeof(hdr)); // TODO: add options
 
     datagram_metadata ipv4_metadata;
     ipv4_metadata.src_addr = src_addr;
