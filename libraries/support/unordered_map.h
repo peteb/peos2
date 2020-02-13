@@ -62,6 +62,7 @@ public:
   }
 
   size_t size() const          {return _storage.size(); }
+  bool full() const            {return _storage.full(); }
   iterator begin()             {return _storage.begin(); }
   iterator end()               {return _storage.end(); }
   const_iterator begin() const {return _storage.begin(); }

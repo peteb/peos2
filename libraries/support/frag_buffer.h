@@ -82,7 +82,7 @@ public:
       return 0;
     }
 
-    // Find the single hole (which is the first one). TODO: make this O(1)
+    // Find the single hole (which is the first one)
     for (auto &hole : _holes) {
       return hole.start;
     }

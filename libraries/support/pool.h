@@ -53,12 +53,19 @@ namespace p2 {
         return &(*_container)[_idx];
       }
 
-      _IterT operator ++()
+      _IterT operator ++(int)
       {
         _IterT copy(*static_cast<_IterT *>(this));
         ++_idx;
         jump_to_valid();
         return copy;
+      }
+
+      _IterT &operator ++()
+      {
+        ++_idx;
+        jump_to_valid();
+        return *static_cast<_IterT *>(this);
       }
 
       bool operator ==(const _IterT &other) const

@@ -6,8 +6,9 @@ namespace net::ipv4 {
   using address = uint32_t;
 
   enum flags {
-    FLAGS_DF = 0x01,
-    FLAGS_MF = 0x02
+    FLAGS_NONE = 0x00,
+    FLAGS_DF   = 0x01,
+    FLAGS_MF   = 0x02
   };
 
   enum proto : uint8_t {

@@ -2,8 +2,10 @@
 
 #include <stddef.h>
 #include <support/flip_buffer.h>
+#include <support/unordered_map.h>
 
 #include "ipv4/definitions.h"
+#include "ipv4/reassembly_buffer.h"
 #include "ethernet/definitions.h"
 
 namespace net {
@@ -49,8 +51,10 @@ namespace net::ipv4 {
 
   private:
     address _local, _netmask, _default_gateway;
+
     p2::flip_buffer<10240> _arp_wait_buffer;  // Holding area for packets awaiting ARP
     uint16_t _next_datagram_id = 0;
+    p2::unordered_map<reassembly_buffer_identifier, reassembly_buffer, 10> _reassembly_buffers;
 
     protocol_stack &_protocols;
   };

@@ -46,8 +46,6 @@ namespace net::ipv4 {
   void protocol_impl::on_receive(const net::ethernet::frame_metadata &ethernet_metadata, const char *data, size_t length)
   {
     (void)ethernet_metadata;
-    (void)data;
-    (void)length;
 
     header hdr;
     assert(length > sizeof(hdr));
@@ -120,7 +118,43 @@ namespace net::ipv4 {
       }
     }
     else {
-      log_info("dropping packet due to fragmentation");
+      if (_reassembly_buffers.full()) {
+        log_warn("dropping packet due to no free reassembly buffers");
+        return;
+      }
+
+      reassembly_buffer_identifier ident{dest_addr, src_addr, id, hdr.protocol};
+      reassembly_buffer *buffer = nullptr;
+      auto buffer_it = _reassembly_buffers.find(ident);
+
+      if (buffer_it != _reassembly_buffers.end()) {
+        buffer = &buffer_it->value;
+      }
+      else {
+        _reassembly_buffers.insert(ident, {});
+        buffer_it = _reassembly_buffers.find(ident);  // TODO: maybe insert should return the iterator instead
+        assert(buffer_it != _reassembly_buffers.end());
+        buffer = &buffer_it->value;
+      }
+
+      assert(buffer);
+
+      if (!(flags & flags::FLAGS_MF)) {
+        // This is the last fragment
+        buffer->received_last = true;
+      }
+
+      buffer->data.insert(frag_offset, payload, payload_size);
+
+      if (buffer->received_last && buffer->data.continuous_size() > 0) {
+        // We've got a complete datagram
+        forward_datagram(_protocols,
+                         ipv4_metadata,
+                         proto{hdr.protocol},
+                         (const char *)buffer->data.data(),
+                         buffer->data.continuous_size());
+        _reassembly_buffers.erase(buffer_it);
+      }
     }
   }
 
@@ -181,7 +215,19 @@ namespace net::ipv4 {
 
   void protocol_impl::tick(uint32_t delta_ms)
   {
-    (void)delta_ms;
+    for (auto iter = _reassembly_buffers.begin(); iter != _reassembly_buffers.end(); ) {
+      if (iter->value.ttl <= 0) {
+        ++iter;
+        continue;
+      }
+
+      iter->value.ttl -= delta_ms;
+
+      if (iter->value.ttl <= 0) {
+        log_info("reassembly buffer for datagram is dropped due to timeout");
+        _reassembly_buffers.erase(iter++);
+      }
+    }
   }
 
   void protocol_impl::configure(address local, address netmask, address default_gateway)
