@@ -71,7 +71,7 @@ namespace net::ipv4 {
       return;
     }
 
-    if (hdr.ihl > 8) {
+    if (hdr.ihl > 9) {
       log_debug("dropping packet due to header too large");
       return;
     }

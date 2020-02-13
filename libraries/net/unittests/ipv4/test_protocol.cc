@@ -195,4 +195,30 @@ TESTSUITE(net::ipv4::protocol) {
     // Then
     ASSERT_EQ(m.udp_mock.on_receive_invocations.size(), 0u);
   }
+
+  TESTCASE("on_receive: options in a packet are not included in forwarded payload") {
+    // Given
+    mock m;
+    const int option_dwords = 4;
+    net::ipv4::protocol_impl ipv4(m.protocols);
+    ipv4.configure(net::ipv4::parse_ipaddr("1.1.0.5"),
+                  net::ipv4::parse_ipaddr("255.255.255.0"),
+                  net::ipv4::parse_ipaddr("1.1.0.1"));
+
+    const char payload[] = "hello";
+    net::ipv4::header hdr = basic_header(sizeof(payload) + option_dwords * 4);
+    hdr.ihl = 5 + option_dwords;
+    hdr.checksum = net::ipv4::checksum(hdr);
+    memcpy(data, &hdr, sizeof(hdr));
+    memcpy(data + option_dwords * 4 + sizeof(hdr), payload, sizeof(payload));
+
+    // When
+    ipv4.on_receive({}, data, sizeof(payload) + option_dwords * 4 + sizeof(hdr));
+
+    // Then
+    ASSERT_EQ(m.udp_mock.on_receive_invocations.size(), 1u);
+    auto invocation = m.udp_mock.on_receive_invocations.front();
+    ASSERT_EQ(invocation.data.size(), 6u);
+    ASSERT_EQ(memcmp(invocation.data.data(), payload, sizeof(payload)), 0);
+  }
 }
