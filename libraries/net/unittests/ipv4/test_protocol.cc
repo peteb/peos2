@@ -152,7 +152,6 @@ TESTSUITE(net::ipv4::protocol) {
     ASSERT_EQ(m.udp_mock.on_receive_invocations.size(), 1u);
   }
 
-
   TESTCASE("on_receive: packet with broadcast dest ip address on different subnet is dropped") {
     // Given
     mock m;
@@ -164,6 +163,28 @@ TESTSUITE(net::ipv4::protocol) {
     const char payload[] = "hello";
     net::ipv4::header hdr = basic_header(sizeof(payload));
     hdr.dest_addr = htonl(net::ipv4::parse_ipaddr("1.1.1.255"));
+    hdr.checksum = net::ipv4::checksum(hdr);
+    memcpy(data, &hdr, sizeof(hdr));
+    memcpy(data + sizeof(hdr), payload, sizeof(payload));
+
+    // When
+    ipv4.on_receive({}, data, sizeof(payload) + sizeof(hdr));
+
+    // Then
+    ASSERT_EQ(m.udp_mock.on_receive_invocations.size(), 0u);
+  }
+
+  TESTCASE("on_receive: packet with an oversized total_length is dropped") {
+    // Given
+    mock m;
+    net::ipv4::protocol_impl ipv4(m.protocols);
+    ipv4.configure(net::ipv4::parse_ipaddr("1.1.0.5"),
+                  net::ipv4::parse_ipaddr("255.255.255.0"),
+                  net::ipv4::parse_ipaddr("1.1.0.1"));
+
+    const char payload[] = "hello";
+    net::ipv4::header hdr = basic_header(sizeof(payload));
+    hdr.total_len = 0xFFFF;
     hdr.checksum = net::ipv4::checksum(hdr);
     memcpy(data, &hdr, sizeof(hdr));
     memcpy(data + sizeof(hdr), payload, sizeof(payload));

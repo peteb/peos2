@@ -12,7 +12,6 @@
 namespace {
   bool forward_datagram(net::protocol_stack &protocols, const net::ipv4::datagram_metadata &metadata, net::ipv4::proto protocol, const char *data, size_t length)
   {
-    // TODO: verify checksum
     switch (protocol) {
     case net::ipv4::proto::PROTO_TCP:
       protocols.tcp().on_receive(metadata, data, length);
@@ -77,8 +76,13 @@ namespace net::ipv4 {
       return;
     }
 
-    if (hdr.total_len < hdr.ihl * 4) {
+    if (total_len < hdr.ihl * 4) {
       log_debug("dropping packet due to total datagram length is less than the header length");
+      return;
+    }
+
+    if (total_len > length) {
+      log_debug("dropping packet due to total length being larger than the packet");
       return;
     }
 
