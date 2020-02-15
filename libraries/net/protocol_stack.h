@@ -5,6 +5,7 @@
 #include "ipv4/protocol.h"
 #include "tcp/protocol.h"
 #include "udp/protocol.h"
+#include "icmp/protocol.h"
 
 namespace net {
 
@@ -21,6 +22,7 @@ public:
   virtual net::ipv4::protocol &ipv4() = 0;
   virtual net::tcp::protocol &tcp() = 0;
   virtual net::udp::protocol &udp() = 0;
+  virtual net::icmp::protocol &icmp() = 0;
 
   virtual void tick(uint32_t delta_ms) = 0;
 };
@@ -38,6 +40,7 @@ public:
   net::ipv4::protocol &ipv4() final {return _ipv4; }
   net::tcp::protocol &tcp() final {return _tcp; }
   net::udp::protocol &udp() final {return _udp; }
+  net::icmp::protocol &icmp() final {return _icmp; }
 
   void tick(uint32_t delta_ms) final
   {
@@ -51,6 +54,7 @@ private:
   net::ipv4::protocol_impl _ipv4;
   net::tcp::protocol _tcp;
   net::udp::protocol_impl _udp;
+  net::icmp::protocol_impl _icmp;
 };
 
 }

@@ -16,8 +16,9 @@ namespace net {
     net::ipv4::protocol &ipv4() final         {assert(_ipv4); return *_ipv4; }
     net::tcp::protocol &tcp() final           {assert(_tcp); return *_tcp; }
     net::udp::protocol &udp() final           {assert(_udp); return *_udp; }
+    net::icmp::protocol &icmp() final         {assert(_icmp); return *_icmp; }
 
-  void tick(uint32_t) final {}
+    void tick(uint32_t) final {}
 
     net::device *_device = nullptr;
     net::ethernet::protocol *_ethernet = nullptr;
@@ -25,6 +26,7 @@ namespace net {
     net::ipv4::protocol *_ipv4 = nullptr;
     net::tcp::protocol *_tcp = nullptr;
     net::udp::protocol *_udp = nullptr;
+    net::icmp::protocol *_icmp = nullptr;
   };
 }
 
@@ -57,6 +59,24 @@ namespace net::udp {
     std::queue<on_receive_invocation> on_receive_invocations;
   };
 }
+
+namespace net::icmp {
+  class protocol_mock : public protocol {
+  public:
+    struct on_receive_invocation {
+      net::ipv4::datagram_metadata datagram;
+      std::vector<char> data;
+    };
+
+    void on_receive(const net::ipv4::datagram_metadata &datagram, const char *data, size_t length)
+    {
+      on_receive_invocations.push({datagram, std::move(std::vector<char>(data, data + length))});
+    }
+
+    std::queue<on_receive_invocation> on_receive_invocations;
+  };
+}
+
 
 namespace net::arp {
   class protocol_mock : public protocol {

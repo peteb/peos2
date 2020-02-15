@@ -21,6 +21,10 @@ namespace {
       protocols.udp().on_receive(metadata, data, length);
       return true;
 
+    case net::ipv4::proto::PROTO_ICMP:
+      protocols.icmp().on_receive(metadata, data, length);
+      return true;
+
     default:
       return false;
     }

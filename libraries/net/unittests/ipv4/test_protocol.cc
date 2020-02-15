@@ -1,8 +1,12 @@
 #include <support/unittest.h>
+
 #include "ipv4/protocol.h"
 #include "ipv4/definitions.h"
 #include "ipv4/utils.h"
+
 #include "unittests/testing_utils.h"
+#include "unittests/ethernet_data.h"
+
 #include "utils.h"
 
 namespace {
@@ -12,11 +16,13 @@ namespace {
     {
       protocols._udp = &udp_mock;
       protocols._arp = &arp_mock;
+      protocols._icmp = &icmp_mock;
     }
 
     net::protocol_stack_mock protocols;
     net::udp::protocol_mock udp_mock;
     net::arp::protocol_mock arp_mock;
+    net::icmp::protocol_mock icmp_mock;
   };
 
   net::ipv4::header basic_header(size_t payload_size)
@@ -395,5 +401,22 @@ TESTSUITE(net::ipv4::protocol) {
     auto invocation = m.udp_mock.on_receive_invocations.front();
     ASSERT_EQ(invocation.data.size(), 24u);
     ASSERT_EQ(memcmp(invocation.data.data(), payload, 24), 0);
+  }
+
+  TESTCASE("on_receive: real world data, fragmented icmp ping") {
+    // Given
+    mock m;
+    net::ipv4::protocol_impl ipv4(m.protocols);
+    ipv4.configure(net::ipv4::parse_ipaddr("2.1.1.1"),
+                  net::ipv4::parse_ipaddr("255.255.255.0"),
+                  net::ipv4::parse_ipaddr("2.1.1.2"));
+
+    // When
+    constexpr size_t header_size = sizeof(net::ethernet::header);
+    ipv4.on_receive({}, net::ethernet_ipv4_icmp_ping_frag1 + header_size, sizeof(net::ethernet_ipv4_icmp_ping_frag1) - 1 - header_size);
+    ipv4.on_receive({}, net::ethernet_ipv4_icmp_ping_frag2 + header_size, sizeof(net::ethernet_ipv4_icmp_ping_frag2) - 1 - header_size);
+
+    // Then
+    ASSERT_EQ(m.icmp_mock.on_receive_invocations.size(), 1u);
   }
 }
