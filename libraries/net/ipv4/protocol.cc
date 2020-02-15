@@ -215,7 +215,7 @@ namespace net::ipv4 {
 
   void protocol_impl::tick(uint32_t delta_ms)
   {
-    for (auto iter = _reassembly_buffers.begin(); iter != _reassembly_buffers.end(); ) {
+    for (auto iter = _reassembly_buffers.begin(), end_iter = _reassembly_buffers.end(); iter != end_iter; ) {
       if (iter->value.ttl <= 0) {
         ++iter;
         continue;

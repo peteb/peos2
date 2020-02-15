@@ -7,7 +7,20 @@
     "string": "cpp",
     "unordered_map": "cpp",
     "deque": "cpp",
-    "vector": "cpp"
+    "vector": "cpp",
+    "*.tcc": "cpp",
+    "chrono": "cpp",
+    "cmath": "cpp",
+    "exception": "cpp",
+    "functional": "cpp",
+    "memory": "cpp",
+    "random": "cpp",
+    "istream": "cpp",
+    "numeric": "cpp",
+    "ostream": "cpp",
+    "sstream": "cpp",
+    "streambuf": "cpp",
+    "system_error": "cpp"
   },
   "files.exclude": {
     "**/.git": true,
