@@ -338,4 +338,62 @@ TESTSUITE(net::ipv4::protocol) {
     // Then
     ASSERT_EQ(m.udp_mock.on_receive_invocations.size(), 0u);
   }
+
+  TESTCASE("on_receive: flooding with incomplete datagrams is handled well") {
+    // Given
+    mock m;
+    net::ipv4::protocol_impl ipv4(m.protocols);
+    ipv4.configure(net::ipv4::parse_ipaddr("1.1.0.5"),
+                  net::ipv4::parse_ipaddr("255.255.255.0"),
+                  net::ipv4::parse_ipaddr("1.1.0.1"));
+
+    const char payload[] = "abcdefghijklmnopqrstuvwxyz";
+
+    // Send in a bunch of fragments from a bunch of different sources
+    for (int a = 0; a < 255; ++a) {
+      for (int b = 0; b < 255; ++b) {
+        {
+          net::ipv4::header hdr = basic_header(16);
+          hdr.frag_ofs = create_frag_ofs(8, net::ipv4::FLAGS_NONE);
+          hdr.src_addr = (hdr.src_addr & 0xFFFF0000) | a | (b << 8);
+          hdr.checksum = net::ipv4::checksum(hdr);
+          memcpy(data, &hdr, sizeof(hdr));
+          memcpy(data + sizeof(hdr), payload + 8, 16);
+          ipv4.on_receive({}, data, 16 + sizeof(hdr));
+        }
+      }
+    }
+
+    // Time out reassembly buffers
+    ipv4.tick(1'000'000);
+
+    // Verify that no fragments created a datagram
+    ASSERT_EQ(m.udp_mock.on_receive_invocations.size(), 0u);
+
+    // Send in first part of a new fragmented message
+    {
+      net::ipv4::header hdr = basic_header(8);
+      hdr.frag_ofs = create_frag_ofs(0, net::ipv4::FLAGS_MF);
+      hdr.checksum = net::ipv4::checksum(hdr);
+      memcpy(data, &hdr, sizeof(hdr));
+      memcpy(data + sizeof(hdr), payload, 8);
+      ipv4.on_receive({}, data, 8 + sizeof(hdr));
+    }
+
+    // Complete datagram with a second fragment
+    {
+      net::ipv4::header hdr = basic_header(16);
+      hdr.frag_ofs = create_frag_ofs(8, net::ipv4::FLAGS_NONE);
+      hdr.checksum = net::ipv4::checksum(hdr);
+      memcpy(data, &hdr, sizeof(hdr));
+      memcpy(data + sizeof(hdr), payload + 8, 16);
+      ipv4.on_receive({}, data, 16 + sizeof(hdr));
+    }
+
+    // Then
+    ASSERT_EQ(m.udp_mock.on_receive_invocations.size(), 1u);
+    auto invocation = m.udp_mock.on_receive_invocations.front();
+    ASSERT_EQ(invocation.data.size(), 24u);
+    ASSERT_EQ(memcmp(invocation.data.data(), payload, 24), 0);
+  }
 }
