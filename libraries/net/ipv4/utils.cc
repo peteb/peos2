@@ -39,11 +39,13 @@ namespace net::ipv4 {
     return ipaddr;
   }
 
-  uint16_t checksum(const net::ipv4::header &header)
+  uint16_t checksum(const net::ipv4::header &header, const char *options, size_t options_length)
   {
     assert(header.checksum == 0);
 
     auto sum = sum_words(reinterpret_cast<const char *>(&header), sizeof(header));
+    sum += sum_words(options, options_length);
+
     while (sum > 0xFFFF)
       sum = (sum >> 16) + (sum & 0xFFFF);
 

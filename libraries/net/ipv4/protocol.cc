@@ -47,10 +47,8 @@ namespace net::ipv4 {
   {
   }
 
-  void protocol_impl::on_receive(const net::ethernet::frame_metadata &ethernet_metadata, const char *data, size_t length)
+  void protocol_impl::on_receive(const net::ethernet::frame_metadata &, const char *data, size_t length)
   {
-    (void)ethernet_metadata;
-
     header hdr;
     assert(length > sizeof(hdr));
     memcpy(&hdr, data, sizeof(hdr));
@@ -61,6 +59,7 @@ namespace net::ipv4 {
     uint16_t checksum = ntohs(hdr.checksum);
     address src_addr = ntohl(hdr.src_addr);
     address dest_addr = ntohl(hdr.dest_addr);
+    size_t header_length = hdr.ihl * 4;
 
     uint8_t flags = frag_ofs >> 12;
     uint16_t frag_offset = (frag_ofs & 0x1FFF) * 8;
@@ -73,12 +72,12 @@ namespace net::ipv4 {
       return;
     }
 
-    if (hdr.ihl > 9) {
+    if (header_length > 60) {
       log_debug("dropping packet due to header too large");
       return;
     }
 
-    if (total_len < hdr.ihl * 4) {
+    if (total_len < header_length) {
       log_debug("dropping packet due to total datagram length is less than the header length");
       return;
     }
@@ -93,9 +92,18 @@ namespace net::ipv4 {
       return;
     }
 
+    const char *options = nullptr;
+    size_t options_length = 0;
+
+    if (header_length > sizeof(hdr)) {
+      options = data + sizeof(hdr);
+      options_length = header_length - sizeof(hdr);
+    }
+
     hdr.checksum = 0;
-    uint16_t calculated_checksum = htons(net::ipv4::checksum(hdr)); // htons due to checksuming over network byte order rather than
-                                                                    // host byte order like in #send
+    uint16_t calculated_checksum = htons(net::ipv4::checksum(hdr, options, options_length));
+    // htons due to checksuming over network byte order rather than
+    // host byte order like in #send
 
     if (checksum != calculated_checksum) {
       log_debug("dropping packet due to incorrect checksum, calculated=%04x, received=%04x", calculated_checksum, checksum);
@@ -278,7 +286,7 @@ namespace net::ipv4 {
     hdr.checksum = 0;  // Field needs to be 0 when calculating the checksum
     hdr.src_addr = htonl(src_addr);
     hdr.dest_addr = htonl(dest_addr);
-    hdr.checksum = net::ipv4::checksum(hdr);
+    hdr.checksum = net::ipv4::checksum(hdr, nullptr, 0);
 
     char buffer[1500];
     // TODO: fetch MTU from ethernet, but hard code to jumbo frames?

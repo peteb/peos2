@@ -219,9 +219,9 @@ TESTSUITE(net::ipv4::protocol) {
     const char payload[] = "hello";
     net::ipv4::header hdr = basic_header(sizeof(payload) + option_dwords * 4);
     hdr.ihl = 5 + option_dwords;
-    hdr.checksum = net::ipv4::checksum(hdr);
+    hdr.checksum = net::ipv4::checksum(hdr, data + sizeof(hdr), option_dwords * 4);
     memcpy(data, &hdr, sizeof(hdr));
-    memcpy(data + option_dwords * 4 + sizeof(hdr), payload, sizeof(payload));
+    memcpy(data  + sizeof(hdr) + option_dwords * 4, payload, sizeof(payload));
 
     // When
     ipv4.on_receive({}, data, sizeof(payload) + option_dwords * 4 + sizeof(hdr));
@@ -418,5 +418,24 @@ TESTSUITE(net::ipv4::protocol) {
 
     // Then
     ASSERT_EQ(m.icmp_mock.on_receive_invocations.size(), 1u);
+  }
+
+  TESTCASE("on_receive: real world data, option") {
+    // Given
+    mock m;
+    net::ipv4::protocol_impl ipv4(m.protocols);
+    ipv4.configure(net::ipv4::parse_ipaddr("127.0.0.1"),
+                  net::ipv4::parse_ipaddr("255.255.255.0"),
+                  net::ipv4::parse_ipaddr("2.1.1.2"));
+
+    // When
+    constexpr size_t header_size = sizeof(net::ethernet::header);
+    ipv4.on_receive({}, net::ethernet_ipv4_cipso + header_size, sizeof(net::ethernet_ipv4_cipso) - 1 - header_size);
+
+    // Then
+    ASSERT_EQ(m.icmp_mock.on_receive_invocations.size(), 1u);
+    auto invocation = m.icmp_mock.on_receive_invocations.front();
+    ASSERT_EQ(invocation.data.size(), 64u);
+    ASSERT_EQ(memcmp(invocation.data.data(), net::ethernet_ipv4_cipso + 74, 64), 0);
   }
 }
