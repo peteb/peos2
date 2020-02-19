@@ -19,8 +19,6 @@ static void configure_ethernet(int fd, net::ethernet::protocol &ethernet);
 
 class file_device : public net::device {
 public:
-  file_device(int fd) : _fd(fd) {}
-
   int send(const char *data, size_t length) final
   {
     assert(length < p2::numeric_limits<uint16_t>::max());
@@ -34,8 +32,13 @@ public:
     return syscall3(write, _fd, data, length);
   }
 
+  void set_fd(int fd)
+  {
+    _fd = fd;
+  }
+
 private:
-  int _fd;
+  int _fd = -1;
 };
 
 class http_server : public net::tcp::callback {
@@ -61,6 +64,12 @@ public:
   }
 };
 
+namespace {
+  file_device device;
+  net::protocol_stack_impl protocols(&device);
+  static_assert(sizeof(protocols) < 10'000'000);
+}
+
 int main(int argc, char *argv[])
 {
   (void)argc;
@@ -73,9 +82,7 @@ int main(int argc, char *argv[])
   int fd = verify(syscall2(open, "/dev/eth0", 0));
 
   {
-    file_device device(fd);
-    static net::protocol_stack_impl protocols(&device);
-
+    device.set_fd(fd);
     configure_ethernet(fd, protocols.ethernet());
 
     protocols.ipv4().configure(net::ipv4::parse_ipaddr("10.0.2.15"),
