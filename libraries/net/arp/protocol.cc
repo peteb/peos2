@@ -141,7 +141,7 @@ namespace net::arp {
       log_debug("creating probe for %s", net::ipv4::ipaddr_str(ipaddr));
 
       probe::op_fun operation = [=]() {
-        send(op::OP_REQUEST, ipaddr, net::ethernet::address::wildcard, net::ethernet::address::broadcast);
+        send(op::OP_REQUEST, ipaddr, net::ethernet::wildcard_address(), net::ethernet::broadcast_address());
       };
 
       _active_probes.insert(ipaddr, operation);
