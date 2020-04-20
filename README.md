@@ -22,6 +22,7 @@ Why build yet another operating system?
 - Virtual filesystem where you can mount drivers
 - Initial ramdisk loaded from a TAR file
 - Network driver (RTL8139)
+- Simple network stack (minimal TCP, UDP, ARP, IPv4)
 
 ## Building the toolchain
 Everything needed to build and run is encapsulated by a Docker image that can be built like so:
